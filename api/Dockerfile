@@ -11,9 +11,9 @@ RUN python -m wget https://dl.min.io/client/mc/release/linux-amd64/mc
 RUN chmod +x mc
 RUN mv mc /usr/local/bin/mc
 
-COPY ./subsetter /subsetter
+COPY ./discover /discover
 
-ENV PYTHONPATH "/subsetter/:${PYTHONPATH}"
+ENV PYTHONPATH "/discover/:${PYTHONPATH}"
 
 EXPOSE 8000
 
