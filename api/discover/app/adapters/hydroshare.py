@@ -4,8 +4,8 @@ from typing import Any, List, Optional, Union
 import requests
 from pydantic import BaseModel, EmailStr, HttpUrl
 
-from subsetter.app.adapters.models import schema
-from subsetter.app.adapters.utils import RepositoryType
+from discover.app.adapters.models import schema
+from discover.app.adapters.utils import RepositoryType
 
 
 class Creator(BaseModel):

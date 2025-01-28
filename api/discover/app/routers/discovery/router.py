@@ -11,10 +11,7 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
 from pymongo import UpdateOne
 
-from subsetter.app.adapters.hydroshare import HydroshareMetadataAdapter
-from subsetter.app.db import User
-from subsetter.app.routers.utils import metadata_file_path, minio_client
-from subsetter.app.users import current_active_user
+from discover.app.adapters.hydroshare import HydroshareMetadataAdapter
 
 router = APIRouter()
 
@@ -220,51 +217,3 @@ def to_associated_media(file):
         "encodingFormat": mime_type,
     }
 
-
-class Message(BaseModel):
-    message: Any
-
-
-@router.post("/hydroshare/refresh")
-async def refresh(message: Message):
-    """Receive and parse Pub/Sub messages."""
-
-    print(f"Hello {message}!")
-
-    return (f"{message}", 204)
-
-
-@router.get("/s3/refresh")
-async def refresh(
-    request: Request, metadata_file: str, bucket_name: str = None, user: User = Depends(current_active_user)
-):
-    records = []
-    with tempfile.TemporaryDirectory() as temp_dir:
-        bucket_name = bucket_name if bucket_name else user.bucket_name
-        output_file = f"{temp_dir}/metadata.gz"
-        minio_client(user).fget_object(bucket_name, metadata_file, output_file)
-
-        # Decompress the output_file as a directory
-        with tempfile.TemporaryDirectory() as temp_dir:
-            with gzip.open(output_file, 'rb') as gz_file:
-                with tarfile.open(fileobj=gz_file, mode='r') as tar:
-                    tar.extractall(temp_dir)
-
-                # Read the contents of each file into a string
-                for root, _, files in os.walk(temp_dir):
-                    for file in files:
-                        file_path = os.path.join(root, file)
-                        with open(file_path, 'r') as f:
-                            records.append(json.loads(f.read()))
-    for record in records:
-        if "url" in record and record["url"]:
-            print(json.dumps(record, indent=2))
-    bulk_operations = [
-        UpdateOne(
-            {'url': record['url']},
-            {'$set': record},
-            upsert=True,
-        )
-        for record in records
-    ]
-    await request.app.mongodb["discovery"].bulk_write(bulk_operations)

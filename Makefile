@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := all
-isort = isort /subsetter
-black = black -S -l 120 --target-version py310 /subsetter
+isort = isort /discover
+black = black -S -l 120 --target-version py310 /discover
 
 .PHONY: up
 up:
