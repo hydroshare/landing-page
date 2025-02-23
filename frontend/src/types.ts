@@ -1,4 +1,8 @@
-interface IResult {
+import type { ViteSSGContext } from "vite-ssg";
+
+export type UserModule = (ctx: ViteSSGContext) => void;
+
+export interface IResult {
   id: string;
   creator: string[];
   dateCreated: string;
@@ -18,16 +22,31 @@ interface IResult {
   score: number; // unused for now...
   url: string;
   funding: string[];
-  spatialCoverage: any[];
+  spatialCoverage: any;
+  _showMore?: boolean; // Used to toggle 'show more...' button
 }
 
-interface IHint {
+export interface ISearchApiResponse {
+  docs: any[];
+  meta?: { count?: { total: number } };
+}
+
+export interface ISearchResultsMetadata {
+  count?: { total: number };
+}
+
+export interface IHint {
   type: "db" | "local";
   key: string;
 }
 
-interface ISearchFilter {
+export interface ISearchFilter {
   publicationYear: {
+    min: number;
+    max: number;
+    isActive: boolean;
+  };
+  creationDate: {
     min: number;
     max: number;
     isActive: boolean;
@@ -43,29 +62,38 @@ interface ISearchFilter {
   // },
   repository: {
     options: string[];
-    value: string;
+    value: string | null;
   };
-  // project: {
-  //   // options: string[],
-  //   value: string[];
-  // };
+  project: {
+    // options: string[];
+    value: string[];
+  };
   creatorName: string;
 }
 
-interface ISearchParams {
+export interface ISearchParams {
   term: string;
   pageSize: number;
   pageNumber: number;
-  publishedStart?: Date;
-  publishedEnd?: Date;
-  dataCoverageStart?: Date;
-  dataCoverageEnd?: Date;
+  publishedStart?: number;
+  publishedEnd?: number;
+  creationDateStart?: number;
+  creationDateEnd?: number;
+  dataCoverageStart?: number;
+  dataCoverageEnd?: number;
   creatorName?: string;
   providerName?: string;
-  // clusters?: string[];
-  sortBy?: "name" | "dateCreated" | "relevance" | "registrationDate";
+  clusters?: string[];
+  sortBy?: "name" | "dateCreated" | "relevance";
 }
 
-interface ITypeaheadParams {
+export interface ITypeaheadParams {
   term: string;
+}
+
+export enum EnumCreativeWorkStatus {
+  Draft = "Draft",
+  Incomplete = "Incomplete",
+  Obsolete = "Obsolete",
+  Published = "Published",
 }

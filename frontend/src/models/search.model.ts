@@ -1,9 +1,17 @@
 import { Model } from "@vuex-orm/core";
 import { ENDPOINTS } from "@/constants";
 import { getQueryString } from "@/util";
+import {
+  IResult,
+  ISearchParams,
+  ISearchResultsMetadata,
+  ITypeaheadParams,
+  ISearchApiResponse,
+} from "@/types";
 
 export interface ISearchState {
-  results: IResult[];
+  results: { docs: IResult[]; metadata?: ISearchResultsMetadata };
+  clusters: string[];
 }
 
 export default class Search extends Model {
@@ -17,9 +25,10 @@ export default class Search extends Model {
     return this.store().state.entities[this.entity];
   }
 
-  static state(): any {
+  static state(): ISearchState {
     return {
-      results: [],
+      results: { docs: [] },
+      clusters: [],
     };
   }
 
@@ -28,18 +37,38 @@ export default class Search extends Model {
    */
   public static async search(params: ISearchParams) {
     const response: Response = await fetch(
-      `${ENDPOINTS.search}?${getQueryString(params)}`
+      `${ENDPOINTS.search}?${getQueryString(params)}`,
     );
+
+    console.log(`${ENDPOINTS.search}?${getQueryString(params)}`);
 
     if (!response.ok) {
       throw new Error("Network response was not OK");
     }
 
-    const rawResults: any[] = await response.json();
+    console.log(response);
+
+    const incoming: ISearchApiResponse = await response.json();
     this.commit((state) => {
-      state.results = rawResults.map(this._parseResult);
+      if (Array.isArray(incoming.docs)) {
+        state.results = {
+          docs: incoming.docs.map(this._parseResult),
+          metadata: incoming.meta,
+        };
+      }
     });
-    return rawResults.length === params.pageSize;
+
+    // If the number of items in this page equals the page size, then there could be more items in the next page.
+    return incoming.docs.length === params.pageSize;
+  }
+
+  /**
+   * Clear all results
+   */
+  public static clearResults() {
+    this.commit((state) => {
+      state.results = { docs: [] as IResult[] };
+    });
   }
 
   /** Fetches the next page indicated by params.pageNumber and appends the incoming items to `state.results`
@@ -47,33 +76,54 @@ export default class Search extends Model {
    */
   public static async fetchMore(params: ISearchParams): Promise<boolean> {
     const response: Response = await fetch(
-      `${ENDPOINTS.search}?${getQueryString(params)}`
+      `${ENDPOINTS.search}?${getQueryString(params)}`,
     );
 
     if (!response.ok) {
       throw new Error("Network response was not OK");
     }
 
-    const incoming = await response.json();
+    const incoming: ISearchApiResponse = await response.json();
 
     this.commit((state) => {
-      state.results =
-        [...state.results, ...incoming.map(this._parseResult)] || [];
+      state.results = {
+        docs: [
+          ...state.results.docs,
+          ...incoming.docs.map(this._parseResult),
+        ] as IResult[],
+        metadata: incoming.meta,
+      };
     });
 
-    return incoming.length === params.pageSize;
+    return incoming.docs.length === params.pageSize;
   }
 
   /** Performs a typeahead search and returns the results */
   public static async typeahead(params: ITypeaheadParams): Promise<any[]> {
     const response: Response = await fetch(
-      `${ENDPOINTS.typeahead}?${getQueryString(params)}/`
+      `${ENDPOINTS.typeahead}?${getQueryString(params)}`,
     );
     if (!response.ok) {
       throw new Error("Network response was not OK");
     }
     const data = await response.json();
     return data;
+  }
+
+  /** Fetches the list of clusters and updates the state */
+  public static async fetchClusters(): Promise<void> {
+    const response: Response = await fetch(ENDPOINTS.clusters);
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch clusters");
+    }
+
+    const clusters: string[] = await response.json();
+    if (clusters) {
+      this.commit((state) => {
+        state.clusters = clusters;
+      });
+    }
   }
 
   /** Transform raw result data from API into `IResult` shaped objects */
