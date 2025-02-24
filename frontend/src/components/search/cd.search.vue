@@ -11,7 +11,6 @@
     item-props
     item-title="key"
     item-value="key"
-    rounded
     :placeholder="$t(`home.search.inputPlaceholder`)"
     density="compact"
     clearable
@@ -20,6 +19,7 @@
     variant="solo"
     v-bind="inputAttrs"
     no-filter
+    hide-details
   >
     <template #item="{ props, item }">
       <v-list-item
@@ -49,7 +49,7 @@
             <v-btn
               tabindex="-1"
               icon
-              variant="elevated"
+              variant="text"
               size="x-small"
               @click.stop="deleteHint(item.raw)"
             >
@@ -58,6 +58,12 @@
           </v-list-item-action>
         </template>
       </v-list-item>
+    </template>
+
+    <template #append>
+      <v-list-item-action>
+        <v-btn color="primary">Search</v-btn>
+      </v-list-item-action>
     </template>
   </v-combobox>
 </template>

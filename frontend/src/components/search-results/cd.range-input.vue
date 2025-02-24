@@ -1,13 +1,13 @@
 <template>
   <div>
-    <v-checkbox
+    <!-- <v-checkbox
       :model-value="isActive"
       @update:model-value="$emit('update:is-active', $event)"
       :label="label"
       density="compact"
       hide-details
       color="primary"
-    />
+    /> -->
     <v-range-slider
       :model-value="modelValue"
       @update:model-value="$emit('update:model-value', $event)"

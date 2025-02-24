@@ -1,7 +1,7 @@
 <template>
   <v-container
     flat
-    class="footer text--secondary d-flex flex-column align-center full-width body-2"
+    class="footer text--secondary d-flex flex-column align-center full-width text-body-2"
   >
     <div class="d-lg-flex justify-space-between full-width">
       <div class="mb-4">
@@ -75,5 +75,9 @@ export default class CdFooter extends Vue {
 <style lang="scss" scoped>
 .footer {
   padding: 2rem 0;
+}
+
+p {
+  margin-bottom: 0.75rem;
 }
 </style>

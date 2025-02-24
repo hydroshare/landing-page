@@ -56,10 +56,10 @@ export interface ISearchFilter {
     max: number;
     isActive: boolean;
   };
-  // contentType: {
-  //   options: string[],
-  //   value: string[]
-  // },
+  contentType: {
+    options: string[];
+    value: string[];
+  };
   repository: {
     options: string[];
     value: string | null;
@@ -84,6 +84,7 @@ export interface ISearchParams {
   creatorName?: string;
   providerName?: string;
   clusters?: string[];
+  contentType?: string[];
   sortBy?: "name" | "dateCreated" | "relevance";
 }
 

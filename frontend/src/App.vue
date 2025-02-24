@@ -2,7 +2,6 @@
   <v-app app>
     <v-app-bar
       v-if="!$route.meta.hideNavigation"
-      color="navbar"
       ref="appBar"
       id="app-bar"
       elevate-on-scroll
@@ -14,13 +13,9 @@
           <img :src="'/img/hydroshare.png'" alt="HydroShare" />
         </router-link>
         <div class="spacer"></div>
-        <v-card
-          class="nav-items mr-2 d-flex mr-4"
-          :elevation="2"
-          v-if="!$vuetify.display.mdAndDown"
-        >
+        <div v-if="!$vuetify.display.mdAndDown" class="d-flex gap-1 ml-6">
           <v-btn
-            color="white"
+            color="black"
             v-for="path of paths"
             :key="path.attrs.to || path.attrs.href"
             v-bind="path.attrs"
@@ -31,7 +26,9 @@
           >
             {{ path.label }}
           </v-btn>
-        </v-card>
+        </div>
+
+        <v-spacer></v-spacer>
 
         <template v-if="!$vuetify.display.mdAndDown">
           <v-btn
@@ -95,17 +92,13 @@
 
     <v-main app>
       <v-container id="main-container">
-        <v-sheet
-          min-height="70vh"
-          rounded
-          :elevation="$route.meta.hideNavigation || $route.meta.flat ? 0 : 2"
-        >
+        <v-sheet min-height="70vh">
           <router-view name="content" :key="$route.fullPath" />
         </v-sheet>
       </v-container>
     </v-main>
 
-    <v-footer class="mt-8 secondary lighten-4">
+    <v-footer class="mt-8 bg-grey-lighten-4">
       <router-view name="footer" />
     </v-footer>
 
@@ -220,9 +213,29 @@ class App extends Vue {
   };
   public paths: any[] = [
     {
-      attrs: { to: "/search" },
-      label: "Search",
-      icon: "mdi-magnify",
+      attrs: { to: "/home" },
+      label: "Home",
+      icon: "mdi-home",
+    },
+    {
+      attrs: { to: "/my-resources" },
+      label: "My Resources",
+      icon: "mdi-home",
+    },
+    {
+      attrs: { to: "/discover" },
+      label: "Discover",
+      icon: "mdi-home",
+    },
+    {
+      attrs: { to: "/apps" },
+      label: "Apps",
+      icon: "mdi-home",
+    },
+    {
+      attrs: { to: "/help" },
+      label: "Help",
+      icon: "mdi-home",
     },
   ];
 
@@ -275,7 +288,7 @@ export default toNative(App);
 
 <style lang="scss" scoped>
 .logo {
-  height: 100%;
+  height: 70%;
   cursor: pointer;
 
   img {
