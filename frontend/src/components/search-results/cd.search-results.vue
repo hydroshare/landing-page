@@ -3,6 +3,13 @@
     class="cd-search-results text-body-1"
     :class="{ 'is-small': $vuetify.display.smAndDown }"
   >
+    <div class="d-flex align-baseline">
+      <div class="text-h5 font-weight-bold mr-2">Discover</div>
+      <div class="text-medium-emphasis text-body-1 font-italic">
+        Public resources shared with the community
+      </div>
+    </div>
+    <v-divider class="mt-2 mb-6"></v-divider>
     <div class="d-sm-block d-md-flex">
       <v-container class="sidebar flex-shrink-0">
         <div class="sidebar--content">
@@ -49,7 +56,9 @@
                     hide-details
                     density="compact"
                   ></v-checkbox>
-                  <v-icon color="green-darken-2">mdi-feather</v-icon>
+                  <v-icon color="green-darken-2" class="pl-1"
+                    >mdi-feather</v-icon
+                  >
                 </div>
               </v-expansion-panel-text>
             </v-expansion-panel>
@@ -176,7 +185,7 @@
             @blur="pushSearchRoute"
             @keyup.enter="pushSearchRoute"
             @click:clear="pushSearchRoute"
-            v-model="filter.creatorName"
+            v-model="filter.authorName"
             label="Author's name"
             class="mt-6"
             prepend-inner-icon="mdi-account-edit"
@@ -190,7 +199,7 @@
             @blur="pushSearchRoute"
             @keyup.enter="pushSearchRoute"
             @click:clear="pushSearchRoute"
-            v-model="filter.creatorName"
+            v-model="filter.ownerName"
             label="Owner's name"
             class="mt-6"
             prepend-inner-icon="mdi-account-key"
@@ -204,7 +213,7 @@
             @blur="pushSearchRoute"
             @keyup.enter="pushSearchRoute"
             @click:clear="pushSearchRoute"
-            v-model="filter.creatorName"
+            v-model="filter.contributorName"
             label="Contributor's name"
             class="mt-6"
             prepend-inner-icon="mdi-account-group"
@@ -218,7 +227,7 @@
             @blur="pushSearchRoute"
             @keyup.enter="pushSearchRoute"
             @click:clear="pushSearchRoute"
-            v-model="filter.creatorName"
+            v-model="filter.subject"
             label="Subject"
             class="mt-6"
             prepend-inner-icon="mdi-pen"
@@ -228,11 +237,28 @@
             density="compact"
           />
 
-          <div class="text-center mt-8">
-            <v-btn @click="clearFilters" :disabled="!isSomeFilterActive"
+          <v-text-field
+            @blur="pushSearchRoute"
+            @keyup.enter="pushSearchRoute"
+            @click:clear="pushSearchRoute"
+            v-model="filter.funder"
+            label="Funder"
+            class="mt-6"
+            prepend-inner-icon="mdi-domain"
+            hide-details
+            clearable
+            variant="outlined"
+            density="compact"
+          />
+
+          <!-- <div class="text-center mt-8">
+            <v-btn
+              @click="clearFilters"
+              :disabled="!isSomeFilterActive"
+              variant="text"
               >Clear Filters</v-btn
             >
-          </div>
+          </div> -->
         </div>
       </v-container>
 
@@ -293,7 +319,7 @@
                 <v-skeleton-loader type="button" />
               </div>
             </template>
-            <template v-else-if="false">
+            <template v-else>
               <div v-if="!results.length" class="text-body-2 text-center mt-8">
                 <v-empty-state
                   text="No results found."
@@ -376,9 +402,6 @@
                 </div>
               </div>
             </template>
-            <div v-else>
-              <v-data-table elevation="1" :items="items"></v-data-table>
-            </div>
           </div>
 
           <div
@@ -491,7 +514,11 @@ class CdSearchResults extends Vue {
       options: ["HydroShare", "EarthChem Library", "Zenodo", "Other"],
       value: null,
     },
-    creatorName: "",
+    authorName: "",
+    contributorName: "",
+    ownerName: "",
+    subject: "",
+    funder: "",
   };
 
   items = [
@@ -567,7 +594,10 @@ class CdSearchResults extends Vue {
       this.filter.contentType.value.length ||
       this.filter.repository.value ||
       this.filter.project.value ||
-      this.filter.creatorName
+      this.filter.authorName ||
+      this.filter.contributorName ||
+      this.filter.ownerName ||
+      this.filter.subject
     );
   }
 
@@ -674,7 +704,7 @@ class CdSearchResults extends Vue {
         SearchHistory.log(this.queryParams.term);
       }
 
-      // Note: this will reload the component because the router-view in the App component has `:key="route.fullPath"`
+      // This will reload the component because the router-view in the App component has `:key="route.fullPath"`
       this.router
         .push({
           name: "search",
@@ -790,7 +820,9 @@ class CdSearchResults extends Vue {
     // this.filter.contentType.value = [];
     this.filter.project.value = [];
     this.filter.repository.value = null;
-    this.filter.creatorName = "";
+    this.filter.authorName = "";
+    this.filter.contributorName = "";
+    this.filter.ownerName = "";
 
     if (wasSomeActive) {
       this.pushSearchRoute();
@@ -802,8 +834,10 @@ class CdSearchResults extends Vue {
     // SEARCH QUERY
     this.searchQuery = this.$route.query["q"] as string;
 
-    // CREATOR NAME
-    this.filter.creatorName = (this.$route.query["cn"] as string) || "";
+    // Author
+    this.filter.authorName = (this.$route.query["an"] as string) || "";
+    this.filter.contributorName = (this.$route.query["cn"] as string) || "";
+    this.filter.ownerName = (this.$route.query["on"] as string) || "";
 
     // REPOSITORY
     this.filter.repository.value = (this.$route.query["r"] as string) || null;

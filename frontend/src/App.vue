@@ -288,7 +288,7 @@ export default toNative(App);
 
 <style lang="scss" scoped>
 .logo {
-  height: 70%;
+  height: 36px;
   cursor: pointer;
 
   img {

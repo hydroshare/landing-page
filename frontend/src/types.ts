@@ -68,7 +68,11 @@ export interface ISearchFilter {
     // options: string[];
     value: string[];
   };
-  creatorName: string;
+  authorName: string;
+  contributorName: string;
+  ownerName: string;
+  subject: string;
+  funder: string;
 }
 
 export interface ISearchParams {
@@ -81,8 +85,12 @@ export interface ISearchParams {
   creationDateEnd?: number;
   dataCoverageStart?: number;
   dataCoverageEnd?: number;
-  creatorName?: string;
+  authorName?: string;
+  contributorName?: string;
+  ownerName?: string;
   providerName?: string;
+  funder?: string;
+  subject?: string;
   clusters?: string[];
   contentType?: string[];
   sortBy?: "name" | "dateCreated" | "relevance";
