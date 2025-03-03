@@ -7,6 +7,7 @@ export interface IResult {
   creator: string[];
   dateCreated: string;
   datePublished: string;
+  lastModified: string;
   description: string;
   highlights: {
     path: string;
@@ -58,15 +59,13 @@ export interface ISearchFilter {
   };
   contentType: {
     options: string[];
-    value: string[];
+    value: string[] | null;
+    isActive: boolean;
   };
-  repository: {
+  availability: {
     options: string[];
-    value: string | null;
-  };
-  project: {
-    // options: string[];
-    value: string[];
+    value: string[] | null;
+    isActive: boolean;
   };
   authorName: string;
   contributorName: string;
@@ -88,10 +87,9 @@ export interface ISearchParams {
   authorName?: string;
   contributorName?: string;
   ownerName?: string;
-  providerName?: string;
   funder?: string;
   subject?: string;
-  clusters?: string[];
+  availability?: string[];
   contentType?: string[];
   sortBy?: "name" | "dateCreated" | "relevance";
 }
@@ -100,9 +98,21 @@ export interface ITypeaheadParams {
   term: string;
 }
 
-export enum EnumCreativeWorkStatus {
-  Draft = "Draft",
-  Incomplete = "Incomplete",
-  Obsolete = "Obsolete",
-  Published = "Published",
+export enum EnumShortParams {
+  QUERY = "q",
+  AUTHOR_NAME = "an",
+  CONTENT_TYPE = "ct",
+  CONTRIBUTOR_NAME = "cn",
+  OWNER_NAME = "on",
+  FUNDER = "f",
+  SUBJECT = "sj",
+  AVAILABILITY = "a",
+  CREATION_DATE = "cd",
+  PUBLICATION_YEAR = "py",
+  DATA_COVERAGE = "dc",
+  SORT = "s",
 }
+
+export type EnumDictionary<T extends string | symbol | number, U> = {
+  [K in T]: U;
+};

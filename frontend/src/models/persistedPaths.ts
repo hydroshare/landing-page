@@ -8,5 +8,7 @@ export const persistedPaths = [
   "entities." + SearchHistory.entity,
 
   "entities." + SearchResults.entity + ".publicationYear",
-  "entities." + SearchResults.entity + ".temporalCoverage",
+  "entities." + SearchResults.entity + ".dataCoverage",
+  "entities." + SearchResults.entity + ".creationDate",
+  "entities." + SearchResults.entity + ".panels",
 ];

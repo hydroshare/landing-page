@@ -5,6 +5,7 @@ export interface ISearchResultsState {
   publicationYear: [number, number];
   dataCoverage: [number, number];
   creationDate: [number, number];
+  panels: number[];
 }
 
 export default class SearchResults extends Model {
@@ -23,6 +24,7 @@ export default class SearchResults extends Model {
       publicationYear: INITIAL_RANGE,
       dataCoverage: INITIAL_RANGE,
       creationDate: INITIAL_RANGE,
+      panels: [],
     };
   }
 }

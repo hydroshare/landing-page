@@ -96,13 +96,13 @@ class CdSpatialCoverageMap extends Vue {
 
   protected loadDrawing() {
     if (this.feature) {
-      if (this.feature["@type"] === "GeoCoordinates") {
+      if (this.feature["type"] === "GeoCoordinates") {
         const point: google.maps.ReadonlyLatLngLiteral = {
           lat: this.feature.latitude,
           lng: this.feature.longitude,
         } as google.maps.ReadonlyLatLngLiteral;
         this.loadMarkers([point]);
-      } else if (this.feature["@type"] === "GeoShape") {
+      } else if (this.feature["type"] === "GeoShape") {
         const extents = this.feature.box
           .trim()
           .split(" ")
@@ -175,8 +175,8 @@ export default toNative(CdSpatialCoverageMap);
 
 <style lang="scss" scoped>
 .map-container {
-  min-width: 20rem;
-  min-height: 10rem;
+  min-width: 25rem;
+  min-height: 15rem;
 }
 
 .cd-spatial-coverage-map {

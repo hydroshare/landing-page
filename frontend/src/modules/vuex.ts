@@ -14,7 +14,7 @@ export const install: UserModule = ({ app }) => {
       VuexORM.install(orm),
       createPersistedState({
         paths: persistedPaths,
-        key: APP_NAME || 'iguide-catalog',
+        key: APP_NAME || "HydroShare catalog",
       }),
     ],
     // state() {

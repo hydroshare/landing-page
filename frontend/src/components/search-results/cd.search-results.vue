@@ -15,172 +15,157 @@
         <div class="sidebar--content">
           <div class="text-h6 mb-6">Filters</div>
 
-          <v-expansion-panels>
-            <v-expansion-panel>
+          <v-expansion-panels multiple v-model="panels">
+            <v-expansion-panel tile key="0">
               <v-expansion-panel-title class="py-0 px-4" color="grey-lighten-3">
                 <v-switch
                   @click.stop=""
-                  label="Availability"
+                  v-model="filter.availability.isActive"
+                  @update:model-value="pushSearchRoute"
                   density="compact"
                   hide-details
                   color="primary"
                 ></v-switch>
+                <div class="ml-4 text-body-1 cursor-pointer">Availiability</div>
               </v-expansion-panel-title>
 
               <v-expansion-panel-text>
-                <div class="d-flex justify-space-between align-center">
+                <div
+                  v-for="(option, index) of filter.availability.options"
+                  class="d-flex justify-space-between align-center"
+                >
                   <v-checkbox
-                    label="Discoverable"
+                    v-model="filter.availability.value"
+                    @update:model-value="pushSearchRoute"
+                    :label="option"
+                    :key="index"
+                    :value="option"
                     hide-details
                     density="compact"
                   ></v-checkbox>
-                  <v-icon color="orange-darken-2" size="small"
-                    >mdi-lock-open</v-icon
-                  >
-                </div>
-
-                <div class="d-flex justify-space-between align-center">
-                  <v-checkbox
-                    label="Public"
-                    hide-details
-                    density="compact"
-                  ></v-checkbox>
-                  <v-icon color="green-darken-2" size="small"
-                    >mdi-lock-open</v-icon
-                  >
-                </div>
-
-                <div class="d-flex justify-space-between align-center">
-                  <v-checkbox
-                    label="Published"
-                    hide-details
-                    density="compact"
-                  ></v-checkbox>
-                  <v-icon color="green-darken-2" class="pl-1"
-                    >mdi-feather</v-icon
-                  >
+                  <v-icon v-bind="availabilityIcons[index]">{{
+                    availabilityIcons[index].icon
+                  }}</v-icon>
                 </div>
               </v-expansion-panel-text>
             </v-expansion-panel>
-          </v-expansion-panels>
 
-          <v-expansion-panels class="mt-6">
-            <v-expansion-panel>
+            <v-expansion-panel tile key="1">
               <v-expansion-panel-title class="py-0 px-4" color="grey-lighten-3">
                 <v-switch
                   @click.stop=""
-                  label="Content type"
+                  v-model="filter.contentType.isActive"
+                  @update:model-value="pushSearchRoute"
                   density="compact"
                   hide-details
                   color="primary"
                 ></v-switch>
+                <div class="ml-4 text-body-1 cursor-pointer">Content type</div>
               </v-expansion-panel-title>
 
               <v-expansion-panel-text>
                 <v-checkbox
-                  v-for="contentType of filter.contentType.options"
-                  :label="contentType"
+                  v-for="(option, index) of filter.contentType.options"
+                  v-model="filter.contentType.value"
+                  @update:model-value="pushSearchRoute"
+                  :label="option"
+                  :key="index"
+                  :value="option"
                   hide-details
                   density="compact"
                   color="primary"
                 ></v-checkbox>
               </v-expansion-panel-text>
             </v-expansion-panel>
+
+            <v-expansion-panel tile key="2">
+              <v-expansion-panel-title class="py-0 px-4" color="grey-lighten-4">
+                <v-switch
+                  @click.stop=""
+                  v-model="filter.dataCoverage.isActive"
+                  @update:model-value="pushSearchRoute"
+                  density="compact"
+                  hide-details
+                  color="primary"
+                ></v-switch>
+                <div class="ml-4 text-body-1 cursor-pointer">
+                  Temporal coverage
+                </div>
+              </v-expansion-panel-title>
+
+              <v-expansion-panel-text>
+                <cd-range-input
+                  v-model="dataCoverage"
+                  v-model:isActive="filter.dataCoverage.isActive"
+                  @update:is-active="pushSearchRoute"
+                  @end="onSliderControlChange(filter.dataCoverage)"
+                  :min="filter.dataCoverage.min"
+                  :max="filter.dataCoverage.max"
+                  label="Temporal coverage"
+                />
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+
+            <v-expansion-panel tile key="3">
+              <v-expansion-panel-title class="py-0 px-4" color="grey-lighten-4">
+                <v-switch
+                  @click.stop=""
+                  v-model="filter.creationDate.isActive"
+                  @update:model-value="pushSearchRoute"
+                  density="compact"
+                  hide-details
+                  color="primary"
+                ></v-switch>
+
+                <div class="ml-4 text-body-1 cursor-pointer">Date created</div>
+              </v-expansion-panel-title>
+
+              <v-expansion-panel-text key="4">
+                <!-- DATA COVERAGE -->
+                <cd-range-input
+                  v-model="creationDate"
+                  v-model:isActive="filter.creationDate.isActive"
+                  @update:is-active="pushSearchRoute"
+                  @end="onSliderControlChange(filter.creationDate)"
+                  :min="filter.creationDate.min"
+                  :max="filter.creationDate.max"
+                  label="Date created"
+                />
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+
+            <v-expansion-panel tile>
+              <v-expansion-panel-title class="py-0 px-4" color="grey-lighten-4">
+                <v-switch
+                  @click.stop=""
+                  v-model="filter.publicationYear.isActive"
+                  @update:model-value="pushSearchRoute"
+                  density="compact"
+                  hide-details
+                  color="primary"
+                ></v-switch>
+
+                <div class="ml-4 text-body-1 cursor-pointer">
+                  Publication year
+                </div>
+              </v-expansion-panel-title>
+
+              <v-expansion-panel-text>
+                <!-- PUBLICATION YEAR -->
+                <cd-range-input
+                  v-model="publicationYear"
+                  v-model:isActive="filter.publicationYear.isActive"
+                  @update:is-active="pushSearchRoute"
+                  @end="onSliderControlChange(filter.publicationYear)"
+                  :min="filter.publicationYear.min"
+                  :max="filter.publicationYear.max"
+                  label="Publication year"
+                />
+              </v-expansion-panel-text>
+            </v-expansion-panel>
           </v-expansion-panels>
 
-          <v-card class="mt-6">
-            <v-card-title class="bg-grey-lighten-3"
-              ><v-label>Temporal filters</v-label></v-card-title
-            >
-            <v-card-text class="pa-0">
-              <v-expansion-panels multiple>
-                <v-expansion-panel tile>
-                  <v-expansion-panel-title
-                    class="py-0 px-4"
-                    color="grey-lighten-4"
-                  >
-                    <v-switch
-                      @click.stop=""
-                      label="Temporal coverage"
-                      density="compact"
-                      hide-details
-                      color="primary"
-                    ></v-switch>
-                  </v-expansion-panel-title>
-
-                  <v-expansion-panel-text>
-                    <cd-range-input
-                      v-model="creationDate"
-                      v-model:isActive="filter.creationDate.isActive"
-                      @update:is-active="pushSearchRoute"
-                      @end="onSliderControlChange(filter.creationDate)"
-                      :min="filter.creationDate.min"
-                      :max="filter.creationDate.max"
-                      label="Temporal coverage"
-                    />
-                  </v-expansion-panel-text>
-                </v-expansion-panel>
-
-                <v-expansion-panel tile>
-                  <v-expansion-panel-title
-                    class="py-0 px-4"
-                    color="grey-lighten-4"
-                  >
-                    <v-switch
-                      @click.stop=""
-                      label="Date created"
-                      density="compact"
-                      hide-details
-                      color="primary"
-                    ></v-switch>
-                  </v-expansion-panel-title>
-
-                  <v-expansion-panel-text>
-                    <!-- DATA COVERAGE -->
-                    <cd-range-input
-                      v-model="dataCoverage"
-                      v-model:isActive="filter.dataCoverage.isActive"
-                      @update:is-active="pushSearchRoute"
-                      @end="onSliderControlChange(filter.dataCoverage)"
-                      :min="filter.dataCoverage.min"
-                      :max="filter.dataCoverage.max"
-                      label="Date created"
-                    />
-                  </v-expansion-panel-text>
-                </v-expansion-panel>
-
-                <v-expansion-panel tile>
-                  <v-expansion-panel-title
-                    class="py-0 px-4"
-                    color="grey-lighten-4"
-                  >
-                    <v-switch
-                      @click.stop=""
-                      label="Publication year"
-                      density="compact"
-                      hide-details
-                      color="primary"
-                    ></v-switch>
-                  </v-expansion-panel-title>
-
-                  <v-expansion-panel-text>
-                    <!-- PUBLICATION YEAR -->
-                    <cd-range-input
-                      v-model="publicationYear"
-                      v-model:isActive="filter.publicationYear.isActive"
-                      @update:is-active="pushSearchRoute"
-                      @end="onSliderControlChange(filter.publicationYear)"
-                      :min="filter.publicationYear.min"
-                      :max="filter.publicationYear.max"
-                      label="Publication year"
-                    />
-                  </v-expansion-panel-text>
-                </v-expansion-panel>
-              </v-expansion-panels>
-            </v-card-text>
-          </v-card>
-
-          <!-- CREATOR NAME -->
+          <!-- AUTHOR NAME -->
           <v-text-field
             @blur="pushSearchRoute"
             @keyup.enter="pushSearchRoute"
@@ -295,37 +280,27 @@
           </div>
 
           <div class="results-container mb-12">
-            <template v-if="isSearching && false">
+            <template v-if="isSearching">
               <!-- TODO: refactor into a component -->
-              <div v-for="index in 4" :key="index" class="mb-16">
-                <div class="d-flex">
-                  <div class="flex-grow-1">
-                    <v-skeleton-loader type="heading" />
-                    <v-skeleton-loader
-                      class="mt-2"
-                      max-width="180"
-                      type="text"
-                    />
-                    <v-skeleton-loader max-width="100" type="text" />
+              <v-skeleton-loader type="list-item" width="150" />
+              <v-card elevation="2">
+                <v-card-text>
+                  <div v-for="index in 4" :key="index">
+                    <v-skeleton-loader type="table-tbody" />
                   </div>
-                  <v-skeleton-loader width="100" max-height="50" type="image" />
-                </div>
-                <v-skeleton-loader class="my-2" type="paragraph" />
-                <div class="d-flex align-center my-2 gap-1">
-                  <v-skeleton-loader width="90" type="text" />
-                  <v-skeleton-loader width="90" type="text" />
-                  <v-skeleton-loader width="90" type="text" />
-                </div>
-                <v-skeleton-loader type="button" />
-              </div>
+                </v-card-text>
+              </v-card>
             </template>
-            <template v-else>
-              <div v-if="!results.length" class="text-body-2 text-center mt-8">
+            <template v-else-if="false">
+              <v-card
+                v-if="!results.length"
+                class="text-body-2 text-center mt-8"
+              >
                 <v-empty-state
                   text="No results found."
                   icon="mdi-text-box-remove"
                 />
-              </div>
+              </v-card>
               <div
                 v-if="searchResultsMetadata?.count?.total"
                 class="text-body-1 text-medium-emphasis mb-4"
@@ -340,7 +315,7 @@
                 :key="result.id"
               >
                 <a
-                  class="result-title text-h6 text-decoration-none"
+                  class="text-h6 text-decoration-none my-12"
                   :href="result.url"
                   target="_blank"
                   v-html="highlight(result, 'name')"
@@ -396,11 +371,120 @@
                     <cd-spatial-coverage-map
                       :loader="loader"
                       :loader-options="options"
-                      :features="result.spatialCoverage"
+                      :feature="result.spatialCoverage"
                     />
                   </div>
                 </div>
               </div>
+            </template>
+
+            <template v-else>
+              <v-card
+                elevation="2"
+                v-if="!results.length"
+                class="text-body-2 text-center mt-8 py-12"
+              >
+                <v-card-text>
+                  <v-empty-state
+                    text="No results found."
+                    icon="mdi-text-box-remove"
+                  />
+                </v-card-text>
+              </v-card>
+              <div
+                v-if="searchResultsMetadata?.count?.total"
+                class="text-body-1 text-medium-emphasis mb-4"
+              >
+                {{ searchResultsMetadata?.count?.total || "" }} result{{
+                  searchResultsMetadata?.count?.total != 1 ? "s" : ""
+                }}
+              </div>
+
+              <v-data-table-virtual
+                v-if="results.length"
+                :headers="headers.filter((header) => header.visible)"
+                :items="results"
+                class="elevation-2 text-body-1"
+                hover
+                expand-on-click
+                show-expand
+              >
+                <!-- <template v-slot:item.icons="{ item }"></template> -->
+                <template #item.title="{ item }">
+                  <a
+                    class="text-decoration-none"
+                    :href="item.url"
+                    target="_blank"
+                    v-html="highlight(item, 'name')"
+                  ></a>
+                </template>
+                <template #item.firstAuthor="{ item }">
+                  <div v-html="highlightCreators(item)"></div>
+                </template>
+                <template #item.dateCreated="{ item }">
+                  <span v-if="item.dateCreated">{{
+                    formatDate(item.dateCreated)
+                  }}</span>
+                </template>
+                <template #item.lastModified="{ item }">
+                  <span v-if="item.lastModified">{{
+                    formatDate(item.lastModified)
+                  }}</span>
+                </template>
+                <template #expanded-row="{ item }">
+                  <div class="d-table-row">
+                    <td class="d-table-cell" colspan="6">
+                      <v-card class="mx-4" flat>
+                        <v-card-text>
+                          <div class="d-flex gap-2">
+                            <div>
+                              <div class="text-h6">Subject Keywords</div>
+                              <div>
+                                <v-chip
+                                  v-for="keyword of item.keywords"
+                                  size="small"
+                                  style="margin: 0.25rem"
+                                  >{{ keyword }}</v-chip
+                                >
+                              </div>
+                              <div class="text-h6 mt-4">Abstract</div>
+                              <p
+                                :class="{ 'snip-3': !item._showMore }"
+                                v-html="highlight(item, 'description')"
+                              ></p>
+
+                              <v-btn
+                                size="x-small"
+                                variant="text"
+                                color="primary"
+                                @click="item._showMore = !item._showMore"
+                                >Show
+                                {{ item._showMore ? "less" : "more" }}...</v-btn
+                              >
+                            </div>
+                            <div v-if="hasSpatialFeatures(item)">
+                              <div class="text-h6">Spatial Coverage</div>
+
+                              <div :id="`map-${item.id}`" class="mb-4">
+                                <cd-spatial-coverage-map
+                                  :loader="loader"
+                                  :loader-options="options"
+                                  :feature="item.spatialCoverage"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </v-card-text>
+                      </v-card>
+                      <v-divider></v-divider>
+                    </td>
+                  </div>
+                </template>
+
+                <!-- <div class="my-1" v-if="result.datePublished">
+                  Publication Date: {{ formatDate(result.datePublished) }}
+                </div> -->
+              </v-data-table-virtual>
             </template>
           </div>
 
@@ -443,6 +527,8 @@ import {
   ISearchParams,
   IResult,
   ISearchResultsMetadata,
+  EnumShortParams,
+  EnumDictionary,
 } from "@/types";
 import CdRangeInput from "./cd.range-input.vue";
 import { useRoute, useRouter } from "vue-router";
@@ -492,10 +578,6 @@ class CdSearchResults extends Vue {
       max: MAX_YEAR,
       isActive: false,
     },
-    project: {
-      // Options are loaded via api during app `created` hook.
-      value: [],
-    },
     contentType: {
       options: [
         "Collection",
@@ -507,12 +589,14 @@ class CdSearchResults extends Vue {
         "Geographic Raster",
         "Image",
       ],
-      value: [],
+      value: null,
+      isActive: false,
     },
 
-    repository: {
-      options: ["HydroShare", "EarthChem Library", "Zenodo", "Other"],
+    availability: {
+      options: ["Discoverable", "Public", "Published"],
       value: null,
+      isActive: false,
     },
     authorName: "",
     contributorName: "",
@@ -521,15 +605,44 @@ class CdSearchResults extends Vue {
     funder: "",
   };
 
-  items = [
-    {
-      icons: "",
-      title: "Logan GAMUT field operations database",
-      firstAuthor: "GeoTrust CDM",
-      dateCreated: new Date(),
-      lastModified: new Date(),
-    },
+  availabilityIcons = [
+    { icon: "mdi-lock-open", size: "small", color: "orange-darken-2" }, // Discoverable
+    { icon: "mdi-lock", size: "small", color: "green-darken-2" }, // Public
+    { icon: "mdi-feather", class: "pl-1", color: "green-darken-2" }, // Published
   ];
+
+  // items = [
+  //   {
+  //     icons: "",
+  //     title: "Logan GAMUT field operations database",
+  //     firstAuthor: "GeoTrust CDM",
+  //     dateCreated: new Date(),
+  //     lastModified: new Date(),
+  //   },
+  // ];
+
+  headers = reactive([
+    { title: "", key: "icons", visible: true },
+    { title: "Title", key: "title", visible: true, minWidth: 200 },
+    {
+      title: "First Author",
+      key: "firstAuthor",
+      visible: true,
+      minWidth: 200,
+    },
+    {
+      title: "Date Created",
+      key: "dateCreated",
+      visible: true,
+      minWidth: 200,
+    },
+    {
+      title: "Last Modified",
+      key: "lastModified",
+      visible: true,
+      minWidth: 200,
+    },
+  ]);
 
   formatDate = formatDate;
   route = useRoute();
@@ -578,26 +691,39 @@ class CdSearchResults extends Vue {
     });
   }
 
+  public get panels() {
+    return SearchResults.$state.panels;
+  }
+
+  public set panels(range: number[]) {
+    // TODO: validate input
+    SearchResults.commit((state) => {
+      state.panels = range;
+    });
+  }
+
   public get results(): IResult[] {
     return Search.$state.results.docs;
   }
 
-  public get clusters() {
-    return Search.$state.clusters;
-  }
+  // public get clusters() {
+  //   return Search.$state.clusters;
+  // }
 
   public get isSomeFilterActive() {
     return (
       this.filter.creationDate.isActive ||
       this.filter.publicationYear.isActive ||
       this.filter.dataCoverage.isActive ||
-      this.filter.contentType.value.length ||
-      this.filter.repository.value ||
-      this.filter.project.value ||
+      (this.filter.availability.isActive &&
+        this.filter.availability.value?.length) ||
+      (this.filter.contentType.isActive &&
+        this.filter.contentType.value?.length) ||
       this.filter.authorName ||
       this.filter.contributorName ||
       this.filter.ownerName ||
-      this.filter.subject
+      this.filter.subject ||
+      this.filter.funder
     );
   }
 
@@ -628,22 +754,36 @@ class CdSearchResults extends Vue {
     }
 
     // CREATOR NAME
-    if (this.filter.creatorName) {
-      queryParams.creatorName = this.filter.creatorName;
+    if (this.filter.authorName) {
+      queryParams.authorName = this.filter.authorName;
     }
 
-    // REPOSITORY
-    if (this.filter.repository.value) {
-      queryParams.providerName = this.filter.repository.value;
+    if (this.filter.contributorName) {
+      queryParams.authorName = this.filter.contributorName;
     }
 
-    // PROJECT
-    if (this.filter.project.value?.length) {
-      queryParams.clusters = this.filter.project.value;
+    if (this.filter.ownerName) {
+      queryParams.authorName = this.filter.ownerName;
+    }
+
+    if (this.filter.funder) {
+      queryParams.authorName = this.filter.funder;
+    }
+
+    if (this.filter.subject) {
+      queryParams.subject = this.filter.subject;
+    }
+
+    // AVAILABILITY
+    if (this.filter.availability.isActive && this.filter.availability.value) {
+      queryParams.availability = this.filter.availability.value;
     }
 
     // CONTENT TYPE
-    if (this.filter.contentType.value?.length) {
+    if (
+      this.filter.contentType.isActive &&
+      this.filter.contentType.value?.length
+    ) {
       queryParams.contentType = this.filter.contentType.value;
     }
 
@@ -659,23 +799,32 @@ class CdSearchResults extends Vue {
   }
 
   /** Route query parameters with short keys. These are parameters needed to replicate a search. */
-  public get routeParams() {
+  public get routeParams(): EnumDictionary<EnumShortParams, any> {
     return {
-      q: this.searchQuery,
-      cn: this.filter.creatorName || undefined,
-      r: this.filter.repository.value || undefined,
-      cd: this.filter.creationDate.isActive
+      [EnumShortParams.QUERY]: this.searchQuery,
+      [EnumShortParams.AUTHOR_NAME]: this.filter.authorName || undefined,
+      [EnumShortParams.CONTRIBUTOR_NAME]:
+        this.filter.contributorName || undefined,
+      [EnumShortParams.OWNER_NAME]: this.filter.ownerName || undefined,
+      [EnumShortParams.FUNDER]: this.filter.funder || undefined,
+      [EnumShortParams.SUBJECT]: this.filter.subject || undefined,
+      [EnumShortParams.AVAILABILITY]: this.filter.availability.isActive
+        ? this.filter.availability.value || undefined
+        : undefined,
+      [EnumShortParams.CONTENT_TYPE]: this.filter.contentType.isActive
+        ? this.filter.contentType.value || undefined
+        : undefined,
+      [EnumShortParams.CREATION_DATE]: this.filter.creationDate.isActive
         ? this.creationDate.map((n) => n.toString()) || undefined
         : undefined,
-      py: this.filter.publicationYear.isActive
+      [EnumShortParams.PUBLICATION_YEAR]: this.filter.publicationYear.isActive
         ? this.publicationYear.map((n) => n.toString()) || undefined
         : undefined,
-      dc: this.filter.dataCoverage.isActive
+      [EnumShortParams.DATA_COVERAGE]: this.filter.dataCoverage.isActive
         ? this.dataCoverage.map((n) => n.toString()) || undefined
         : undefined,
-      // ct: this.filter.contentType.value || undefined,
-      p: this.filter.project.value || undefined,
-      s: (this.searchQuery ? this.sort : this.sortEmpty) || undefined,
+      [EnumShortParams.SORT]:
+        (this.searchQuery ? this.sort : this.sortEmpty) || undefined,
     };
   }
 
@@ -759,7 +908,8 @@ class CdSearchResults extends Vue {
       return "";
     }
     const div = document.createElement("DIV");
-    div.innerHTML = result.creator.join(", ");
+    // div.innerHTML = result.creator.join(", ");
+    div.innerHTML = result.creator[0];
 
     let content = div.textContent || div.innerText || "";
 
@@ -817,12 +967,17 @@ class CdSearchResults extends Vue {
     this.filter.dataCoverage.isActive = false;
     this.dataCoverage = [MIN_YEAR, MAX_YEAR];
 
-    // this.filter.contentType.value = [];
-    this.filter.project.value = [];
-    this.filter.repository.value = null;
+    this.filter.availability.value = null;
+    this.filter.availability.isActive = false;
+
+    this.filter.contentType.value = null;
+    this.filter.contentType.isActive = false;
+
     this.filter.authorName = "";
     this.filter.contributorName = "";
     this.filter.ownerName = "";
+    this.filter.subject = "";
+    this.filter.funder = "";
 
     if (wasSomeActive) {
       this.pushSearchRoute();
@@ -834,68 +989,87 @@ class CdSearchResults extends Vue {
     // SEARCH QUERY
     this.searchQuery = this.$route.query["q"] as string;
 
-    // Author
-    this.filter.authorName = (this.$route.query["an"] as string) || "";
-    this.filter.contributorName = (this.$route.query["cn"] as string) || "";
-    this.filter.ownerName = (this.$route.query["on"] as string) || "";
-
-    // REPOSITORY
-    this.filter.repository.value = (this.$route.query["r"] as string) || null;
+    this.filter.authorName =
+      (this.$route.query[EnumShortParams.AUTHOR_NAME] as string) || "";
+    this.filter.contributorName =
+      (this.$route.query[EnumShortParams.CONTRIBUTOR_NAME] as string) || "";
+    this.filter.ownerName =
+      (this.$route.query[EnumShortParams.OWNER_NAME] as string) || "";
+    this.filter.funder =
+      (this.$route.query[EnumShortParams.FUNDER] as string) || "";
+    this.filter.subject =
+      (this.$route.query[EnumShortParams.SUBJECT] as string) || "";
 
     // CONTENT TYPE
-    // this.filter.contentType.value = (this.$route.query["ct"] as string[]) || [];
+    if (this.$route.query[EnumShortParams.CONTENT_TYPE]) {
+      this.filter.contentType.isActive = true;
+      this.filter.contentType.value = this.$route.query[
+        EnumShortParams.CONTENT_TYPE
+      ]
+        ? ([this.$route.query[EnumShortParams.CONTENT_TYPE]].flat() as string[])
+        : null;
+    }
 
-    // PROJECT
-    this.filter.project.value = this.$route.query["p"]
-      ? ([this.$route.query["p"]].flat() as string[])
-      : [];
+    // AVAILABILITY
+    if (this.$route.query[EnumShortParams.AVAILABILITY]) {
+      this.filter.availability.isActive = true;
+      this.filter.availability.value = this.$route.query[
+        EnumShortParams.AVAILABILITY
+      ]
+        ? ([this.$route.query[EnumShortParams.AVAILABILITY]].flat() as string[])
+        : null;
+    }
 
     // CREATION DATE
-    if (this.$route.query["cd"]) {
+    if (this.$route.query[EnumShortParams.CREATION_DATE]) {
       this.filter.creationDate.isActive = true;
       this.creationDate =
-        ((this.$route.query["cd"] as [string, string])?.map((n) => +n) as [
-          number,
-          number,
-        ]) || this.creationDate;
+        ((
+          this.$route.query[EnumShortParams.CREATION_DATE] as [string, string]
+        )?.map((n) => +n) as [number, number]) || this.creationDate;
     }
 
     // PUBLICATION YEAR
-    if (this.$route.query["py"]) {
+    if (this.$route.query[EnumShortParams.PUBLICATION_YEAR]) {
       this.filter.publicationYear.isActive = true;
       this.publicationYear =
-        ((this.$route.query["py"] as [string, string])?.map((n) => +n) as [
-          number,
-          number,
-        ]) || this.publicationYear;
+        ((
+          this.$route.query[EnumShortParams.PUBLICATION_YEAR] as [
+            string,
+            string,
+          ]
+        )?.map((n) => +n) as [number, number]) || this.publicationYear;
     }
 
     // DATA COVERAGE
-    if (this.$route.query["dc"]) {
+    if (this.$route.query[EnumShortParams.DATA_COVERAGE]) {
       this.filter.dataCoverage.isActive = true;
       this.dataCoverage =
-        ((this.$route.query["dc"] as [string, string])?.map((n) => +n) as [
-          number,
-          number,
-        ]) || this.dataCoverage;
+        ((
+          this.$route.query[EnumShortParams.DATA_COVERAGE] as [string, string]
+        )?.map((n) => +n) as [number, number]) || this.dataCoverage;
     }
 
     // SORT
-    if (this.route.query["s"]) {
+    if (this.route.query[EnumShortParams.SORT]) {
       if (this.searchQuery) {
         this.sort =
-          (this.route.query["s"] as "name" | "dateCreated" | "relevance") ||
-          this.sort;
+          (this.route.query[EnumShortParams.SORT] as
+            | "name"
+            | "dateCreated"
+            | "relevance") || this.sort;
       } else {
         this.sortEmpty =
-          (this.route.query["s"] as "name" | "dateCreated" | "relevance") ||
-          this.sort;
+          (this.route.query[EnumShortParams.SORT] as
+            | "name"
+            | "dateCreated"
+            | "relevance") || this.sort;
       }
     }
   }
 
   public hasSpatialFeatures(result: IResult): boolean {
-    return result.spatialCoverage?.some((feature: any) => feature.geometry);
+    return result.spatialCoverage;
   }
 }
 export default toNative(CdSearchResults);
@@ -906,6 +1080,15 @@ export default toNative(CdSearchResults);
 .v-expansion-panel--active:not(:first-child),
 .v-expansion-panel--active + .v-expansion-panel {
   margin-top: 1px;
+}
+
+:deep(.v-table tr.v-data-table__tr:nth-child(even) td) {
+  background: #f7f7f7;
+}
+
+:deep(.v-table tr.v-data-table__tr td) {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
 }
 
 .sidebar {

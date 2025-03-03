@@ -12,6 +12,7 @@ from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
 from pymongo import UpdateOne
 
 from discover.app.adapters.hydroshare import HydroshareMetadataAdapter
+from config import get_settings
 
 router = APIRouter()
 
@@ -139,8 +140,10 @@ class SearchQuery(BaseModel):
         highlightPaths = ['name', 'description', 'keywords']
         stages = []
         compound = {'filter': self._filters, 'must': self._must}
+
         if self.term:
             compound['should'] = self._should
+
         search_stage = {
             '$search': {
                 'index': 'fuzzy_search',
@@ -158,22 +161,71 @@ class SearchQuery(BaseModel):
                 self.sortBy = "name_for_sorting"
                 self.reverseSort = not self.reverseSort
             stages.append({'$sort': {self.sortBy: -1 if self.reverseSort else 1}})
-        stages.append({'$skip': (self.pageNumber - 1) * self.pageSize})
-        stages.append({'$limit': self.pageSize})
-        # stages.append({'$unset': ['_id', '_class_id']})
+
         stages.append(
             {'$set': {'score': {'$meta': 'searchScore'}, 'highlights': {'$meta': 'searchHighlights'}}},
         )
         return stages
 
+    @property
+    def stages_v2(self):
+        highlightPaths = ['name', 'description', 'keywords']
+        searchPaths = ['name', 'description', 'keywords']
+        stages = []
+        compound = {'filter': self._filters, 'must': self._must}
+
+        if self.term:
+            compound['should'] = [{'autocomplete': {'query': self.term, 'path': key, 'fuzzy': {'maxEdits': 1}}} for key in searchPaths]
+
+        search_stage = {
+            '$search': {
+                'index': 'fuzzy_search',
+                'compound': compound,
+            }
+        }
+
+        if self.term:
+            search_stage["$search"]['highlight'] = {'path': highlightPaths}
+
+        stages.append(search_stage)
+
+        # sorting needs to happen before pagination
+        if self.sortBy:
+            if self.sortBy == "name":
+                self.sortBy = "name_for_sorting"
+                self.reverseSort = not self.reverseSort
+            stages.append({'$sort': {self.sortBy: -1 if self.reverseSort else 1}})
+
+        stages.append(
+            {'$set': {'score': {'$meta': 'searchScore'}, 'highlights': {'$meta': 'searchHighlights'}}},
+        )
+
+        if self.term:
+            # get only results which meet minimum relevance score threshold
+            stages.append({'$match': {'score': {'$gt': get_settings().search_relevance_score_threshold}}})
+
+        return stages
+
 
 @router.get("/search")
 async def search(request: Request, search_query: SearchQuery = Depends()):
-    stages = search_query.stages
-    print(json.dumps(stages, indent=2))
-    result = await request.app.mongodb["discovery"].aggregate(stages).to_list(search_query.pageSize)
+    result = await aggregate_stages(request, search_query.stages_v2, search_query.pageNumber, search_query.pageSize)
     json_str = json.dumps(result, default=str)
     return json.loads(json_str)
+    
+
+async def aggregate_stages(request, stages, pageNumber=1, pageSize=30):
+    # Insert a `$facet` stage to extract the total count. We specify pagination here too.
+    stages.append({"$facet": {"docs": [{"$skip": (pageNumber - 1) * pageSize},
+                                       {"$limit": pageSize}], "totalCount": [{"$count": 'count'}]}})
+
+    aggregation = await request.app.mongodb["discovery"].aggregate(stages).to_list(None)
+    total_count = aggregation[0]["totalCount"][0]["count"] if len(aggregation[0]["totalCount"]) else None
+
+    if total_count is not None:
+        return {"docs": aggregation[0]["docs"], "meta": {"count": {"total": total_count}}}
+    
+    return {"docs": aggregation[0]["docs"]}
 
 
 @router.get("/typeahead")

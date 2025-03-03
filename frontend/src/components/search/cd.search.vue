@@ -62,7 +62,7 @@
 
     <template #append>
       <v-list-item-action>
-        <v-btn color="primary">Search</v-btn>
+        <v-btn color="primary" @click="onSearch">Search</v-btn>
       </v-list-item-action>
     </template>
   </v-combobox>

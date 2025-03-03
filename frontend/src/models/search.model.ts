@@ -40,13 +40,9 @@ export default class Search extends Model {
       `${ENDPOINTS.search}?${getQueryString(params)}`,
     );
 
-    console.log(`${ENDPOINTS.search}?${getQueryString(params)}`);
-
     if (!response.ok) {
       throw new Error("Network response was not OK");
     }
-
-    console.log(response);
 
     const incoming: ISearchApiResponse = await response.json();
     this.commit((state) => {
@@ -128,10 +124,13 @@ export default class Search extends Model {
 
   /** Transform raw result data from API into `IResult` shaped objects */
   private static _parseResult(rawResult: any): IResult {
+    console.log(rawResult);
+    // TODO: get resource type and access
     return {
       creator: rawResult.creator.map((c) => c.name) || [],
       dateCreated: rawResult.dateCreated || "",
       datePublished: rawResult.datePublished || "",
+      lastModified: rawResult.dateModified || "",
       description: rawResult.description || "",
       funding: rawResult.funding?.map((f) => f.name || f.funder.name) || [],
       highlights: rawResult.highlights || [],
