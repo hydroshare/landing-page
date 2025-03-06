@@ -437,7 +437,7 @@
                       <v-card class="mx-4" flat>
                         <v-card-text>
                           <div class="d-flex gap-2">
-                            <div>
+                            <div class="flex-grow-1">
                               <div class="text-h6">Subject Keywords</div>
                               <div>
                                 <v-chip
@@ -462,6 +462,7 @@
                                 {{ item._showMore ? "less" : "more" }}...</v-btn
                               >
                             </div>
+
                             <div v-if="hasSpatialFeatures(item)">
                               <div class="text-h6">Spatial Coverage</div>
 
@@ -1082,7 +1083,7 @@ export default toNative(CdSearchResults);
   margin-top: 1px;
 }
 
-:deep(.v-table tr.v-data-table__tr:nth-child(even) td) {
+:deep(.v-table .v-data-table__tr:nth-child(even) td) {
   background: #f7f7f7;
 }
 
@@ -1105,11 +1106,11 @@ export default toNative(CdSearchResults);
   flex: 1 1 auto;
 }
 
-.results-content {
-  min-width: 0; // https://stackoverflow.com/a/66689926/3288102
-  max-width: 70rem;
-  margin: unset;
-}
+// .results-content {
+//   min-width: 0; // https://stackoverflow.com/a/66689926/3288102
+//   max-width: 70rem;
+//   margin: unset;
+// }
 
 .results-container {
   * {
