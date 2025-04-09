@@ -4,9 +4,9 @@ import subprocess
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from discover.app.routers.discovery import router as discovery_router
+from discover.app.routers.pubsub import router as pubsub_router
 from discover.config import get_settings
 
 # TODO: get oauth working with swagger/redoc
@@ -32,6 +32,12 @@ app.include_router(
     discovery_router,
     prefix="/api/discovery",
     tags=["discovery"],
+)
+
+app.include_router(
+    pubsub_router,
+    prefix="/api/pubsub",
+    tags=["pubsub"],
 )
 
 @app.on_event("startup")
