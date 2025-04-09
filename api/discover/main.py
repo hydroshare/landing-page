@@ -1,11 +1,8 @@
-import os
-import subprocess
-
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from discover.app.routers.discovery import router as discovery_router
+#from discover.app.routers.discovery import router as discovery_router
 from discover.app.routers.pubsub import router as pubsub_router
 from discover.config import get_settings
 
@@ -28,11 +25,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(
-    discovery_router,
-    prefix="/api/discovery",
-    tags=["discovery"],
-)
+#app.include_router(
+#    discovery_router,
+#    prefix="/api/discovery",
+#    tags=["discovery"],
+#)
 
 app.include_router(
     pubsub_router,
