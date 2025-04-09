@@ -12,29 +12,29 @@ class Settings(BaseSettings):
     argo_namespace: str
     argo_bearer_token: str
 
-    mongo_url: str
-    mongo_database: str
+    mongo_url: str = None
+    mongo_database: str = None
 
-    hydroshare_mongo_url: str
-    hydroshare_mongo_database: str
+    hydroshare_mongo_url: str = None
+    hydroshare_mongo_database: str = None
 
     hydroshare_api_authorization: str
     hydroshare_host: str
 
-    oauth2_client_id: str
-    oauth2_client_secret: str
-    oauth2_redirect_url: str
-    vite_oauth2_redirect_url: str
-    vite_app_api_url: str
-    allow_origins: str
+    oauth2_client_id: str = None
+    oauth2_client_secret: str = None
+    oauth2_redirect_url: str = None
+    vite_oauth2_redirect_url: str = None
+    vite_app_api_url: str = None
+    allow_origins: str = None
 
-    minio_access_key: str
-    minio_secret_key: str
-    minio_api_url: str
+    minio_access_key: str = None
+    minio_secret_key: str = None
+    minio_api_url: str = None
 
     cloud_run: bool = False
 
-    OIDC_BASE_URL: str
+    OIDC_BASE_URL: str = None
 
     @property
     def user_info_endpoint(self):
