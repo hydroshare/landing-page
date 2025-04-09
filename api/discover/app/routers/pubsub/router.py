@@ -51,10 +51,11 @@ async def resource_extract(push_request: GooglePubSubPushRequest):
     credentials = get_settings().hydroshare_api_authorization
     resource_bucket = requests.get(url, headers={'Authorization': f'Basic {credentials}'}).text
     
-    api_instance.submit_workflow(
-        namespace=get_settings().argo_namespace,
-        body=metadata_extraction_submission_body(resource_bucket,
-                                                 "extracted-hydroshare-metadata",
-                                                 message_data.resource_id),
-        _preload_content=False
-    )
+    if not message_data.removed:
+        api_instance.submit_workflow(
+            namespace=get_settings().argo_namespace,
+            body=metadata_extraction_submission_body(resource_bucket,
+                                                    "extracted-hydroshare-metadata",
+                                                    message_data.resource_id),
+            _preload_content=False
+        )
