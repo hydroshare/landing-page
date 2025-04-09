@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     hydroshare_mongo_url: str
     hydroshare_mongo_database: str
 
+    hydroshare_api_authorization: str
+    hydroshare_host: str
+
     oauth2_client_id: str
     oauth2_client_secret: str
     oauth2_redirect_url: str
