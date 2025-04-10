@@ -35,12 +35,12 @@ class GooglePubSubPushRequest(BaseModel):
 
 router = APIRouter()
 
-def metadata_extraction_submission_body(input_bucket: str, output_bucket: str, resource_id: str):
+def metadata_extraction_submission_body(input_bucket: str, resource_id: str):
     return {
         "resourceKind": "WorkflowTemplate",
         "resourceName": "metadata-extractor-hydroshare-discovery",
         "submitOptions": {
-            "parameters": [f"input-bucket={input_bucket}", f"output_bucket={output_bucket}", f"resource-id={resource_id}"],
+            "parameters": [f"input-bucket={input_bucket}", f"resource-id={resource_id}"],
         },
     }
 
@@ -55,7 +55,6 @@ async def resource_extract(push_request: GooglePubSubPushRequest):
         api_instance.submit_workflow(
             namespace=get_settings().argo_namespace,
             body=metadata_extraction_submission_body(resource_bucket,
-                                                    "extracted-hydroshare-metadata",
                                                     message_data.resource_id),
             _preload_content=False
         )
