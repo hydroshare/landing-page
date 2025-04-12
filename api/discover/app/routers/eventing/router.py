@@ -32,9 +32,6 @@ class GooglePubSubMessage(BaseModel):
 
     def discovery_message(self) -> DiscoveryMessage:
         return DiscoveryMessage.model_validate_json(self.data)
-    
-    def cloud_storage_message(self) -> CloudStorageMessage:
-        return CloudStorageMessage.model_validate_json(self.data)
 
 class GooglePubSubPushRequest(BaseModel):
     message: GooglePubSubMessage
