@@ -86,7 +86,7 @@ async def resource_collect(request: Request, push_request: GooglePubSubPushReque
     bucket_id = message_data.bucketId
     object_id = message_data.objectId
     filepath = os.path.join(bucket_id, object_id)
-    if message_data.eventType == EventTypeEnum.object_metadata_update:
+    if message_data.eventType == EventTypeEnum.object_finalize:
         with request.app.s3.open(filepath) as f:
             metadata_json = json.loads(f.read())
             metadata_json['_s3_filepath'] = filepath
