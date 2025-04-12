@@ -16,9 +16,6 @@ class Settings(BaseSettings):
     mongo_url: str
     mongo_database: str
 
-    hydroshare_mongo_url: str = None
-    hydroshare_mongo_database: str = None
-
 
 @lru_cache()
 def get_settings() -> Settings:
