@@ -13,3 +13,4 @@ pyproj
 wget
 #hsclient
 s3fs
+motor
