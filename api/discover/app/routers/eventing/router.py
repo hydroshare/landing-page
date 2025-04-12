@@ -1,7 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
+from enum import Enum
 
 from typing import Any
 import requests
+import os
+import json
 
 from pydantic import BaseModel, Base64Str
 from argo_workflows import Configuration, ApiClient
@@ -22,6 +25,21 @@ class DiscoveryMessage(BaseModel):
     resource_id: str
     removed: bool
 
+class EventTypeEnum(Enum):
+    object_finalize = 'OBJECT_FINALIZE'
+    object_metadata_update = 'OBJECT_METADATA_UPDATE'
+    object_delete = 'OBJECT_DELETE'
+    object_archive = 'OBJECT_ARCHIVE'
+
+class CloudStorageMessage(BaseModel):
+    notificationConfig: str
+    eventType: EventTypeEnum
+    payloadFormat: str
+    bucketId: str
+    objectId: str
+    objectGeneration: str
+    eventTime: str
+
 class GooglePubSubMessage(BaseModel):
     data: Base64Str
     messageId: str
@@ -29,6 +47,9 @@ class GooglePubSubMessage(BaseModel):
 
     def discovery_message(self) -> DiscoveryMessage:
         return DiscoveryMessage.model_validate_json(self.data)
+    
+    def cloud_storage_message(self) -> CloudStorageMessage:
+        return CloudStorageMessage.model_validate_json(self.data)
 
 class GooglePubSubPushRequest(BaseModel):
     message: GooglePubSubMessage
@@ -58,3 +79,16 @@ async def resource_extract(push_request: GooglePubSubPushRequest):
                                                     message_data.resource_id),
             _preload_content=False
         )
+
+@router.post("/resource/collect")
+async def resource_collect(request: Request, push_request: GooglePubSubPushRequest):
+    message_data: CloudStorageMessage = push_request.message.cloud_storage_message()
+    bucket_id = message_data.bucketId
+    object_id = message_data.objectId
+    if message_data.eventType == EventTypeEnum.object_metadata_update:
+        filepath = os.path.join(bucket_id, object_id)
+        with request.app.s3.open(filepath) as f:
+            metadata_json = json.loads(f.read())
+        await request.app.mongodb["discovery"].find_one_and_replace({"url": metadata_json["url"]}, metadata_json, upsert=True)
+    elif message_data.eventType == EventTypeEnum.object_delete:
+        await request.app.mongodb["discovery"].delete_one({"url": metadata_json["url"]})

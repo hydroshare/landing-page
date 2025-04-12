@@ -12,8 +12,9 @@ class Settings(BaseSettings):
     argo_namespace: str
     argo_bearer_token: str
 
-    mongo_url: str = None
-    mongo_database: str = None
+    s3_endpoint_url: str = 'https://s3.hydroshare.org'
+    mongo_url: str
+    mongo_database: str
 
     hydroshare_mongo_url: str = None
     hydroshare_mongo_database: str = None
