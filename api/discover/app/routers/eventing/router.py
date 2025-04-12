@@ -25,21 +25,6 @@ class DiscoveryMessage(BaseModel):
     resource_id: str
     removed: bool
 
-class EventTypeEnum(Enum):
-    object_finalize = 'OBJECT_FINALIZE'
-    object_metadata_update = 'OBJECT_METADATA_UPDATE'
-    object_delete = 'OBJECT_DELETE'
-    object_archive = 'OBJECT_ARCHIVE'
-
-class CloudStorageMessage(BaseModel):
-    notificationConfig: str
-    eventType: EventTypeEnum
-    payloadFormat: str
-    bucketId: str
-    objectId: str
-    objectGeneration: str
-    eventTime: str
-
 class GooglePubSubMessage(BaseModel):
     data: Base64Str
     messageId: str
@@ -80,16 +65,24 @@ async def resource_extract(push_request: GooglePubSubPushRequest):
             _preload_content=False
         )
 
+class EventTypeEnum(Enum):
+    object_finalize = 'google.cloud.storage.object.v1.finalized'
+    object_delete = 'google.cloud.storage.object.v1.deleted'
+
+class CloudStorageMessage(BaseModel):
+    type: EventTypeEnum
+    bucket: str
+    object: str
+
 @router.post("/resource/collect")
-async def resource_collect(request: Request, push_request: GooglePubSubPushRequest):
-    message_data: CloudStorageMessage = push_request.message.cloud_storage_message()
-    bucket_id = message_data.bucketId
-    object_id = message_data.objectId
+async def resource_collect(request: Request, cloud_storage_message: CloudStorageMessage):
+    bucket_id = cloud_storage_message.bucket
+    object_id = cloud_storage_message.object
     filepath = os.path.join(bucket_id, object_id)
-    if message_data.eventType == EventTypeEnum.object_finalize:
+    if cloud_storage_message.type == EventTypeEnum.object_finalize:
         with request.app.s3.open(filepath) as f:
             metadata_json = json.loads(f.read())
             metadata_json['_s3_filepath'] = filepath
         await request.app.mongodb["discovery"].find_one_and_replace({"url": metadata_json["url"]}, metadata_json, upsert=True)
-    elif message_data.eventType == EventTypeEnum.object_delete:
+    elif cloud_storage_message.type == EventTypeEnum.object_delete:
         await request.app.mongodb["discovery"].delete_one({"_s3_filepath": filepath})
