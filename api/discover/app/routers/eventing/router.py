@@ -85,10 +85,11 @@ async def resource_collect(request: Request, push_request: GooglePubSubPushReque
     message_data: CloudStorageMessage = push_request.message.cloud_storage_message()
     bucket_id = message_data.bucketId
     object_id = message_data.objectId
+    filepath = os.path.join(bucket_id, object_id)
     if message_data.eventType == EventTypeEnum.object_metadata_update:
-        filepath = os.path.join(bucket_id, object_id)
         with request.app.s3.open(filepath) as f:
             metadata_json = json.loads(f.read())
+            metadata_json['_s3_filepath'] = filepath
         await request.app.mongodb["discovery"].find_one_and_replace({"url": metadata_json["url"]}, metadata_json, upsert=True)
     elif message_data.eventType == EventTypeEnum.object_delete:
-        await request.app.mongodb["discovery"].delete_one({"url": metadata_json["url"]})
+        await request.app.mongodb["discovery"].delete_one({"_s3_filepath": filepath})
