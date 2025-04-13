@@ -68,7 +68,6 @@ class EventTypeEnum(Enum):
     object_delete = 'google.cloud.storage.object.v1.deleted'
 
 class CloudStorageMessage(BaseModel):
-    type: EventTypeEnum
     bucket: str
     name: str
 
