@@ -82,7 +82,4 @@ async def resource_collect(request: Request, cloud_storage_message: CloudStorage
     bucket_id = cloud_storage_message.bucket
     object_name = cloud_storage_message.name
     filepath = os.path.join(bucket_id, object_name)
-    with request.app.s3.open(filepath) as f:
-        metadata_json = json.loads(f.read())
-        metadata_json['_s3_filepath'] = filepath
-    await request.app.mongodb["discovery"].find_one_and_replace({"url": metadata_json["url"]}, metadata_json, upsert=True)
+    await request.app.mongodb["discovery"].delete_one({"_s3_filepath": filepath})
