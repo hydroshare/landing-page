@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Header
+from typing import Annotated
 from enum import Enum
 
 from typing import Any
@@ -69,17 +70,17 @@ class EventTypeEnum(Enum):
 class CloudStorageMessage(BaseModel):
     type: EventTypeEnum
     bucket: str
-    object: str
+    name: str
 
 @router.post("/resource/collect")
-async def resource_collect(request: Request, cloud_storage_message: CloudStorageMessage):
+async def resource_collect(request: Request, cloud_storage_message: CloudStorageMessage, ce_type: Annotated[str | None, Header()] = None):
     bucket_id = cloud_storage_message.bucket
-    object_id = cloud_storage_message.object
-    filepath = os.path.join(bucket_id, object_id)
-    if cloud_storage_message.type == EventTypeEnum.object_finalize:
+    object_name = cloud_storage_message.name
+    filepath = os.path.join(bucket_id, object_name)
+    if ce_type == EventTypeEnum.object_finalize:
         with request.app.s3.open(filepath) as f:
             metadata_json = json.loads(f.read())
             metadata_json['_s3_filepath'] = filepath
         await request.app.mongodb["discovery"].find_one_and_replace({"url": metadata_json["url"]}, metadata_json, upsert=True)
-    elif cloud_storage_message.type == EventTypeEnum.object_delete:
+    elif ce_type == EventTypeEnum.object_delete:
         await request.app.mongodb["discovery"].delete_one({"_s3_filepath": filepath})
