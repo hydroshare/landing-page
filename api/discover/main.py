@@ -19,8 +19,9 @@ async def on_startup(app: FastAPI):
     app.db = AsyncIOMotorClient(get_settings().mongo_url)
     app.mongodb = app.db[get_settings().mongo_database]
     app.s3 = s3fs.S3FileSystem(endpoint_url=get_settings().s3_endpoint_url)
+    yield
 
-app = FastAPI()
+app = FastAPI(lifespan=on_startup)
 
 app.include_router(
     eventing_router,
