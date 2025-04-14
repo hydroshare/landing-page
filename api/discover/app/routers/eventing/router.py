@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Header
+from fastapi import APIRouter, Request
 
 from typing import Any
 import requests
@@ -73,7 +73,7 @@ async def resource_collect(request: Request, cloud_storage_message: CloudStorage
     with request.app.s3.open(filepath) as f:
         metadata_json = json.loads(f.read())
         metadata_json['_s3_filepath'] = filepath
-    await request.app.mongodb["discovery"].find_one_and_replace({"url": metadata_json["url"]}, json.dumps(metadata_json), upsert=True)
+    await request.app.mongodb["discovery"].find_one_and_replace({"url": metadata_json["url"]}, metadata_json, upsert=True)
 
 @router.post("/resource/remove")
 async def resource_collect(request: Request, cloud_storage_message: CloudStorageMessage):
