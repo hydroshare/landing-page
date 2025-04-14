@@ -1,6 +1,4 @@
 from fastapi import APIRouter, Request, Header
-from typing import Annotated
-from enum import Enum
 
 from typing import Any
 import requests
@@ -10,7 +8,6 @@ import json
 from pydantic import BaseModel, Base64Str
 from argo_workflows import Configuration, ApiClient
 from argo_workflows.api import workflow_service_api
-from bson.objectid import ObjectId
 
 from config import get_settings
 
@@ -76,8 +73,7 @@ async def resource_collect(request: Request, cloud_storage_message: CloudStorage
     with request.app.s3.open(filepath) as f:
         metadata_json = json.loads(f.read())
         metadata_json['_s3_filepath'] = filepath
-        metadata_json['_id'] = ObjectId()
-    await request.app.mongodb["discovery"].find_one_and_replace({"url": metadata_json["url"]}, metadata_json, upsert=True)
+    await request.app.mongodb["discovery"].find_one_and_replace({"url": metadata_json["url"]}, json.dumps(metadata_json), upsert=True)
 
 @router.post("/resource/remove")
 async def resource_collect(request: Request, cloud_storage_message: CloudStorageMessage):
