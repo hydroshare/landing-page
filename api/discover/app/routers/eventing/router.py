@@ -73,12 +73,13 @@ async def resource_collect(request: Request, cloud_storage_message: CloudStorage
     with request.app.s3.open(filepath) as f:
         metadata_json = json.loads(f.read())
         metadata_json['_s3_filepath'] = filepath
-    await request.app.mongodb["discovery"].find_one_and_replace({"url": metadata_json["url"]}, metadata_json, upsert=True)
     typeahead_json = {}
     typeahead_json['name'] = metadata_json['name']
     typeahead_json['description'] = metadata_json['description']
     typeahead_json['keywords'] = metadata_json['keywords']
     typeahead_json['url'] = metadata_json['url']
+    typeahead_json['_s3_filepath'] = filepath
+    await request.app.mongodb["discovery"].find_one_and_replace({"url": metadata_json["url"]}, metadata_json, upsert=True)
     await request.app.mongodb["typeahead"].find_one_and_replace({"url": metadata_json["url"]}, metadata_json, upsert=True)
 
 @router.post("/resource/remove")
@@ -86,4 +87,6 @@ async def resource_collect(request: Request, cloud_storage_message: CloudStorage
     bucket_id = cloud_storage_message.bucket
     object_name = cloud_storage_message.name
     filepath = os.path.join(bucket_id, object_name)
-    await request.app.mongodb["discovery"].delete_one({"_s3_filepath": filepath})
+    if not request.app.s3.exists(filepath):
+        await request.app.mongodb["discovery"].delete_one({"_s3_filepath": filepath})
+        await request.app.mongodb["typeahead"].delete_one({"_s3_filepath": filepath})
