@@ -155,7 +155,7 @@ class SearchQuery(BaseModel):
         must = []
         must.append({'term': {'path': 'type', 'query': "Dataset"}})
         if self.contentType:
-            must.append({'term': {'path': '@type', 'query': self.contentType}})
+            must.append({'term': {'path': 'additionalType', 'query': self.contentType}})
         if self.creatorName:
             must.append({'text': {'path': 'creator.name', 'query': self.creatorName}})
         if self.contributorName:
