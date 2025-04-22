@@ -9,22 +9,22 @@ git clone https://github.com/hydroshare/discover-atlas.git
 
 ### API for local development
 ```console
-cd app
 cp .env.template .env
 make build
 make up
 ```
-The API will be available at http://0.0.0.0:8000
+The root route of the API will be available at http://localhost:8000. 
+The swagger docs will be at http://localhost:8000/docs. 
+The Redoc is at http://localhost:8000/redoc. 
 
 ### Frontend for local development
 ```console
-cd app
 cp .env.template .env  #if you haven't already
 cd frontend
 npm install
-npm run dev
+npm run serve
 ```
-The frontend will be available at http://localhost:5173/discover
+The frontend will be available at http://localhost:8080/
 More detailed info is available in the [frontend readme](frontend/README.md)
 
 ## Formatting
