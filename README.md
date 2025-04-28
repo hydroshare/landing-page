@@ -10,6 +10,7 @@ git clone https://github.com/hydroshare/discover-atlas.git
 ### API for local development
 ```console
 cp .env.template .env
+# modify settings as necessary in the .env (at least MONGO_URL and MONGO_DATABASE)
 make build
 make up
 ```
