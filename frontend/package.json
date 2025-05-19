@@ -6,16 +6,19 @@
   "scripts": {
     "serve": "vite --open",
     "build": "vite build",
-    "validate": "npm-run-all --parallel lint-fix format-fix",
     "build-prod": "vite build --mode=production",
     "serve-prod": "vite --mode production",
     "deploy": "node scripts/gh-pages-deploy.js",
     "up": "taze major -I",
-    "lint-format": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts --ignore-pattern .gitignore",
-    "lint-format-fix": "eslint --ext .vue,.js,.jsx,.cjs,.mjs,.ts --fix --ignore-pattern .gitignore .",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --ignore-path .gitignore",
+    "lint-fix": "eslint --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore .",
+    "format": "prettier --check src/",
+    "format-fix": "prettier --write src/",
+    "lint-format": "npm-run-all --parallel lint format",
+    "lint-format-fix": "npm-run-all --parallel lint-fix format-fix",
     "precommit": "npm run lint-format",
     "prepush": "npm run lint-format",
-    "prepare": "cd .. && husky frontend/.husky"
+    "prepare": "husky install"
   },
   "dependencies": {
     "@cznethub/cznet-vue-core": "^0.2.34",
@@ -75,8 +78,5 @@
     "vite-ssg-sitemap": "^0.8.1",
     "vitest": "^3.0.8",
     "vue-tsc": "^2.2.8"
-  },
-  "lint-staged": {
-    "*": "eslint --fix"
   }
 }
