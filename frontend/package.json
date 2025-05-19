@@ -1,8 +1,8 @@
 {
   "name": "discovery-atlas",
+  "type": "module",
   "version": "1.0.1",
   "private": true,
-  "type": "module",
   "scripts": {
     "serve": "vite --open",
     "build": "vite build",
