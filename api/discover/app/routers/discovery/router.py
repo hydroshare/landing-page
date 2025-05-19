@@ -1,17 +1,11 @@
-import gzip
 import json
 import mimetypes
-import os
-import tarfile
-import tempfile
 from datetime import datetime
-from typing import Any, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
-from pymongo import UpdateOne
 
-from discover.app.adapters.hydroshare import HydroshareMetadataAdapter
 from config import get_settings
 
 router = APIRouter()
@@ -24,10 +18,16 @@ class SearchQuery(BaseModel):
     contentType: Optional[str] = None
     providerName: Optional[str] = None
     creatorName: Optional[str] = None
+    contributorName: Optional[str] = None
+    keyword: Optional[str] = None
     dataCoverageStart: Optional[int] = None
     dataCoverageEnd: Optional[int] = None
     publishedStart: Optional[int] = None
     publishedEnd: Optional[int] = None
+    dateCreatedStart: Optional[int] = None
+    dateCreatedEnd: Optional[int] = None
+    dateModifiedStart: Optional[int] = None
+    dateModifiedEnd: Optional[int] = None
     hasPartName: Optional[str] = None
     isPartOfName: Optional[str] = None
     associatedMediaName: Optional[str] = None
@@ -46,7 +46,7 @@ class SearchQuery(BaseModel):
             return None
         return v
 
-    @field_validator('dataCoverageStart', 'dataCoverageEnd', 'publishedStart', 'publishedEnd')
+    @field_validator('dataCoverageStart', 'dataCoverageEnd', 'publishedStart', 'publishedEnd', 'dateCreatedStart', 'dateCreatedEnd', 'dateModifiedStart', 'dateModifiedEnd')
     def validate_year(cls, v, info: ValidationInfo):
         if v is None:
             return v
@@ -63,6 +63,10 @@ class SearchQuery(BaseModel):
             raise ValueError('dataCoverageEnd must be greater or equal to dataCoverageStart')
         if self.publishedStart and self.publishedEnd and self.publishedEnd < self.publishedStart:
             raise ValueError('publishedEnd must be greater or equal to publishedStart')
+        if self.dateCreatedStart and self.dateCreatedEnd and self.dateCreatedEnd < self.dateCreatedStart:
+            raise ValueError('dateCreatedEnd must be greater or equal to dateCreatedStart')
+        if self.dateModifiedStart and self.dateModifiedEnd and self.dateModifiedEnd < self.dateModifiedStart:
+            raise ValueError('dateModifiedEnd must be greater or equal to dateModifiedStart')
 
     @field_validator('pageNumber', 'pageSize')
     def validate_page(cls, v, info: ValidationInfo):
@@ -92,6 +96,44 @@ class SearchQuery(BaseModel):
                 }
             )
 
+        if self.dateCreatedStart:
+            filters.append(
+                {
+                    'range': {
+                        'path': 'dateCreated',
+                        'gte': datetime(self.dateCreatedStart, 1, 1),
+                    },
+                }
+            )
+        if self.dateCreatedEnd:
+            filters.append(
+                {
+                    'range': {
+                        'path': 'dateCreated',
+                        'lt': datetime(self.dateCreatedEnd + 1, 1, 1),  # +1 to include all of the dateCreatedEnd year
+                    },
+                }
+            )
+
+        if self.dateModifiedStart:
+            filters.append(
+                {
+                    'range': {
+                        'path': 'dateModified',
+                        'gte': datetime(self.dateModifiedStart, 1, 1),
+                    },
+                }
+            )
+        if self.dateModifiedEnd:
+            filters.append(
+                {
+                    'range': {
+                        'path': 'dateModified',
+                        'lt': datetime(self.dateModifiedEnd + 1, 1, 1),  # +1 to include all of the dateModifiedEnd year
+                    },
+                }
+            )
+
         if self.dataCoverageStart:
             filters.append(
                 {'range': {'path': 'temporalCoverage.startDate', 'gte': datetime(self.dataCoverageStart, 1, 1)}}
@@ -113,9 +155,13 @@ class SearchQuery(BaseModel):
         must = []
         must.append({'term': {'path': 'type', 'query': "Dataset"}})
         if self.contentType:
-            must.append({'term': {'path': '@type', 'query': self.contentType}})
+            must.append({'term': {'path': 'additionalType', 'query': self.contentType}})
         if self.creatorName:
             must.append({'text': {'path': 'creator.name', 'query': self.creatorName}})
+        if self.contributorName:
+            must.append({'text': {'path': 'contributor.name', 'query': self.contributorName}})
+        if self.keyword:
+            must.append({'text': {'path': 'keywords', 'query': self.keyword}})
         if self.providerName:
             must.append({'text': {'path': 'provider.name', 'query': self.providerName}})
         if self.hasPartName:
@@ -212,7 +258,7 @@ async def search(request: Request, search_query: SearchQuery = Depends()):
     result = await aggregate_stages(request, search_query.stages_v2, search_query.pageNumber, search_query.pageSize)
     json_str = json.dumps(result, default=str)
     return json.loads(json_str)
-    
+
 
 async def aggregate_stages(request, stages, pageNumber=1, pageSize=30):
     # Insert a `$facet` stage to extract the total count. We specify pagination here too.
@@ -224,7 +270,7 @@ async def aggregate_stages(request, stages, pageNumber=1, pageSize=30):
 
     if total_count is not None:
         return {"docs": aggregation[0]["docs"], "meta": {"count": {"total": total_count}}}
-    
+
     return {"docs": aggregation[0]["docs"]}
 
 
