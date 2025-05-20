@@ -79,8 +79,8 @@ async def resource_collect(request: Request, cloud_storage_message: CloudStorage
     typeahead_json['keywords'] = metadata_json['keywords']
     typeahead_json['url'] = metadata_json['url']
     typeahead_json['_s3_filepath'] = filepath
-    await request.app.mongodb["discovery"].find_one_and_replace({"url": metadata_json["url"]}, metadata_json, upsert=True)
-    await request.app.mongodb["typeahead"].find_one_and_replace({"url": metadata_json["url"]}, metadata_json, upsert=True)
+    await request.app.mongodb["discovery"].find_one_and_replace({"_s3_filepath": metadata_json["_s3_filepath"]}, metadata_json, upsert=True)
+    await request.app.mongodb["typeahead"].find_one_and_replace({"_s3_filepath": metadata_json["_s3_filepath"]}, metadata_json, upsert=True)
 
 @router.post("/resource/remove")
 async def resource_collect(request: Request, cloud_storage_message: CloudStorageMessage):
