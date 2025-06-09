@@ -236,11 +236,11 @@ class SearchQuery(BaseModel):
         stages.append(search_stage)
 
         # sorting needs to happen before pagination
-        if self.sortBy:
-            if self.sortBy == "name":
-                self.sortBy = "name_for_sorting"
-                self.reverseSort = not self.reverseSort
-            stages.append({'$sort': {self.sortBy: -1 if self.reverseSort else 1}})
+        # if self.sortBy:
+        #     if self.sortBy == "name":
+        #         self.sortBy = "name_for_sorting"
+        #         self.reverseSort = not self.reverseSort
+        #     stages.append({'$sort': {self.sortBy: -1 if self.reverseSort else 1}})
 
         stages.append(
             {'$set': {'score': {'$meta': 'searchScore'}, 'highlights': {'$meta': 'searchHighlights'}}},

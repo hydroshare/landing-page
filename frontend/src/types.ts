@@ -22,6 +22,7 @@ export interface IResult {
   name: string;
   score: number; // unused for now...
   url: string;
+  identifier: string;
   funding: string[];
   spatialCoverage: any;
   _showMore?: boolean; // Used to toggle 'show more...' button
@@ -71,7 +72,7 @@ export interface ISearchFilter {
   contributorName: string;
   ownerName: string;
   subject: string;
-  funder: string;
+  fundingFunderName: string;
 }
 
 export interface ISearchParams {
@@ -80,14 +81,14 @@ export interface ISearchParams {
   pageNumber: number;
   publishedStart?: number;
   publishedEnd?: number;
-  creationDateStart?: number;
-  creationDateEnd?: number;
+  dateCreatedStart?: number;
+  dateCreatedEnd?: number;
   dataCoverageStart?: number;
   dataCoverageEnd?: number;
   authorName?: string;
   contributorName?: string;
   ownerName?: string;
-  funder?: string;
+  fundingFunderName?: string;
   subject?: string;
   availability?: string[];
   contentType?: string[];

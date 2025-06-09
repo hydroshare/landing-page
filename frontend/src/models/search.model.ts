@@ -17,6 +17,8 @@ export interface ISearchState {
 export default class Search extends Model {
   static entity = "search";
 
+  static abortController = new AbortController()
+
   static fields() {
     return {};
   }
@@ -36,26 +38,33 @@ export default class Search extends Model {
    * @returns a boolean indicating if the query has more pages that can be fetched with `fetchMore` method
    */
   public static async search(params: ISearchParams) {
-    const response: Response = await fetch(
-      `${ENDPOINTS.search}?${getQueryString(params)}`,
-    );
+    try {
+      this.abortController.abort("[Search]: Searching...")
+      this.abortController = new AbortController()
+      const response: Response = await fetch(
+        `${ENDPOINTS.search}?${getQueryString(params)}`, { signal: this.abortController.signal }
+      );
 
-    if (!response.ok) {
-      throw new Error("Network response was not OK");
-    }
-
-    const incoming: ISearchApiResponse = await response.json();
-    this.commit((state) => {
-      if (Array.isArray(incoming.docs)) {
-        state.results = {
-          docs: incoming.docs.map(this._parseResult),
-          metadata: incoming.meta,
-        };
+      if (!response.ok) {
+        throw new Error("Network response was not OK");
       }
-    });
 
-    // If the number of items in this page equals the page size, then there could be more items in the next page.
-    return incoming.docs.length === params.pageSize;
+      const incoming: ISearchApiResponse = await response.json();
+      this.commit((state) => {
+        if (Array.isArray(incoming.docs)) {
+          state.results = {
+            docs: incoming.docs.map(this._parseResult),
+            metadata: incoming.meta,
+          };
+        }
+      });
+
+      // If the number of items in this page equals the page size, then there could be more items in the next page.
+      return incoming.docs.length === params.pageSize;
+    }
+    catch (e) {
+      console.log(e)
+    }
   }
 
   /**
@@ -124,7 +133,6 @@ export default class Search extends Model {
 
   /** Transform raw result data from API into `IResult` shaped objects */
   private static _parseResult(rawResult: any): IResult {
-    console.log(rawResult);
     // TODO: get resource type and access
     return {
       creator: rawResult.creator.map((c) => c.name) || [],
@@ -141,6 +149,7 @@ export default class Search extends Model {
       score: rawResult.score || 0,
       spatialCoverage: rawResult.spatialCoverage?.geo || [],
       url: rawResult.url || "",
+      identifier: rawResult.identifier[0] || "",
     };
   }
 

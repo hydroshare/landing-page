@@ -226,7 +226,7 @@
             @blur="pushSearchRoute"
             @keyup.enter="pushSearchRoute"
             @click:clear="pushSearchRoute"
-            v-model="filter.funder"
+            v-model="filter.fundingFunderName"
             label="Funder"
             class="mt-6"
             prepend-inner-icon="mdi-domain"
@@ -291,92 +291,6 @@
                 </v-card-text>
               </v-card>
             </template>
-            <template v-else-if="false">
-              <v-card
-                v-if="!results.length"
-                class="text-body-2 text-center mt-8"
-              >
-                <v-empty-state
-                  text="No results found."
-                  icon="mdi-text-box-remove"
-                />
-              </v-card>
-              <div
-                v-if="searchResultsMetadata?.count?.total"
-                class="text-body-1 text-medium-emphasis mb-4"
-              >
-                {{ searchResultsMetadata?.count?.total || "" }} result{{
-                  searchResultsMetadata?.count?.total != 1 ? "s" : ""
-                }}
-              </div>
-              <div
-                v-for="result of results"
-                class="mb-16 text-body-2"
-                :key="result.id"
-              >
-                <a
-                  class="text-h6 text-decoration-none my-12"
-                  :href="result.url"
-                  target="_blank"
-                  v-html="highlight(result, 'name')"
-                ></a>
-                <div class="my-1" v-html="highlightCreators(result)"></div>
-                <div class="my-1" v-if="result.dateCreated">
-                  Date Created: {{ formatDate(result.dateCreated) }}
-                </div>
-                <div class="my-1" v-if="result.datePublished">
-                  Publication Date: {{ formatDate(result.datePublished) }}
-                </div>
-                <p
-                  class="mt-4 mb-1"
-                  :class="{ 'snip-3': !result._showMore }"
-                  v-html="highlight(result, 'description')"
-                ></p>
-
-                <v-btn
-                  size="x-small"
-                  variant="text"
-                  color="primary"
-                  @click="result._showMore = !result._showMore"
-                  >Show {{ result._showMore ? "less" : "more" }}...</v-btn
-                >
-
-                <div
-                  class="d-flex gap-1 justify-space-between flex-wrap flex-lg-nowrap mt-2"
-                >
-                  <div>
-                    <a
-                      class="mb-2 d-block"
-                      :href="result.url"
-                      target="_blank"
-                      >{{ result.url }}</a
-                    >
-                    <div class="mb-2">
-                      <strong>Keywords: </strong
-                      ><span v-html="highlight(result, 'keywords')"></span>
-                    </div>
-                    <div class="mb-2" v-if="result.funding.length">
-                      <strong>Funded by: </strong
-                      >{{ result.funding.join(", ") }}
-                    </div>
-                    <div class="mb-2" v-if="result.license">
-                      <strong>License: </strong>{{ result.license }}
-                    </div>
-                  </div>
-
-                  <div
-                    v-if="hasSpatialFeatures(result)"
-                    :id="`map-${result.id}`"
-                  >
-                    <cd-spatial-coverage-map
-                      :loader="loader"
-                      :loader-options="options"
-                      :feature="result.spatialCoverage"
-                    />
-                  </div>
-                </div>
-              </div>
-            </template>
 
             <template v-else>
               <v-card
@@ -413,7 +327,7 @@
                 <template #item.title="{ item }">
                   <a
                     class="text-decoration-none"
-                    :href="item.url"
+                    :href="item.identifier"
                     target="_blank"
                     v-html="highlight(item, 'name')"
                   ></a>
@@ -724,7 +638,7 @@ class CdSearchResults extends Vue {
       this.filter.contributorName ||
       this.filter.ownerName ||
       this.filter.subject ||
-      this.filter.funder
+      this.filter.fundingFunderName
     );
   }
 
@@ -738,8 +652,8 @@ class CdSearchResults extends Vue {
 
     // CREATION DATE
     if (this.filter.creationDate.isActive) {
-      queryParams.creationDateStart = this.creationDate[0];
-      queryParams.creationDateEnd = this.creationDate[1];
+      queryParams.dateCreatedStart = this.creationDate[0];
+      queryParams.dateCreatedEnd = this.creationDate[1];
     }
 
     // PUBLICATION YEAR
@@ -760,15 +674,15 @@ class CdSearchResults extends Vue {
     }
 
     if (this.filter.contributorName) {
-      queryParams.authorName = this.filter.contributorName;
+      queryParams.contributorName = this.filter.contributorName;
     }
 
     if (this.filter.ownerName) {
-      queryParams.authorName = this.filter.ownerName;
+      queryParams.ownerName = this.filter.ownerName;
     }
 
-    if (this.filter.funder) {
-      queryParams.authorName = this.filter.funder;
+    if (this.filter.fundingFunderName) {
+      queryParams.fundingFunderName = this.filter.fundingFunderName;
     }
 
     if (this.filter.subject) {
@@ -807,7 +721,7 @@ class CdSearchResults extends Vue {
       [EnumShortParams.CONTRIBUTOR_NAME]:
         this.filter.contributorName || undefined,
       [EnumShortParams.OWNER_NAME]: this.filter.ownerName || undefined,
-      [EnumShortParams.FUNDER]: this.filter.funder || undefined,
+      [EnumShortParams.FUNDER]: this.filter.fundingFunderName || undefined,
       [EnumShortParams.SUBJECT]: this.filter.subject || undefined,
       [EnumShortParams.AVAILABILITY]: this.filter.availability.isActive
         ? this.filter.availability.value || undefined
@@ -878,7 +792,7 @@ class CdSearchResults extends Vue {
     this.isSearching = true;
     this.pageNumber = 1;
 
-    this.hasMore = await Search.search(this.queryParams);
+    this.hasMore = !!(await Search.search(this.queryParams));
     this.isSearching = false;
   }
 
@@ -978,7 +892,7 @@ class CdSearchResults extends Vue {
     this.filter.contributorName = "";
     this.filter.ownerName = "";
     this.filter.subject = "";
-    this.filter.funder = "";
+    this.filter.fundingFunderName = "";
 
     if (wasSomeActive) {
       this.pushSearchRoute();
@@ -996,7 +910,7 @@ class CdSearchResults extends Vue {
       (this.$route.query[EnumShortParams.CONTRIBUTOR_NAME] as string) || "";
     this.filter.ownerName =
       (this.$route.query[EnumShortParams.OWNER_NAME] as string) || "";
-    this.filter.funder =
+    this.filter.fundingFunderName =
       (this.$route.query[EnumShortParams.FUNDER] as string) || "";
     this.filter.subject =
       (this.$route.query[EnumShortParams.SUBJECT] as string) || "";
