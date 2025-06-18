@@ -170,7 +170,7 @@
             @blur="pushSearchRoute"
             @keyup.enter="pushSearchRoute"
             @click:clear="pushSearchRoute"
-            v-model="filter.authorName"
+            v-model="filter.creatorName"
             label="Author's name"
             class="mt-6"
             prepend-inner-icon="mdi-account-edit"
@@ -305,14 +305,6 @@
                   />
                 </v-card-text>
               </v-card>
-              <div
-                v-if="searchResultsMetadata?.count?.total"
-                class="text-body-1 text-medium-emphasis mb-4"
-              >
-                {{ searchResultsMetadata?.count?.total || "" }} result{{
-                  searchResultsMetadata?.count?.total != 1 ? "s" : ""
-                }}
-              </div>
 
               <v-data-table-virtual
                 v-if="results.length"
@@ -441,7 +433,6 @@ import {
   ISearchFilter,
   ISearchParams,
   IResult,
-  ISearchResultsMetadata,
   EnumShortParams,
   EnumDictionary,
 } from "@/types";
@@ -453,12 +444,6 @@ const loader: Loader = new Loader(
   import.meta.env.VITE_APP_GOOGLE_MAPS_API_KEY,
   options,
 );
-
-const sortOptions: { label: string; value: string }[] = [
-  { label: "Relevance", value: "relevance" },
-  { label: "Date Created", value: "dateCreated" },
-  { label: "Title", value: "name" },
-];
 
 @Component({
   name: "cd-search-results",
@@ -474,8 +459,6 @@ class CdSearchResults extends Vue {
   hasMore = true;
   isSearching = false;
   isFetchingMore = false;
-  sort: "name" | "dateCreated" | "relevance" = "relevance";
-  sortEmpty = "dateCreated";
   // public view: 'list' | 'map' = 'list'
   filter: ISearchFilter = {
     publicationYear: {
@@ -513,11 +496,11 @@ class CdSearchResults extends Vue {
       value: null,
       isActive: false,
     },
-    authorName: "",
+    creatorName: "",
     contributorName: "",
     ownerName: "",
     subject: "",
-    funder: "",
+    fundingFunderName: "",
   };
 
   availabilityIcons = [
@@ -562,16 +545,6 @@ class CdSearchResults extends Vue {
   formatDate = formatDate;
   route = useRoute();
   router = useRouter();
-
-  get sortOptions(): { label: string; value: string }[] {
-    return this.searchQuery
-      ? sortOptions
-      : sortOptions.slice(1, sortOptions.length);
-  }
-
-  get searchResultsMetadata(): ISearchResultsMetadata | undefined {
-    return Search.$state.results.metadata;
-  }
 
   public get creationDate() {
     return SearchResults.$state.creationDate;
@@ -618,7 +591,7 @@ class CdSearchResults extends Vue {
   }
 
   public get results(): IResult[] {
-    return Search.$state.results.docs;
+    return Search.$state.results;
   }
 
   // public get clusters() {
@@ -634,7 +607,7 @@ class CdSearchResults extends Vue {
         this.filter.availability.value?.length) ||
       (this.filter.contentType.isActive &&
         this.filter.contentType.value?.length) ||
-      this.filter.authorName ||
+      this.filter.creatorName ||
       this.filter.contributorName ||
       this.filter.ownerName ||
       this.filter.subject ||
@@ -669,8 +642,8 @@ class CdSearchResults extends Vue {
     }
 
     // CREATOR NAME
-    if (this.filter.authorName) {
-      queryParams.authorName = this.filter.authorName;
+    if (this.filter.creatorName) {
+      queryParams.creatorName = this.filter.creatorName;
     }
 
     if (this.filter.contributorName) {
@@ -686,7 +659,7 @@ class CdSearchResults extends Vue {
     }
 
     if (this.filter.subject) {
-      queryParams.subject = this.filter.subject;
+      queryParams.keyword = this.filter.subject;
     }
 
     // AVAILABILITY
@@ -702,14 +675,6 @@ class CdSearchResults extends Vue {
       queryParams.contentType = this.filter.contentType.value;
     }
 
-    // SORT BY
-    if (this.searchQuery && this.sort) {
-      queryParams.sortBy = this.sort;
-    } else if (this.sortEmpty) {
-      // @ts-ignore
-      queryParams.sortBy = this.sortEmpty;
-    }
-
     return queryParams;
   }
 
@@ -717,7 +682,7 @@ class CdSearchResults extends Vue {
   public get routeParams(): EnumDictionary<EnumShortParams, any> {
     return {
       [EnumShortParams.QUERY]: this.searchQuery,
-      [EnumShortParams.AUTHOR_NAME]: this.filter.authorName || undefined,
+      [EnumShortParams.AUTHOR_NAME]: this.filter.creatorName || undefined,
       [EnumShortParams.CONTRIBUTOR_NAME]:
         this.filter.contributorName || undefined,
       [EnumShortParams.OWNER_NAME]: this.filter.ownerName || undefined,
@@ -738,8 +703,6 @@ class CdSearchResults extends Vue {
       [EnumShortParams.DATA_COVERAGE]: this.filter.dataCoverage.isActive
         ? this.dataCoverage.map((n) => n.toString()) || undefined
         : undefined,
-      [EnumShortParams.SORT]:
-        (this.searchQuery ? this.sort : this.sortEmpty) || undefined,
     };
   }
 
@@ -888,7 +851,7 @@ class CdSearchResults extends Vue {
     this.filter.contentType.value = null;
     this.filter.contentType.isActive = false;
 
-    this.filter.authorName = "";
+    this.filter.creatorName = "";
     this.filter.contributorName = "";
     this.filter.ownerName = "";
     this.filter.subject = "";
@@ -902,9 +865,9 @@ class CdSearchResults extends Vue {
   /** Load route query parameters into component values. */
   private _loadRouteParams() {
     // SEARCH QUERY
-    this.searchQuery = this.$route.query["q"] as string;
+    this.searchQuery = this.$route.query[EnumShortParams.QUERY] as string;
 
-    this.filter.authorName =
+    this.filter.creatorName =
       (this.$route.query[EnumShortParams.AUTHOR_NAME] as string) || "";
     this.filter.contributorName =
       (this.$route.query[EnumShortParams.CONTRIBUTOR_NAME] as string) || "";
@@ -963,23 +926,6 @@ class CdSearchResults extends Vue {
         ((
           this.$route.query[EnumShortParams.DATA_COVERAGE] as [string, string]
         )?.map((n) => +n) as [number, number]) || this.dataCoverage;
-    }
-
-    // SORT
-    if (this.route.query[EnumShortParams.SORT]) {
-      if (this.searchQuery) {
-        this.sort =
-          (this.route.query[EnumShortParams.SORT] as
-            | "name"
-            | "dateCreated"
-            | "relevance") || this.sort;
-      } else {
-        this.sortEmpty =
-          (this.route.query[EnumShortParams.SORT] as
-            | "name"
-            | "dateCreated"
-            | "relevance") || this.sort;
-      }
     }
   }
 

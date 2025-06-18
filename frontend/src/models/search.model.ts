@@ -4,13 +4,11 @@ import { getQueryString } from "@/util";
 import {
   IResult,
   ISearchParams,
-  ISearchResultsMetadata,
   ITypeaheadParams,
-  ISearchApiResponse,
 } from "@/types";
 
 export interface ISearchState {
-  results: { docs: IResult[]; metadata?: ISearchResultsMetadata };
+  results: IResult[];
   clusters: string[];
 }
 
@@ -29,7 +27,7 @@ export default class Search extends Model {
 
   static state(): ISearchState {
     return {
-      results: { docs: [] },
+      results: [],
       clusters: [],
     };
   }
@@ -49,18 +47,15 @@ export default class Search extends Model {
         throw new Error("Network response was not OK");
       }
 
-      const incoming: ISearchApiResponse = await response.json();
+      const incoming = await response.json();
       this.commit((state) => {
-        if (Array.isArray(incoming.docs)) {
-          state.results = {
-            docs: incoming.docs.map(this._parseResult),
-            metadata: incoming.meta,
-          };
+        if (Array.isArray(incoming)) {
+          state.results = incoming.map(this._parseResult);
         }
       });
 
       // If the number of items in this page equals the page size, then there could be more items in the next page.
-      return incoming.docs.length === params.pageSize;
+      return incoming.length === params.pageSize;
     }
     catch (e) {
       console.log(e)
@@ -72,7 +67,7 @@ export default class Search extends Model {
    */
   public static clearResults() {
     this.commit((state) => {
-      state.results = { docs: [] as IResult[] };
+      state.results = [] as IResult[];
     });
   }
 
@@ -88,19 +83,16 @@ export default class Search extends Model {
       throw new Error("Network response was not OK");
     }
 
-    const incoming: ISearchApiResponse = await response.json();
+    const incoming = await response.json();
 
     this.commit((state) => {
-      state.results = {
-        docs: [
-          ...state.results.docs,
-          ...incoming.docs.map(this._parseResult),
-        ] as IResult[],
-        metadata: incoming.meta,
-      };
+      state.results = [
+        ...state.results,
+        ...incoming.map(this._parseResult),
+      ] as IResult[];
     });
 
-    return incoming.docs.length === params.pageSize;
+    return incoming.length === params.pageSize;
   }
 
   /** Performs a typeahead search and returns the results */

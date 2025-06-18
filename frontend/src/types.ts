@@ -28,15 +28,6 @@ export interface IResult {
   _showMore?: boolean; // Used to toggle 'show more...' button
 }
 
-export interface ISearchApiResponse {
-  docs: any[];
-  meta?: { count?: { total: number } };
-}
-
-export interface ISearchResultsMetadata {
-  count?: { total: number };
-}
-
 export interface IHint {
   type: "db" | "local";
   key: string;
@@ -68,7 +59,7 @@ export interface ISearchFilter {
     value: string[] | null;
     isActive: boolean;
   };
-  authorName: string;
+  creatorName: string;
   contributorName: string;
   ownerName: string;
   subject: string;
@@ -85,14 +76,13 @@ export interface ISearchParams {
   dateCreatedEnd?: number;
   dataCoverageStart?: number;
   dataCoverageEnd?: number;
-  authorName?: string;
+  creatorName?: string;
   contributorName?: string;
   ownerName?: string;
   fundingFunderName?: string;
-  subject?: string;
+  keyword?: string;
   availability?: string[];
   contentType?: string[];
-  sortBy?: "name" | "dateCreated" | "relevance";
 }
 
 export interface ITypeaheadParams {
@@ -102,16 +92,15 @@ export interface ITypeaheadParams {
 export enum EnumShortParams {
   QUERY = "q",
   AUTHOR_NAME = "an",
-  CONTENT_TYPE = "ct",
   CONTRIBUTOR_NAME = "cn",
   OWNER_NAME = "on",
+  CONTENT_TYPE = "ct",
   FUNDER = "f",
   SUBJECT = "sj",
   AVAILABILITY = "a",
   CREATION_DATE = "cd",
   PUBLICATION_YEAR = "py",
   DATA_COVERAGE = "dc",
-  SORT = "s",
 }
 
 export type EnumDictionary<T extends string | symbol | number, U> = {

@@ -13,8 +13,6 @@ router = APIRouter()
 
 class SearchQuery(BaseModel):
     term: Optional[str] = None
-    sortBy: Optional[str] = None
-    reverseSort: bool = True
     contentType: Optional[str] = None
     providerName: Optional[str] = None
     creatorName: Optional[str] = None
@@ -181,40 +179,9 @@ class SearchQuery(BaseModel):
 
         return must
 
+
     @property
     def stages(self):
-        highlightPaths = ['name', 'description', 'keywords']
-        stages = []
-        compound = {'filter': self._filters, 'must': self._must}
-
-        if self.term:
-            compound['should'] = self._should
-
-        search_stage = {
-            '$search': {
-                'index': 'fuzzy_search',
-                'compound': compound,
-            }
-        }
-        if self.term:
-            search_stage["$search"]['highlight'] = {'path': highlightPaths}
-
-        stages.append(search_stage)
-
-        # sorting needs to happen before pagination
-        if self.sortBy:
-            if self.sortBy == "name":
-                self.sortBy = "name_for_sorting"
-                self.reverseSort = not self.reverseSort
-            stages.append({'$sort': {self.sortBy: -1 if self.reverseSort else 1}})
-
-        stages.append(
-            {'$set': {'score': {'$meta': 'searchScore'}, 'highlights': {'$meta': 'searchHighlights'}}},
-        )
-        return stages
-
-    @property
-    def stages_v2(self):
         highlightPaths = ['name', 'description', 'keywords']
         searchPaths = ['name', 'description', 'keywords']
         stages = []
@@ -235,13 +202,6 @@ class SearchQuery(BaseModel):
 
         stages.append(search_stage)
 
-        # sorting needs to happen before pagination
-        # if self.sortBy:
-        #     if self.sortBy == "name":
-        #         self.sortBy = "name_for_sorting"
-        #         self.reverseSort = not self.reverseSort
-        #     stages.append({'$sort': {self.sortBy: -1 if self.reverseSort else 1}})
-
         stages.append(
             {'$set': {'score': {'$meta': 'searchScore'}, 'highlights': {'$meta': 'searchHighlights'}}},
         )
@@ -255,23 +215,16 @@ class SearchQuery(BaseModel):
 
 @router.get("/search")
 async def search(request: Request, search_query: SearchQuery = Depends()):
-    result = await aggregate_stages(request, search_query.stages_v2, search_query.pageNumber, search_query.pageSize)
+    result = await aggregate_stages(request, search_query.stages, search_query.pageNumber, search_query.pageSize)
     json_str = json.dumps(result, default=str)
     return json.loads(json_str)
 
 
 async def aggregate_stages(request, stages, pageNumber=1, pageSize=30):
-    # Insert a `$facet` stage to extract the total count. We specify pagination here too.
-    stages.append({"$facet": {"docs": [{"$skip": (pageNumber - 1) * pageSize},
-                                       {"$limit": pageSize}], "totalCount": [{"$count": 'count'}]}})
-
+    stages.append({"$skip": (pageNumber - 1) * pageSize})
+    stages.append({"$limit": pageSize})
     aggregation = await request.app.mongodb["discovery"].aggregate(stages).to_list(None)
-    total_count = aggregation[0]["totalCount"][0]["count"] if len(aggregation[0]["totalCount"]) else None
-
-    if total_count is not None:
-        return {"docs": aggregation[0]["docs"], "meta": {"count": {"total": total_count}}}
-
-    return {"docs": aggregation[0]["docs"]}
+    return aggregation
 
 
 @router.get("/typeahead")
