@@ -33,7 +33,7 @@ class SearchQuery(BaseModel):
     fundingFunderName: Optional[str] = None
     creativeWorkStatus: Optional[str] = None
     pageNumber: int = 1
-    pageSize: int = 30
+    pageSize: int = 20
 
     @field_validator('*')
     def empty_str_to_none(cls, v, info: ValidationInfo):
@@ -223,7 +223,7 @@ async def search(request: Request, search_query: SearchQuery = Depends()):
     return json.loads(json_str)
 
 
-async def aggregate_stages(request, stages, pageNumber=1, pageSize=30):
+async def aggregate_stages(request, stages, pageNumber=1, pageSize=20):
     stages.append({"$skip": (pageNumber - 1) * pageSize})
     stages.append({"$limit": pageSize})
     aggregation = await request.app.mongodb["discovery"].aggregate(stages).to_list(None)
@@ -231,7 +231,7 @@ async def aggregate_stages(request, stages, pageNumber=1, pageSize=30):
 
 
 @router.get("/typeahead")
-async def typeahead(request: Request, term: str, pageSize: int = 30):
+async def typeahead(request: Request, term: str, pageSize: int = 20):
     search_paths = ['name', 'description', 'keywords']
     should = [{'autocomplete': {'query': term, 'path': key, 'fuzzy': {'maxEdits': 1}}} for key in search_paths]
 

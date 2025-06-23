@@ -567,7 +567,7 @@ class CdSearchResults extends Vue {
   isIntersecting = false;
   searchQuery = "";
   pageNumber = 1;
-  pageSize = 15;
+  pageSize = 20;
   hasMore = true;
   isSearching = false;
   isFetchingMore = false;
