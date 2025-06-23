@@ -356,12 +356,12 @@
                 <template v-slot:item.icons="{ item }">
                   <div class="d-flex align-center justify-start">
                     <v-img
-                      class="img-content-type mr-2"
+                      class="mr-2"
                       v-if="contentTypeLogos[item.contentType]"
                       :src="contentTypeLogos[item.contentType]"
                       :title="item.contentType"
-                      width="60"
-                      max-width="60"
+                      width="30"
+                      max-width="30"
                     />
                     <v-img
                       class="img-access-icon flex-grow-0"
@@ -1100,12 +1100,6 @@ export default toNative(CdSearchResults);
 
 .results-content-wrapper {
   flex: 1 1 auto;
-}
-
-.img-content-type {
-  background-color: #fff;
-  border: 1px solid #ddd;
-  border-radius: 3px;
 }
 
 // .results-content {
