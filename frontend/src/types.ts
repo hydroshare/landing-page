@@ -25,6 +25,8 @@ export interface IResult {
   identifier: string;
   funding: string[];
   spatialCoverage: any;
+  contentType: string;
+  sharingStatus: string;
   _showMore?: boolean; // Used to toggle 'show more...' button
 }
 
@@ -50,7 +52,7 @@ export interface ISearchFilter {
     isActive: boolean;
   };
   contentType: {
-    options: string[];
+    options: { label: string; value: string }[];
     value: string[] | null;
     isActive: boolean;
   };
@@ -81,7 +83,7 @@ export interface ISearchParams {
   ownerName?: string;
   fundingFunderName?: string;
   keyword?: string;
-  availability?: string[];
+  creativeWorkStatus?: string[];
   contentType?: string[];
 }
 

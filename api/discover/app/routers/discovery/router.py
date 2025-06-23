@@ -176,7 +176,6 @@ class SearchQuery(BaseModel):
             must.append(
                 {'text': {'path': ['creativeWorkStatus', 'creativeWorkStatus.name'], 'query': self.creativeWorkStatus}}
             )
-
         return must
 
 

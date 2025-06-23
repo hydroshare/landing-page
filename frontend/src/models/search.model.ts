@@ -127,12 +127,12 @@ export default class Search extends Model {
   private static _parseResult(rawResult: any): IResult {
     // TODO: get resource type and access
     return {
-      creator: rawResult.creator.map((c) => c.name) || [],
+      creator: rawResult.creator.map((c: any) => c.name) || [],
       dateCreated: rawResult.dateCreated || "",
       datePublished: rawResult.datePublished || "",
       lastModified: rawResult.dateModified || "",
       description: rawResult.description || "",
-      funding: rawResult.funding?.map((f) => f.name || f.funder.name) || [],
+      funding: rawResult.funding?.map((f: any) => f.name || f.funder.name) || [],
       highlights: rawResult.highlights || [],
       id: rawResult["_id"],
       keywords: Search._getKeywords(rawResult.keywords),
@@ -142,6 +142,8 @@ export default class Search extends Model {
       spatialCoverage: rawResult.spatialCoverage?.geo || [],
       url: rawResult.url || "",
       identifier: rawResult.identifier[0] || "",
+      contentType: rawResult.additionalType || "",
+      sharingStatus: rawResult.creativeWorkStatus?.name || ""
     };
   }
 

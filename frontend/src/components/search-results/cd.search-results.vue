@@ -36,16 +36,42 @@
                 >
                   <v-checkbox
                     v-model="filter.availability.value"
-                    @update:model-value="pushSearchRoute"
+                    @update:model-value="
+                      onFilterControlChange(filter.availability)
+                    "
+                    color="primary"
                     :label="option"
                     :key="index"
                     :value="option"
                     hide-details
                     density="compact"
                   ></v-checkbox>
-                  <v-icon v-bind="availabilityIcons[index]">{{
-                    availabilityIcons[index].icon
-                  }}</v-icon>
+                  <v-img
+                    v-if="option === 'Public'"
+                    :src="sharingStatusIcons.PUBLIC"
+                    class="img-access-icon flex-grow-0"
+                    width="25"
+                    title="Public"
+                    alt="Public"
+                  />
+
+                  <v-img
+                    v-else-if="option === 'Published'"
+                    :src="sharingStatusIcons.PUBLISHED"
+                    class="img-access-icon flex-grow-0"
+                    width="25"
+                    title="Published"
+                    alt="Published"
+                  />
+
+                  <v-img
+                    v-else-if="option === 'Discoverable'"
+                    :src="sharingStatusIcons.DISCOVERABLE"
+                    class="img-access-icon flex-grow-0"
+                    width="25"
+                    title="Discoverable"
+                    alt="Discoverable"
+                  />
                 </div>
               </v-expansion-panel-text>
             </v-expansion-panel>
@@ -67,10 +93,12 @@
                 <v-checkbox
                   v-for="(option, index) of filter.contentType.options"
                   v-model="filter.contentType.value"
-                  @update:model-value="pushSearchRoute"
-                  :label="option"
+                  @update:model-value="
+                    onFilterControlChange(filter.contentType)
+                  "
+                  :label="option.label"
                   :key="index"
-                  :value="option"
+                  :value="option.value"
                   hide-details
                   density="compact"
                   color="primary"
@@ -98,7 +126,7 @@
                   v-model="dataCoverage"
                   v-model:isActive="filter.dataCoverage.isActive"
                   @update:is-active="pushSearchRoute"
-                  @end="onSliderControlChange(filter.dataCoverage)"
+                  @end="onFilterControlChange(filter.dataCoverage)"
                   :min="filter.dataCoverage.min"
                   :max="filter.dataCoverage.max"
                   label="Temporal coverage"
@@ -126,7 +154,7 @@
                   v-model="creationDate"
                   v-model:isActive="filter.creationDate.isActive"
                   @update:is-active="pushSearchRoute"
-                  @end="onSliderControlChange(filter.creationDate)"
+                  @end="onFilterControlChange(filter.creationDate)"
                   :min="filter.creationDate.min"
                   :max="filter.creationDate.max"
                   label="Date created"
@@ -156,7 +184,7 @@
                   v-model="publicationYear"
                   v-model:isActive="filter.publicationYear.isActive"
                   @update:is-active="pushSearchRoute"
-                  @end="onSliderControlChange(filter.publicationYear)"
+                  @end="onFilterControlChange(filter.publicationYear)"
                   :min="filter.publicationYear.min"
                   :max="filter.publicationYear.max"
                   label="Publication year"
@@ -180,7 +208,7 @@
             density="compact"
           />
 
-          <v-text-field
+          <!-- <v-text-field
             @blur="pushSearchRoute"
             @keyup.enter="pushSearchRoute"
             @click:clear="pushSearchRoute"
@@ -192,7 +220,7 @@
             clearable
             variant="outlined"
             density="compact"
-          />
+          /> -->
 
           <v-text-field
             @blur="pushSearchRoute"
@@ -282,7 +310,7 @@
           <div class="results-container mb-12">
             <template v-if="isSearching">
               <!-- TODO: refactor into a component -->
-              <v-skeleton-loader type="list-item" width="150" />
+              <!-- <v-skeleton-loader type="list-item" width="150" /> -->
               <v-card elevation="2">
                 <v-card-text>
                   <div v-for="index in 4" :key="index">
@@ -315,7 +343,58 @@
                 expand-on-click
                 show-expand
               >
-                <!-- <template v-slot:item.icons="{ item }"></template> -->
+                <template v-slot:item.icons="{ item }">
+                  <div class="d-flex align-center justify-start">
+                    <v-img
+                      class="img-content-type mr-2"
+                      v-if="contentTypeLogos[item.contentType]"
+                      :src="contentTypeLogos[item.contentType]"
+                      :title="item.contentType"
+                      width="60"
+                      max-width="60"
+                    />
+                    <v-img
+                      class="img-access-icon flex-grow-0"
+                      width="25"
+                      v-if="item.sharingStatus === 'Public'"
+                      :src="sharingStatusIcons.PUBLIC"
+                      title="Public"
+                      alt="Public"
+                    />
+                    <v-img
+                      class="img-access-icon flex-grow-0"
+                      width="25"
+                      v-else-if="item.sharingStatus === 'Private'"
+                      :src="sharingStatusIcons.PRIVATE"
+                      title="Private"
+                      alt="Private"
+                    />
+                    <v-img
+                      class="img-access-icon flex-grow-0"
+                      width="25"
+                      v-else-if="item.sharingStatus === 'Discoverable'"
+                      :src="sharingStatusIcons.DISCOVERABLE"
+                      title="Discoverable"
+                      alt="Discoverable"
+                    />
+                    <v-img
+                      class="img-access-icon flex-grow-0"
+                      width="25"
+                      v-if="item.sharingStatus === 'Published'"
+                      :src="sharingStatusIcons.PUBLISHED"
+                      title="Published"
+                      alt="Published"
+                    />
+                    <v-img
+                      class="img-access-icon flex-grow-0"
+                      width="25"
+                      v-if="hasSpatialFeatures(item)"
+                      :src="sharingStatusIcons.SPATIAL"
+                      title="Contains Spatial Coverage"
+                      alt="Contains Spatial Coverage"
+                    />
+                  </div>
+                </template>
                 <template #item.title="{ item }">
                   <a
                     class="text-decoration-none"
@@ -445,6 +524,33 @@ const loader: Loader = new Loader(
   options,
 );
 
+const contentTypeLogos: { [key: string]: string } = {
+  CompositeResource: new URL("/img/composite48x48.png", import.meta.url).href,
+  CollectionResource: new URL("/img/collection48x48.png", import.meta.url).href,
+  GeographicRasterAggregation: new URL(
+    "/img/geographicraster48x48.png",
+    import.meta.url,
+  ).href,
+  TimeSeriesAggregation: new URL("/img/timeseries48x48.png", import.meta.url)
+    .href,
+  GeographicFeatureAggregation: new URL(
+    "/img/geographicfeature48x48.png",
+    import.meta.url,
+  ).href,
+  MultidimensionalAggregation: new URL(
+    "/img/multidimensional48x48.png",
+    import.meta.url,
+  ).href,
+};
+
+const sharingStatusIcons: { [key: string]: string } = {
+  PUBLIC: new URL("/img/public.png", import.meta.url).href,
+  PRIVATE: new URL("/img/private.png", import.meta.url).href,
+  DISCOVERABLE: new URL("/img/discoverable.png", import.meta.url).href,
+  PUBLISHED: new URL("/img/published.png", import.meta.url).href,
+  SPATIAL: new URL("/img/Globe-Green.png", import.meta.url).href,
+};
+
 @Component({
   name: "cd-search-results",
   components: { CdSearch, CdSpatialCoverageMap, CdRangeInput },
@@ -460,6 +566,7 @@ class CdSearchResults extends Vue {
   isSearching = false;
   isFetchingMore = false;
   // public view: 'list' | 'map' = 'list'
+
   filter: ISearchFilter = {
     publicationYear: {
       min: MIN_YEAR,
@@ -478,14 +585,24 @@ class CdSearchResults extends Vue {
     },
     contentType: {
       options: [
-        "Collection",
-        "CSV Data",
-        "Document",
-        "File Set",
-        "Generic Data",
-        "Geographic Feature (ESRI Shapefiles)",
-        "Geographic Raster",
-        "Image",
+        // TODO: get the 'value' prop values
+        { label: "Composite Resource", value: "CompositeResource" },
+        { label: "Collection", value: "CollectionResource" },
+        { label: "Time Series", value: "TimeSeriesAggregation" },
+        { label: "CSV Data", value: "CSV Data" },
+        { label: "Document", value: "Document" },
+        { label: "File Set", value: "File Set" },
+        { label: "Generic Data", value: "Generic Data" },
+        {
+          label: "Geographic Feature (ESRI Shapefiles)",
+          value: "GeographicFeatureAggregation",
+        },
+        { label: "Geographic Raster", value: "GeographicRasterAggregation" },
+        {
+          label: "Multidimensional (NetCDF)",
+          value: "MultidimensionalAggregation",
+        },
+        { label: "Image", value: "Image" },
       ],
       value: null,
       isActive: false,
@@ -508,37 +625,45 @@ class CdSearchResults extends Vue {
     { icon: "mdi-lock", size: "small", color: "green-darken-2" }, // Public
     { icon: "mdi-feather", class: "pl-1", color: "green-darken-2" }, // Published
   ];
-
-  // items = [
-  //   {
-  //     icons: "",
-  //     title: "Logan GAMUT field operations database",
-  //     firstAuthor: "GeoTrust CDM",
-  //     dateCreated: new Date(),
-  //     lastModified: new Date(),
-  //   },
-  // ];
+  contentTypeLogos = contentTypeLogos;
+  sharingStatusIcons = sharingStatusIcons;
 
   headers = reactive([
-    { title: "", key: "icons", visible: true },
-    { title: "Title", key: "title", visible: true, minWidth: 200 },
+    {
+      title: "",
+      key: "icons",
+      visible: true,
+      width: 60,
+      minWidth: 60,
+      sortable: false,
+    },
+    {
+      title: "Title",
+      key: "title",
+      visible: true,
+      minWidth: 200,
+      sortable: false,
+    },
     {
       title: "First Author",
       key: "firstAuthor",
       visible: true,
       minWidth: 200,
+      sortable: false,
     },
     {
       title: "Date Created",
       key: "dateCreated",
       visible: true,
       minWidth: 200,
+      sortable: false,
     },
     {
       title: "Last Modified",
       key: "lastModified",
       visible: true,
       minWidth: 200,
+      sortable: false,
     },
   ]);
 
@@ -664,7 +789,7 @@ class CdSearchResults extends Vue {
 
     // AVAILABILITY
     if (this.filter.availability.isActive && this.filter.availability.value) {
-      queryParams.availability = this.filter.availability.value;
+      queryParams.creativeWorkStatus = this.filter.availability.value;
     }
 
     // CONTENT TYPE
@@ -771,11 +896,11 @@ class CdSearchResults extends Vue {
     this.isFetchingMore = false;
   }
 
-  public onSliderControlChange(filter: {
-    min: number;
-    max: number;
-    isActive: boolean;
-  }) {
+  public onFilterControlChange(
+    filter: Partial<{
+      isActive: boolean;
+    }>,
+  ) {
     filter.isActive = true;
 
     this.pushSearchRoute();
@@ -787,7 +912,7 @@ class CdSearchResults extends Vue {
     }
     const div = document.createElement("DIV");
     // div.innerHTML = result.creator.join(", ");
-    div.innerHTML = result.creator[0];
+    div.innerHTML = result.creator[0] || "";
 
     let content = div.textContent || div.innerText || "";
 
@@ -804,7 +929,6 @@ class CdSearchResults extends Vue {
         content = content.replaceAll(hit, `<mark>${hit}</mark>`);
       });
     }
-
     return content;
   }
 
@@ -964,6 +1088,12 @@ export default toNative(CdSearchResults);
 
 .results-content-wrapper {
   flex: 1 1 auto;
+}
+
+.img-content-type {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 3px;
 }
 
 // .results-content {

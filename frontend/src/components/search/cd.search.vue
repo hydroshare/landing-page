@@ -27,6 +27,7 @@
         density="compact"
         @pointerdown="onHintSelected($event, item.raw)"
         @keydown.enter="onHintSelected($event, item.raw)"
+        @keydown.right="onHintRight($event, item.raw)"
       >
         <template #prepend>
           <v-icon size="x-small">{{
@@ -37,8 +38,8 @@
           <v-list-item-title
             :class="{ 'text-accent': item.raw.type === 'local' }"
             class="font-weight-regular"
-            >{{ item.raw.key }}</v-list-item-title
-          >
+            v-html="boldStart(item.raw.key, valueInternal)"
+          ></v-list-item-title>
         </template>
         <template #append>
           <v-list-item-action
@@ -212,6 +213,11 @@ class CdSearch extends Vue {
     this.onSearch();
   }
 
+  public async onHintRight(_event: PointerEvent, hint: IHint) {
+    this.valueInternal = hint.key;
+    this.searchInput?.focus();
+  }
+
   public deleteHint(hint: IHint) {
     SearchHistory.deleteHint(hint.key);
     this.hints = this.typeaheadHints;
@@ -231,6 +237,13 @@ class CdSearch extends Vue {
     } catch (e) {
       console.log(e);
     }
+  }
+
+  public boldStart(title: string, startStr: string) {
+    if (title.indexOf(startStr) >= 0) {
+      return title.replace(startStr, `<b>${startStr}</b>`);
+    }
+    return title;
   }
 
   _handleTypeahead() {
