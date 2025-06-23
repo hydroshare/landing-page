@@ -265,7 +265,13 @@
             density="compact"
           />
 
-          <v-btn @click="clearFilters" class="mt-4" block>Clear Filters</v-btn>
+          <v-btn
+            :disabled="!isSomeFilterActive"
+            @click="clearFilters"
+            class="mt-4"
+            block
+            >Clear Filters</v-btn
+          >
 
           <!-- <div class="text-center mt-8">
             <v-btn
