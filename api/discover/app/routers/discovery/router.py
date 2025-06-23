@@ -182,12 +182,16 @@ class SearchQuery(BaseModel):
     @property
     def stages(self):
         highlightPaths = ['name', 'description', 'keywords']
-        searchPaths = ['name', 'description', 'keywords']
         stages = []
         compound = {'filter': self._filters, 'must': self._must}
 
         if self.term:
-            compound['should'] = [{'autocomplete': {'query': self.term, 'path': key, 'fuzzy': {'maxEdits': 1}}} for key in searchPaths]
+            compound['should'] = [
+                # https://www.mongodb.com/docs/atlas/atlas-search/score/modify-score/#std-label-scoring-boost
+                {'autocomplete': {'query': self.term, 'path': 'name', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 2 } }}},
+                {'autocomplete': {'query': self.term, 'path': 'description', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 1.5 } }}},
+                {'autocomplete': {'query': self.term, 'path': 'keywords', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 1.5 } }}},
+            ]
 
         search_stage = {
             '$search': {

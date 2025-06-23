@@ -193,6 +193,21 @@
             </v-expansion-panel>
           </v-expansion-panels>
 
+          <!-- SUBJECT -->
+          <v-text-field
+            @blur="pushSearchRoute"
+            @keyup.enter="pushSearchRoute"
+            @click:clear="pushSearchRoute"
+            v-model="filter.subject"
+            label="Subject"
+            class="mt-6"
+            prepend-inner-icon="mdi-pen"
+            hide-details
+            clearable
+            variant="outlined"
+            density="compact"
+          />
+
           <!-- AUTHOR NAME -->
           <v-text-field
             @blur="pushSearchRoute"
@@ -240,20 +255,6 @@
             @blur="pushSearchRoute"
             @keyup.enter="pushSearchRoute"
             @click:clear="pushSearchRoute"
-            v-model="filter.subject"
-            label="Subject"
-            class="mt-6"
-            prepend-inner-icon="mdi-pen"
-            hide-details
-            clearable
-            variant="outlined"
-            density="compact"
-          />
-
-          <v-text-field
-            @blur="pushSearchRoute"
-            @keyup.enter="pushSearchRoute"
-            @click:clear="pushSearchRoute"
             v-model="filter.fundingFunderName"
             label="Funder"
             class="mt-6"
@@ -263,6 +264,8 @@
             variant="outlined"
             density="compact"
           />
+
+          <v-btn @click="clearFilters" class="mt-4" block>Clear Filters</v-btn>
 
           <!-- <div class="text-center mt-8">
             <v-btn
@@ -342,6 +345,7 @@
                 hover
                 expand-on-click
                 show-expand
+                density="compact"
               >
                 <template v-slot:item.icons="{ item }">
                   <div class="d-flex align-center justify-start">
@@ -397,11 +401,13 @@
                 </template>
                 <template #item.title="{ item }">
                   <a
+                    v-if="item.identifier"
                     class="text-decoration-none"
                     :href="item.identifier"
                     target="_blank"
                     v-html="highlight(item, 'name')"
                   ></a>
+                  <p v-else v-html="highlight(item, 'name')"></p>
                 </template>
                 <template #item.firstAuthor="{ item }">
                   <div v-html="highlightCreators(item)"></div>
