@@ -21,7 +21,7 @@
                 <v-switch
                   @click.stop=""
                   v-model="filter.availability.isActive"
-                  @update:model-value="pushSearchRoute"
+                  @update:model-value="pushSearchRoute()"
                   density="compact"
                   hide-details
                   color="primary"
@@ -81,7 +81,7 @@
                 <v-switch
                   @click.stop=""
                   v-model="filter.contentType.isActive"
-                  @update:model-value="pushSearchRoute"
+                  @update:model-value="pushSearchRoute()"
                   density="compact"
                   hide-details
                   color="primary"
@@ -111,7 +111,7 @@
                 <v-switch
                   @click.stop=""
                   v-model="filter.dataCoverage.isActive"
-                  @update:model-value="pushSearchRoute"
+                  @update:model-value="pushSearchRoute()"
                   density="compact"
                   hide-details
                   color="primary"
@@ -139,7 +139,7 @@
                 <v-switch
                   @click.stop=""
                   v-model="filter.creationDate.isActive"
-                  @update:model-value="pushSearchRoute"
+                  @update:model-value="pushSearchRoute()"
                   density="compact"
                   hide-details
                   color="primary"
@@ -167,7 +167,7 @@
                 <v-switch
                   @click.stop=""
                   v-model="filter.publicationYear.isActive"
-                  @update:model-value="pushSearchRoute"
+                  @update:model-value="pushSearchRoute()"
                   density="compact"
                   hide-details
                   color="primary"
@@ -193,35 +193,47 @@
             </v-expansion-panel>
           </v-expansion-panels>
 
-          <!-- SUBJECT -->
-          <v-text-field
-            @blur="pushSearchRoute"
-            @keyup.enter="pushSearchRoute"
-            @click:clear="pushSearchRoute"
+          <cd-search
             v-model="filter.subject"
-            label="Subject"
-            class="mt-6"
-            prepend-inner-icon="mdi-pen"
-            hide-details
-            clearable
-            variant="outlined"
-            density="compact"
-          />
-
-          <!-- AUTHOR NAME -->
-          <v-text-field
+            :target-field="EnumHistoryTypes.SUBJECT"
+            :append-search-button="false"
+            :is-eager="true"
             @blur="pushSearchRoute"
             @keyup.enter="pushSearchRoute"
-            @click:clear="pushSearchRoute"
-            v-model="filter.creatorName"
-            label="Author's name"
+            @hint-selected="pushSearchRoute()"
+            @clear="
+              filter.subject = '';
+              pushSearchRoute();
+            "
+            :inputAttrs="{
+              variant: 'outlined',
+              prependInnerIcon: 'mdi-pen',
+              label: 'Subject',
+            }"
             class="mt-6"
-            prepend-inner-icon="mdi-account-edit"
-            hide-details
-            clearable
-            variant="outlined"
-            density="compact"
-          />
+          >
+          </cd-search>
+
+          <cd-search
+            v-model="filter.creatorName"
+            :target-field="EnumHistoryTypes.CREATOR"
+            :append-search-button="false"
+            :is-eager="true"
+            @blur="pushSearchRoute"
+            @keyup.enter="pushSearchRoute"
+            @hint-selected="pushSearchRoute()"
+            @clear="
+              filter.creatorName = '';
+              pushSearchRoute();
+            "
+            :inputAttrs="{
+              variant: 'outlined',
+              prependInnerIcon: 'mdi-account-edit',
+              label: 'Author\'s Name',
+            }"
+            class="mt-6"
+          >
+          </cd-search>
 
           <!-- <v-text-field
             @blur="pushSearchRoute"
@@ -237,50 +249,56 @@
             density="compact"
           /> -->
 
-          <v-text-field
-            @blur="pushSearchRoute"
-            @keyup.enter="pushSearchRoute"
-            @click:clear="pushSearchRoute"
+          <cd-search
             v-model="filter.contributorName"
-            label="Contributor's name"
-            class="mt-6"
-            prepend-inner-icon="mdi-account-group"
-            hide-details
-            clearable
-            variant="outlined"
-            density="compact"
-          />
-
-          <v-text-field
+            :target-field="EnumHistoryTypes.CONTRIBUTOR"
+            :append-search-button="false"
+            :is-eager="true"
             @blur="pushSearchRoute"
             @keyup.enter="pushSearchRoute"
-            @click:clear="pushSearchRoute"
-            v-model="filter.fundingFunderName"
-            label="Funder"
+            @hint-selected="pushSearchRoute()"
+            @clear="
+              filter.contributorName = '';
+              pushSearchRoute();
+            "
+            :inputAttrs="{
+              variant: 'outlined',
+              prependInnerIcon: 'mdi-account-group',
+              label: 'Contributor\'s Name',
+            }"
             class="mt-6"
-            prepend-inner-icon="mdi-domain"
-            hide-details
-            clearable
-            variant="outlined"
-            density="compact"
-          />
+          >
+          </cd-search>
+
+          <cd-search
+            v-model="filter.fundingFunderName"
+            :target-field="EnumHistoryTypes.FUNDER"
+            :append-search-button="false"
+            :is-eager="true"
+            @blur="pushSearchRoute"
+            @keyup.enter="pushSearchRoute"
+            @hint-selected="pushSearchRoute()"
+            @clear="
+              filter.fundingFunderName = '';
+              pushSearchRoute();
+            "
+            :inputAttrs="{
+              variant: 'outlined',
+              prependInnerIcon: 'mdi-domain',
+              label: 'Funder',
+            }"
+            class="mt-6"
+          >
+          </cd-search>
 
           <v-btn
             :disabled="!isSomeFilterActive"
             @click="clearFilters"
-            class="mt-4"
+            class="mt-8"
+            variant="outlined"
             block
             >Clear Filters</v-btn
           >
-
-          <!-- <div class="text-center mt-8">
-            <v-btn
-              @click="clearFilters"
-              :disabled="!isSomeFilterActive"
-              variant="text"
-              >Clear Filters</v-btn
-            >
-          </div> -->
         </div>
       </v-container>
 
@@ -289,12 +307,18 @@
           <div class="d-flex align-center gap-1 mb-6">
             <cd-search
               v-model="searchQuery"
+              :target-field="EnumHistoryTypes.TERM"
+              :auto-focus="true"
               @update:model-value="pushSearchRoute"
               @clear="
                 searchQuery = '';
                 pushSearchRoute();
               "
-              :inputAttrs="{ variant: 'outlined' }"
+              :inputAttrs="{
+                variant: 'outlined',
+                prependInnerIcon: 'mdi-magnify',
+                placeholder: $t(`home.search.inputPlaceholder`),
+              }"
             />
             <v-card
               v-if="isSomeFilterActive"
@@ -526,6 +550,7 @@ import {
   IResult,
   EnumShortParams,
   EnumDictionary,
+  EnumHistoryTypes,
 } from "@/types";
 import CdRangeInput from "./cd.range-input.vue";
 import { useRoute, useRouter } from "vue-router";
@@ -631,12 +656,6 @@ class CdSearchResults extends Vue {
     subject: "",
     fundingFunderName: "",
   };
-
-  availabilityIcons = [
-    { icon: "mdi-lock-open", size: "small", color: "orange-darken-2" }, // Discoverable
-    { icon: "mdi-lock", size: "small", color: "green-darken-2" }, // Public
-    { icon: "mdi-feather", class: "pl-1", color: "green-darken-2" }, // Published
-  ];
   contentTypeLogos = contentTypeLogos;
   sharingStatusIcons = sharingStatusIcons;
 
@@ -682,6 +701,7 @@ class CdSearchResults extends Vue {
   formatDate = formatDate;
   route = useRoute();
   router = useRouter();
+  EnumHistoryTypes = EnumHistoryTypes;
 
   public get creationDate() {
     return SearchResults.$state.creationDate;
@@ -731,10 +751,6 @@ class CdSearchResults extends Vue {
     return Search.$state.results;
   }
 
-  // public get clusters() {
-  //   return Search.$state.clusters;
-  // }
-
   public get isSomeFilterActive() {
     return (
       this.filter.creationDate.isActive ||
@@ -783,6 +799,7 @@ class CdSearchResults extends Vue {
       queryParams.creatorName = this.filter.creatorName;
     }
 
+    // CONTRIBUTOR NAME
     if (this.filter.contributorName) {
       queryParams.contributorName = this.filter.contributorName;
     }
@@ -791,10 +808,12 @@ class CdSearchResults extends Vue {
       queryParams.ownerName = this.filter.ownerName;
     }
 
+    // FUNDER
     if (this.filter.fundingFunderName) {
       queryParams.fundingFunderName = this.filter.fundingFunderName;
     }
 
+    // SUBJECT
     if (this.filter.subject) {
       queryParams.keyword = this.filter.subject;
     }
@@ -861,12 +880,37 @@ class CdSearchResults extends Vue {
     }
   }
 
+  logHistory() {
+    if (this.queryParams.term) {
+      SearchHistory.log(this.queryParams.term, EnumHistoryTypes.TERM);
+    }
+    if (this.filter.creatorName) {
+      SearchHistory.log(this.filter.creatorName, EnumHistoryTypes.CREATOR);
+    }
+    if (this.filter.contributorName) {
+      SearchHistory.log(
+        this.filter.contributorName,
+        EnumHistoryTypes.CONTRIBUTOR,
+      );
+    }
+    if (this.filter.subject) {
+      SearchHistory.log(this.filter.subject, EnumHistoryTypes.SUBJECT);
+    }
+    if (this.filter.fundingFunderName) {
+      SearchHistory.log(this.filter.fundingFunderName, EnumHistoryTypes.FUNDER);
+    }
+  }
+
   /** Pushes the desired search to the router, which will reload the route with the new query parameters */
-  pushSearchRoute() {
+  pushSearchRoute(value?: string) {
+    if (value && this.route.name !== "search") {
+      this.router
+        .push({ name: "search", query: { q: value } })
+        .catch(sameRouteNavigationErrorHandler);
+    }
+
     try {
-      if (this.queryParams.term) {
-        SearchHistory.log(this.queryParams.term);
-      }
+      this.logHistory();
 
       // This will reload the component because the router-view in the App component has `:key="route.fullPath"`
       this.router

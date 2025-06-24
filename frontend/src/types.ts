@@ -31,7 +31,7 @@ export interface IResult {
 }
 
 export interface IHint {
-  type: "db" | "local";
+  type: EnumHistoryTypes;
   key: string;
 }
 
@@ -89,6 +89,7 @@ export interface ISearchParams {
 
 export interface ITypeaheadParams {
   term: string;
+  field: EnumHistoryTypes
 }
 
 export enum EnumShortParams {
@@ -103,6 +104,15 @@ export enum EnumShortParams {
   CREATION_DATE = "cd",
   PUBLICATION_YEAR = "py",
   DATA_COVERAGE = "dc",
+}
+
+export enum EnumHistoryTypes {
+  TERM = "term",
+  CREATOR = "creator",
+  CONTRIBUTOR = "contributor",
+  SUBJECT = "subject",
+  FUNDER = "funder",
+  DATABASE = "db",
 }
 
 export type EnumDictionary<T extends string | symbol | number, U> = {

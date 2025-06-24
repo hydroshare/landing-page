@@ -22,6 +22,7 @@ export const API_BASE = import.meta.env.VITE_APP_API_URL || "";
 export const ENDPOINTS: { [key: string]: string } = {
   search: `${API_BASE}/discovery/search`,
   typeahead: `${API_BASE}/discovery/typeahead`,
+  typeaheadCreator: `${API_BASE}/discovery/typeahead_creator`,
   // submit: `${API_BASE}/catalog/dataset`,
   // register: `${API_BASE}/catalog/repository/hydroshare`,
   // refresh: `${API_BASE}/catalog/repository/hydroshare`,

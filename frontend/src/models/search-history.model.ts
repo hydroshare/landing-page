@@ -1,10 +1,12 @@
+import { EnumHistoryTypes, IHint } from "@/types";
 import { Model } from "@vuex-orm/core";
 
-export interface ISearchHistoryState {}
+export interface ISearchHistoryState { }
 
 export interface ISearch {
   key: string;
   date: number;
+  type: string;
 }
 
 export default class SearchHistory extends Model implements ISearch {
@@ -12,12 +14,25 @@ export default class SearchHistory extends Model implements ISearch {
   static primaryKey = "key";
   public readonly key!: string;
   public readonly date!: number;
+  public readonly type!: string;
 
   static fields() {
     return {
       key: this.attr(""),
+      type: this.attr(""),
       date: this.attr(0),
     };
+  }
+
+  static beforeSelect(documents: SearchHistory[]) {
+    const validTypes = Object.values(EnumHistoryTypes)
+    // Preprocess existing documents created before implementation of multiple history types
+    documents.forEach((doc) => {
+      if (!validTypes.includes(doc.type as EnumHistoryTypes)) {
+        doc.$update({ type: EnumHistoryTypes.TERM })
+      }
+    })
+    return documents
   }
 
   static get $state(): ISearchHistoryState {
@@ -28,29 +43,27 @@ export default class SearchHistory extends Model implements ISearch {
     return {};
   }
 
-  public static log(key: string) {
-    SearchHistory.insert({ data: { key, date: Date.now() } });
+  public static log(key: string, type: EnumHistoryTypes) {
+    SearchHistory.insert({ data: { key, type, date: Date.now() } });
   }
 
-  public static searchHints(searchString: string): IHint[] {
-    if (!searchString?.trim()) {
-      return this.all()
-        .sort((a, b) => b.date - a.date)
-        .map((entry) => ({ type: "local", key: entry.key }))
-        .slice(0, 10) as IHint[];
+  public static searchHints(searchString: string, type: EnumHistoryTypes) {
+    const str = searchString.trim().toLowerCase();
+
+    const allHints = this.all()
+      .sort((a, b) => b.date - a.date)
+      .filter(hint => hint.type === type)
+      .map(hint => ({ type: hint.type, key: hint.key })) as IHint[]
+
+    if (!str) {
+      return allHints.slice(0, 10);
     }
-
-    const str = searchString.trim();
-
-    return (
-      this.all()
-        .filter((entry: ISearch) => {
-          const val = entry.key.toLowerCase();
-          return val.includes(str.toLowerCase()) && val.length > str.length;
-        })
-        .sort((a, b) => b.date - a.date)
-        .map((entry) => ({ type: "local", key: entry.key })) || []
-    );
+    else {
+      return allHints.filter((entry) => {
+        const val = entry.key.toLowerCase();
+        return val.includes(str) && val.length > str.length;
+      })
+    }
   }
 
   public static deleteHint(key: string) {

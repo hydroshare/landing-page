@@ -4,14 +4,12 @@
     @keydown.enter="onSearch"
     @click:clear="$emit('clear')"
     @click="menu = true"
-    v-model="valueInternal"
+    v-model.trim="valueInternal"
     v-model:menu="menu"
     ref="searchInput"
-    prepend-inner-icon="mdi-magnify"
     item-props
     item-title="key"
     item-value="key"
-    :placeholder="$t(`home.search.inputPlaceholder`)"
     density="compact"
     clearable
     :loading="isFetchingHints"
@@ -31,12 +29,16 @@
       >
         <template #prepend>
           <v-icon size="x-small">{{
-            item.raw.type === "local" ? "mdi-history" : "mdi-magnify"
+            item.raw.type === EnumHistoryTypes.DATABASE
+              ? "mdi-magnify"
+              : "mdi-history"
           }}</v-icon>
         </template>
         <template #title>
           <v-list-item-title
-            :class="{ 'text-accent': item.raw.type === 'local' }"
+            :class="{
+              'text-accent': item.raw.type !== EnumHistoryTypes.DATABASE,
+            }"
             class="font-weight-regular"
             v-html="boldStart(item.raw.key, valueInternal)"
           ></v-list-item-title>
@@ -45,7 +47,7 @@
           <v-list-item-action
             tabindex="-1"
             class="ma-0 pa-0"
-            v-if="item.raw.type === 'local'"
+            v-if="item.raw.type !== EnumHistoryTypes.DATABASE"
           >
             <v-btn
               tabindex="-1"
@@ -61,7 +63,7 @@
       </v-list-item>
     </template>
 
-    <template #append>
+    <template v-if="appendSearchButton" #append>
       <v-list-item-action>
         <v-btn color="primary" @click="onSearch">Search</v-btn>
       </v-list-item-action>
@@ -78,28 +80,29 @@ import {
   Watch,
   toNative,
 } from "vue-facing-decorator";
-import { APP_NAME, sameRouteNavigationErrorHandler } from "@/constants";
 import { fromEvent, from } from "rxjs";
 import { debounceTime, map, switchMap, tap } from "rxjs/operators";
 import SearchHistory from "@/models/search-history.model";
 import Search from "@/models/search.model";
 import type { VTextField } from "vuetify/lib/components/index.mjs";
-import { IHint } from "@/types";
-import { useRoute, useRouter } from "vue-router";
+import { EnumHistoryTypes, IHint } from "@/types";
 
 const typeaheadDebounceTime = 500;
 
 @Component({
   name: "cd-search",
   components: {},
-  emits: ["update:model-value", "clear"],
+  emits: ["update:model-value", "hint-selected", "clear"],
 })
 class CdSearch extends Vue {
   @Prop() modelValue!: string;
+  @Prop({ default: true }) appendSearchButton!: boolean;
+  @Prop({ default: false }) autoFocus!: boolean;
+  /** If `true`, the component will emit  the `update:model-value` event on every keystroke without debounce */
+  @Prop({ default: false }) isEager!: boolean;
   @Prop({ default: () => ({}) }) inputAttrs: any;
+  @Prop({ default: EnumHistoryTypes.TERM }) targetField!: EnumHistoryTypes;
   @Ref("searchInput") searchInput!: InstanceType<typeof VTextField>;
-
-  appName = APP_NAME;
 
   valueInternal = "";
   previousValueInternal = "";
@@ -107,8 +110,7 @@ class CdSearch extends Vue {
   menu = false;
   isFetchingHints = false;
   rawDbHints: any[] = [];
-  route = useRoute();
-  router = useRouter();
+  EnumHistoryTypes = EnumHistoryTypes;
 
   public get typeaheadHints(): IHint[] {
     if (!this.rawDbHints || !this.valueInternal) {
@@ -119,7 +121,10 @@ class CdSearch extends Vue {
   }
 
   public get localHints(): IHint[] {
-    return SearchHistory.searchHints(this.valueInternal);
+    return SearchHistory.searchHints(
+      this.valueInternal || "",
+      this.targetField,
+    );
   }
 
   public get dbHints(): IHint[] {
@@ -154,8 +159,12 @@ class CdSearch extends Vue {
     }
   }
 
+  created() {
+    // @ts-ignore Vuetify component needs `null` instead of empty string initially
+    this.valueInternal = this.modelValue || null;
+  }
+
   async mounted() {
-    this.valueInternal = this.modelValue;
     this.previousValueInternal = this.modelValue;
     try {
       await this._onTypeahead();
@@ -163,10 +172,12 @@ class CdSearch extends Vue {
     this.hints = this.typeaheadHints;
 
     // Initially, set focus on the input, but hide menu.
-    setTimeout(() => {
-      this.searchInput?.focus();
-      this.menu = false;
-    }, 0);
+    if (this.autoFocus) {
+      setTimeout(() => {
+        this.searchInput?.focus();
+        this.menu = false;
+      }, 0);
+    }
 
     // https://www.learnrxjs.io/learn-rxjs/recipes/type-ahead
     if (this.searchInput) {
@@ -177,6 +188,9 @@ class CdSearch extends Vue {
             // Show hints from local history while the database ones load
             this.hints = this.localHints;
             this.menu = true;
+            if (this.isEager) {
+              this.$emit("update:model-value", this.valueInternal);
+            }
           }),
           debounceTime(typeaheadDebounceTime),
           map((e: any) => e.target.value),
@@ -189,14 +203,9 @@ class CdSearch extends Vue {
   }
 
   public onSearch() {
-    this._onChange();
     this.previousValueInternal = this.valueInternal;
-    if (this.valueInternal && this.route.name !== "search") {
-      this.router
-        .push({ name: "search", query: { q: this.valueInternal } })
-        .catch(sameRouteNavigationErrorHandler);
-    }
     this.menu = false;
+    this.$emit("update:model-value", this.valueInternal);
   }
 
   public async onHintSelected(event: PointerEvent, hint: IHint) {
@@ -211,6 +220,7 @@ class CdSearch extends Vue {
     this.valueInternal = hint.key;
     this.isFetchingHints = !!this.valueInternal;
     this.onSearch();
+    this.$emit("hint-selected", this.valueInternal);
   }
 
   public async onHintRight(_event: PointerEvent, hint: IHint) {
@@ -232,7 +242,10 @@ class CdSearch extends Vue {
 
     try {
       this.previousValueInternal = this.valueInternal;
-      this.rawDbHints = await Search.typeahead({ term: this.valueInternal });
+      this.rawDbHints = await Search.typeahead({
+        term: this.valueInternal,
+        field: this.targetField,
+      });
       this.isFetchingHints = false;
     } catch (e) {
       console.log(e);
@@ -251,10 +264,6 @@ class CdSearch extends Vue {
     if (this.valueInternal) {
       this.isFetchingHints = false;
     }
-  }
-
-  _onChange() {
-    this.$emit("update:model-value", this.valueInternal);
   }
 }
 export default toNative(CdSearch);

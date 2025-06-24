@@ -333,8 +333,18 @@ async def aggregate_stages(request, stages, pageNumber=1, pageSize=20):
 
 
 @router.get("/typeahead")
-async def typeahead(request: Request, term: str, pageSize: int = 20):
-    search_paths = ['name', 'description', 'keywords']
+async def typeahead(request: Request, term: str, field: str = "term"):
+    search_paths = ['name', 'description', 'keywords'] # default
+    
+    if field == "creator":
+        search_paths = ["creator.name"]
+    elif field == "contributor":
+        search_paths = ["contributor.name"]
+    elif field == "subject":
+        search_paths = ["keywords"]
+    elif field == "funder":
+        search_paths = ["funding.funder.name"]
+
     should = [{'autocomplete': {'query': term, 'path': key, 'fuzzy': {'maxEdits': 1}}} for key in search_paths]
 
     stages = [
@@ -342,7 +352,7 @@ async def typeahead(request: Request, term: str, pageSize: int = 20):
             '$search': {
                 'index': 'fuzzy_search',
                 'compound': {'should': should},
-                'highlight': {'path': ['description', 'name', 'keywords']},
+                'highlight': {'path': search_paths},
             }
         },
         {
@@ -350,12 +360,15 @@ async def typeahead(request: Request, term: str, pageSize: int = 20):
                 'name': 1,
                 'description': 1,
                 'keywords': 1,
+                'creator': 1,
+                'contributor': 1,
+                'funding': 1,
                 'highlights': {'$meta': 'searchHighlights'},
                 '_id': 0,
             }
         },
     ]
-    result = await request.app.mongodb["discovery"].aggregate(stages).to_list(pageSize)
+    result = await request.app.mongodb["discovery"].aggregate(stages).to_list(20)
     return result
 
 
