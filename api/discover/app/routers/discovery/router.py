@@ -3,7 +3,7 @@ import mimetypes
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Query
 from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
 
 from config import get_settings
@@ -13,7 +13,7 @@ router = APIRouter()
 
 class SearchQuery(BaseModel):
     term: Optional[str] = None
-    contentType: Optional[str] = None
+    contentType: Optional[list[str]] = []
     providerName: Optional[str] = None
     creatorName: Optional[str] = None
     contributorName: Optional[str] = None
@@ -31,7 +31,7 @@ class SearchQuery(BaseModel):
     associatedMediaName: Optional[str] = None
     fundingGrantName: Optional[str] = None
     fundingFunderName: Optional[str] = None
-    creativeWorkStatus: Optional[str] = None
+    creativeWorkStatus: Optional[list[str]] = []
     pageNumber: int = 1
     pageSize: int = 20
 
@@ -40,9 +40,26 @@ class SearchQuery(BaseModel):
         if info.field_name == 'term' and v:
             return v.strip()
 
+        # Don't convert empty strings to None for list fields like contentType/creativeWorkStatus
+        if info.field_name in ['contentType', 'creativeWorkStatus']:
+            return v
+
         if isinstance(v, str) and v.strip() == '':
             return None
         return v
+
+    @field_validator('contentType', 'creativeWorkStatus')
+    def validate_list_type_fields(cls, v):
+        """Ensure contentType/creativeWorkStatus is always a list and filter out empty strings"""
+        if v is None:
+            return []
+        if isinstance(v, str):
+            # Handle single string values
+            return [v.strip()] if v.strip() else []
+        if isinstance(v, list):
+            # Filter out empty strings from list
+            return [item.strip() for item in v if isinstance(item, str) and item.strip()]
+        return []
 
     @field_validator('dataCoverageStart', 'dataCoverageEnd', 'publishedStart', 'publishedEnd', 'dateCreatedStart', 'dateCreatedEnd', 'dateModifiedStart', 'dateModifiedEnd')
     def validate_year(cls, v, info: ValidationInfo):
@@ -140,6 +157,7 @@ class SearchQuery(BaseModel):
             filters.append(
                 {'range': {'path': 'temporalCoverage.endDate', 'lt': datetime(self.dataCoverageEnd + 1, 1, 1)}}
             )
+
         return filters
 
     @property
@@ -152,8 +170,18 @@ class SearchQuery(BaseModel):
     def _must(self):
         must = []
         must.append({'term': {'path': 'type', 'query': "Dataset"}})
-        if self.contentType:
-            must.append({'term': {'path': 'additionalType', 'query': self.contentType}})
+        if self.contentType and len(self.contentType) > 0:
+            # Use exact term matching for each content type to ensure precise filtering
+            if len(self.contentType) == 1:
+                # Single content type - use term for exact match
+                must.append({'term': {'path': 'additionalType', 'query': self.contentType[0]}})
+            else:
+                # Multiple content types - use compound OR with exact term matches
+                # This ensures each content type is matched exactly, not partially
+                content_type_conditions = []
+                for content_type in self.contentType:
+                    content_type_conditions.append({'term': {'path': 'additionalType', 'query': content_type}})
+                must.append({'compound': {'should': content_type_conditions}})
         if self.creatorName:
             must.append({'text': {'path': 'creator.name', 'query': self.creatorName}})
         if self.contributorName:
@@ -172,10 +200,31 @@ class SearchQuery(BaseModel):
             must.append({'text': {'path': 'funding.name', 'query': self.fundingGrantName}})
         if self.fundingFunderName:
             must.append({'text': {'path': 'funding.funder.name', 'query': self.fundingFunderName}})
-        if self.creativeWorkStatus:
-            must.append(
-                {'text': {'path': ['creativeWorkStatus', 'creativeWorkStatus.name'], 'query': self.creativeWorkStatus}}
-            )
+        if self.creativeWorkStatus and len(self.creativeWorkStatus) > 0:
+            # Use exact term matching for each creative work status to ensure precise filtering
+            if len(self.creativeWorkStatus) == 1:
+                # Single creative work status - use term for exact match on both possible paths
+                must.append({
+                    'compound': {
+                        'should': [
+                            {'term': {'path': 'creativeWorkStatus', 'query': self.creativeWorkStatus[0]}},
+                            {'term': {'path': 'creativeWorkStatus.name', 'query': self.creativeWorkStatus[0]}}
+                        ]
+                    }
+                })
+            else:
+                # Multiple creative work statuses - use compound OR with exact term matches
+                status_conditions = []
+                for status in self.creativeWorkStatus:
+                    status_conditions.append({
+                        'compound': {
+                            'should': [
+                                {'term': {'path': 'creativeWorkStatus', 'query': status}},
+                                {'term': {'path': 'creativeWorkStatus.name', 'query': status}}
+                            ]
+                        }
+                    })
+                must.append({'compound': {'should': status_conditions}})
         return must
 
 
@@ -216,8 +265,61 @@ class SearchQuery(BaseModel):
         return stages
 
 
+def get_search_query(
+    term: Optional[str] = None,
+    contentType: list[str] = Query(default=[]),
+    providerName: Optional[str] = None,
+    creatorName: Optional[str] = None,
+    contributorName: Optional[str] = None,
+    keyword: Optional[str] = None,
+    dataCoverageStart: Optional[int] = None,
+    dataCoverageEnd: Optional[int] = None,
+    publishedStart: Optional[int] = None,
+    publishedEnd: Optional[int] = None,
+    dateCreatedStart: Optional[int] = None,
+    dateCreatedEnd: Optional[int] = None,
+    dateModifiedStart: Optional[int] = None,
+    dateModifiedEnd: Optional[int] = None,
+    hasPartName: Optional[str] = None,
+    isPartOfName: Optional[str] = None,
+    associatedMediaName: Optional[str] = None,
+    fundingGrantName: Optional[str] = None,
+    fundingFunderName: Optional[str] = None,
+    creativeWorkStatus: list[str] = Query(default=[]),
+    pageNumber: int = 1,
+    pageSize: int = 30
+) -> SearchQuery:
+    """Custom dependency to handle contentType/creativeWorkStatus as both single values and lists"""
+
+    # Create SearchQuery instance with processed parameters
+    return SearchQuery(
+        term=term,
+        contentType=contentType,
+        providerName=providerName,
+        creatorName=creatorName,
+        contributorName=contributorName,
+        keyword=keyword,
+        dataCoverageStart=dataCoverageStart,
+        dataCoverageEnd=dataCoverageEnd,
+        publishedStart=publishedStart,
+        publishedEnd=publishedEnd,
+        dateCreatedStart=dateCreatedStart,
+        dateCreatedEnd=dateCreatedEnd,
+        dateModifiedStart=dateModifiedStart,
+        dateModifiedEnd=dateModifiedEnd,
+        hasPartName=hasPartName,
+        isPartOfName=isPartOfName,
+        associatedMediaName=associatedMediaName,
+        fundingGrantName=fundingGrantName,
+        fundingFunderName=fundingFunderName,
+        creativeWorkStatus=creativeWorkStatus,
+        pageNumber=pageNumber,
+        pageSize=pageSize
+    )
+
+
 @router.get("/search")
-async def search(request: Request, search_query: SearchQuery = Depends()):
+async def search(request: Request, search_query: SearchQuery = Depends(get_search_query)):
     result = await aggregate_stages(request, search_query.stages, search_query.pageNumber, search_query.pageSize)
     json_str = json.dumps(result, default=str)
     return json.loads(json_str)
@@ -270,4 +372,3 @@ def to_associated_media(file):
         "sha256": file.checksum,
         "encodingFormat": mime_type,
     }
-
