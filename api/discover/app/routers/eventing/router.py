@@ -4,6 +4,8 @@ from typing import Any
 import requests
 import os
 import json
+import re
+from datetime import datetime
 
 from pydantic import BaseModel, Base64Str
 from argo_workflows import Configuration, ApiClient
@@ -65,13 +67,22 @@ class CloudStorageMessage(BaseModel):
     bucket: str
     name: str
 
+datetime_format_regex = re.compile(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{6}\+\d{2}:\d{2}$')
+datetime_format = "%Y-%m-%d %H:%M:%S.%f%z"
+
+def datetime_parser(dct):
+    for k, v in dct.items():
+        if isinstance(v, str) and datetime_format_regex.match(v):
+            dct[k] = datetime.strptime(v, datetime_format)
+    return dct
+
 @router.post("/resource/collect")
 async def resource_collect(request: Request, cloud_storage_message: CloudStorageMessage):
     bucket_id = cloud_storage_message.bucket
     object_name = cloud_storage_message.name
     filepath = os.path.join(bucket_id, object_name)
     with request.app.s3.open(filepath) as f:
-        metadata_json = json.loads(f.read())
+        metadata_json = json.loads(f.read(), object_hook=datetime_parser)
         metadata_json['_s3_filepath'] = filepath
     typeahead_json = {}
     typeahead_json['name'] = metadata_json['name']
