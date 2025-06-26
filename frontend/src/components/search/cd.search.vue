@@ -4,7 +4,7 @@
     @keydown.enter="onSearch"
     @click:clear="$emit('clear')"
     @click="menu = true"
-    v-model.trim="valueInternal"
+    v-model="valueInternal"
     v-model:menu="menu"
     ref="searchInput"
     item-props
