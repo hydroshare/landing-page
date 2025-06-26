@@ -465,6 +465,9 @@
                                   v-for="keyword of item.keywords"
                                   size="small"
                                   style="margin: 0.25rem"
+                                  variant="outlined"
+                                  class="bg-grey-lighten-5"
+                                  border="thin"
                                   >{{ keyword }}</v-chip
                                 >
                               </div>
