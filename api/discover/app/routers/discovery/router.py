@@ -261,6 +261,9 @@ class SearchQuery(BaseModel):
         if self.term:
             # get only results which meet minimum relevance score threshold
             stages.append({'$match': {'score': {'$gt': get_settings().search_relevance_score_threshold}}})
+        
+        # TODO: To exclude resource level metadata documents for now.
+        stages.append({'$match': {"identifier": {"$not": {"$elemMatch": {"$eq": None}}}}})
 
         return stages
 
