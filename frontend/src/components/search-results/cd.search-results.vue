@@ -977,7 +977,7 @@ class CdSearchResults extends Vue {
 
     if (result.highlights) {
       let hits = result.highlights
-        .filter((highlight) => highlight.path === "creator.@list.name")
+        .filter((highlight) => highlight.path === "creator.name")
         .map((hit) =>
           hit.texts.filter((t) => t.type === "hit").map((t) => t.value),
         )

@@ -33,7 +33,7 @@ class Settings(BaseSettings):
 
     OIDC_BASE_URL: str
 
-    search_relevance_score_threshold: float = 1.0
+    search_relevance_score_threshold: float = 15
 
     @property
     def user_info_endpoint(self):

@@ -230,16 +230,39 @@ class SearchQuery(BaseModel):
 
     @property
     def stages(self):
-        highlightPaths = ['name', 'description', 'keywords']
+        highlightPaths = ['name', 'description', 'keywords', 'creator.name']
         stages = []
         compound = {'filter': self._filters, 'must': self._must}
 
+        # The term is searched for in name, description, keywords and creator name
         if self.term:
             compound['should'] = [
                 # https://www.mongodb.com/docs/atlas/atlas-search/score/modify-score/#std-label-scoring-boost
-                {'autocomplete': {'query': self.term, 'path': 'name', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 2 } }}},
-                {'autocomplete': {'query': self.term, 'path': 'description', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 1.5 } }}},
-                {'autocomplete': {'query': self.term, 'path': 'keywords', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 1.5 } }}},
+                {'autocomplete': {'query': self.term, 'path': 'name', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 5 } }}},
+                {'autocomplete': {'query': self.term, 'path': 'description', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 3 } }}},
+                {'autocomplete': {'query': self.term, 'path': 'keywords', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 3 } }}},
+                {'autocomplete': {'query': self.term, 'path': 'creator.name', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 5 } }}},
+            ]
+        
+        # Dedicated input filters. Boost the score further if matched.
+        if self.creatorName:
+            compound['should'] = [
+                {'autocomplete': {'query': self.creatorName, 'path': 'creator.name', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 5 } }}},
+            ]
+
+        if self.contributorName:
+            compound['should'] = [
+                {'autocomplete': {'query': self.contributorName, 'path': 'contributor.name', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 5 } }}},
+            ]
+
+        if self.keyword:
+            compound['should'] = [
+                {'autocomplete': {'query': self.keyword, 'path': 'keywords', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 3 } }}},
+            ]
+
+        if self.fundingFunderName:
+            compound['should'] = [
+                {'autocomplete': {'query': self.fundingFunderName, 'path': 'funding.funder.name', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 3 } }}},
             ]
 
         search_stage = {
@@ -249,8 +272,7 @@ class SearchQuery(BaseModel):
             }
         }
 
-        if self.term:
-            search_stage["$search"]['highlight'] = {'path': highlightPaths}
+        search_stage["$search"]['highlight'] = {'path': highlightPaths}
 
         stages.append(search_stage)
 
@@ -258,12 +280,12 @@ class SearchQuery(BaseModel):
             {'$set': {'score': {'$meta': 'searchScore'}, 'highlights': {'$meta': 'searchHighlights'}}},
         )
 
-        if self.term:
+        if self.term or self.creatorName or self.keyword or self.contributorName:
             # get only results which meet minimum relevance score threshold
             stages.append({'$match': {'score': {'$gt': get_settings().search_relevance_score_threshold}}})
         
         # TODO: To exclude resource level metadata documents for now.
-        stages.append({'$match': {"identifier": {"$not": {"$elemMatch": {"$eq": None}}}}})
+        stages.append({'$match': {"dateCreated": {"$not": {"$eq": None}}}})
 
         return stages
 
