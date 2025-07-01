@@ -2,6 +2,7 @@ import json
 import mimetypes
 from datetime import datetime
 from typing import Optional
+import functools
 
 from fastapi import APIRouter, Depends, Request, Query
 from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
@@ -410,3 +411,9 @@ def to_associated_media(file):
         "sha256": file.checksum,
         "encodingFormat": mime_type,
     }
+
+
+@router.get("/content-types")
+async def content_types(request: Request) -> list[str]:
+    existing_content_types = await request.app.db[get_settings().mongo_database]["discovery"].find().distinct('additionalType')
+    return sorted(existing_content_types, key=functools.cmp_to_key(lambda c1, c2 : c1 < c2))

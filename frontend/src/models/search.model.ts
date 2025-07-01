@@ -9,7 +9,8 @@ import {
 
 export interface ISearchState {
   results: IResult[];
-  clusters: string[];
+  contentTypes: string[];
+  isFetchingContentTypes: boolean;
 }
 
 export default class Search extends Model {
@@ -28,7 +29,8 @@ export default class Search extends Model {
   static state(): ISearchState {
     return {
       results: [],
-      clusters: [],
+      contentTypes: [],
+      isFetchingContentTypes: true,
     };
   }
 
@@ -107,20 +109,23 @@ export default class Search extends Model {
     return data;
   }
 
-  /** Fetches the list of clusters and updates the state */
-  public static async fetchClusters(): Promise<void> {
-    const response: Response = await fetch(ENDPOINTS.clusters);
+  /** Fetches the list of content types and updates the state */
+  public static async fetchContentTypes(): Promise<void> {
+    const response: Response = await fetch(ENDPOINTS.contentTypes);
 
     if (!response.ok) {
-      throw new Error("Failed to fetch clusters");
+      throw new Error("Failed to fetch content types");
     }
 
-    const clusters: string[] = await response.json();
-    if (clusters) {
+    const contentTypes: string[] = await response.json();
+    if (contentTypes) {
       this.commit((state) => {
-        state.clusters = clusters;
+        state.contentTypes = contentTypes.filter(contentType => contentType !== "CompositeResource");
       });
     }
+    this.commit((state) => {
+      state.isFetchingContentTypes = false
+    })
   }
 
   /** Transform raw result data from API into `IResult` shaped objects */

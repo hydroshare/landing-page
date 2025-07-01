@@ -52,7 +52,6 @@ export interface ISearchFilter {
     isActive: boolean;
   };
   contentType: {
-    options: { label: string; value: string }[];
     value: string[] | null;
     isActive: boolean;
   };

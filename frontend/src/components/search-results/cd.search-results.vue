@@ -89,16 +89,22 @@
                 <div class="ml-4 text-body-1 cursor-pointer">Content type</div>
               </v-expansion-panel-title>
 
+              <v-progress-linear
+                v-if="isFetchingContentTypes"
+                color="primary"
+                indeterminate
+              ></v-progress-linear>
+
               <v-expansion-panel-text>
                 <v-checkbox
-                  v-for="(option, index) of filter.contentType.options"
+                  v-for="(option, index) of contentTypes"
                   v-model="filter.contentType.value"
                   @update:model-value="
                     onFilterControlChange(filter.contentType)
                   "
-                  :label="option.label"
+                  :label="contentTypeLabels[option] || option"
                   :key="index"
-                  :value="option.value"
+                  :value="option"
                   hide-details
                   density="compact"
                   color="primary"
@@ -591,6 +597,19 @@ const sharingStatusIcons: { [key: string]: string } = {
   SPATIAL: new URL("/img/Globe-Green.png", import.meta.url).href,
 };
 
+const contentTypeLabels: { [key: string]: string } = {
+  CollectionResource: "Collection",
+  TimeSeriesAggregation: "Time Series",
+  "CSV Data": "CSV Data",
+  Document: "Document",
+  "File Set": "File Set",
+  "Generic Data": "Generic Data",
+  GeographicFeatureAggregation: "Geographic Feature (ESRI Shapefiles)",
+  GeographicRasterAggregation: "Geographic Raster",
+  MultidimensionalAggregation: "Multidimensional (NetCDF)",
+  Image: "Image",
+};
+
 @Component({
   name: "cd-search-results",
   components: { CdSearch, CdSpatialCoverageMap, CdRangeInput },
@@ -624,26 +643,6 @@ class CdSearchResults extends Vue {
       isActive: false,
     },
     contentType: {
-      options: [
-        // TODO: get the 'value' prop values
-        { label: "Composite Resource", value: "CompositeResource" },
-        { label: "Collection", value: "CollectionResource" },
-        { label: "Time Series", value: "TimeSeriesAggregation" },
-        { label: "CSV Data", value: "CSV Data" },
-        { label: "Document", value: "Document" },
-        { label: "File Set", value: "File Set" },
-        { label: "Generic Data", value: "Generic Data" },
-        {
-          label: "Geographic Feature (ESRI Shapefiles)",
-          value: "GeographicFeatureAggregation",
-        },
-        { label: "Geographic Raster", value: "GeographicRasterAggregation" },
-        {
-          label: "Multidimensional (NetCDF)",
-          value: "MultidimensionalAggregation",
-        },
-        { label: "Image", value: "Image" },
-      ],
       value: null,
       isActive: false,
     },
@@ -661,6 +660,7 @@ class CdSearchResults extends Vue {
   };
   contentTypeLogos = contentTypeLogos;
   sharingStatusIcons = sharingStatusIcons;
+  contentTypeLabels = contentTypeLabels;
 
   headers = reactive([
     {
@@ -769,6 +769,14 @@ class CdSearchResults extends Vue {
       this.filter.subject ||
       this.filter.fundingFunderName
     );
+  }
+
+  public get contentTypes() {
+    return Search.$state.contentTypes;
+  }
+
+  public get isFetchingContentTypes() {
+    return Search.$state.isFetchingContentTypes;
   }
 
   /** Search query parameters */

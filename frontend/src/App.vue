@@ -196,6 +196,7 @@ import CzLogin from "@/components/account/cz.login.vue";
 import { addRouteTags } from "./modules/router";
 import { useRoute, RouteLocationRaw } from "vue-router";
 import { useRouter } from "vue-router";
+import Search from "./models/search.model";
 
 @Component({
   name: "app",
@@ -272,6 +273,12 @@ class App extends Vue {
         };
       },
     );
+
+    try {
+      Search.fetchContentTypes();
+    } catch (e) {
+      console.error("Failed to fetch content types", e);
+    }
   }
 
   beforeDestroy() {
