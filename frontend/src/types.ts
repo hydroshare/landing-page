@@ -37,6 +37,8 @@ export interface IHint {
 
 export interface ISearchParams {
   term: string;
+  sortBy?: string;
+  order?: 'asc' | 'desc';
   pageSize: number;
   pageNumber: number;
   publishedStart?: number;

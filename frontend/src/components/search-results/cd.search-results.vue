@@ -391,6 +391,7 @@
                 density="compact"
                 :loading="isFetchingMore"
                 v-model:sort-by="sortBy"
+                @update:sort-by="onSortChange()"
                 :cell-props="
                   (item) => ({
                     class: { isSorted: item.column.key === sortBy[0]?.key },
@@ -449,7 +450,7 @@
                     />
                   </div>
                 </template>
-                <template #item.title="{ item }">
+                <template #item.name="{ item }">
                   <a
                     v-if="item.identifier"
                     class="text-decoration-none text-body-1"
@@ -459,7 +460,7 @@
                   ></a>
                   <p v-else v-html="highlight(item, 'name')"></p>
                 </template>
-                <template #item.firstAuthor="{ item }">
+                <template #item.creatorName="{ item }">
                   <div v-html="highlightCreators(item)"></div>
                 </template>
                 <template #item.dateCreated="{ item }">
@@ -784,13 +785,13 @@ class CdSearchResults extends Vue {
     },
     {
       title: "Title",
-      key: "title",
+      key: "name",
       visible: true,
       minWidth: 200,
     },
     {
       title: "First Author",
-      key: "firstAuthor",
+      key: "creatorName",
       visible: true,
       minWidth: 200,
       sortRaw: (a, b) => {
@@ -880,6 +881,11 @@ class CdSearchResults extends Vue {
       pageNumber: this.pageNumber,
     };
 
+    if (this.sortBy[0]) {
+      params.sortBy = this.sortBy[0].key;
+      params.order = this.sortBy[0].order as "asc" | "desc";
+    }
+
     this.registeredFilters.forEach((f) => {
       params = { ...params, ...f.getQueryParams() };
     });
@@ -889,9 +895,15 @@ class CdSearchResults extends Vue {
 
   /** Route query parameters with short keys. These are parameters needed to replicate a search. */
   public get routeParams(): EnumDictionary<EnumShortParams, any> {
-    let params = {
+    let params: { [key: string]: string } = {
       [EnumShortParams.QUERY]: this.searchQuery,
     };
+
+    if (this.sortBy[0]) {
+      params.sortBy = this.sortBy[0].key;
+      params.order = this.sortBy[0].order as string;
+    }
+
     this.registeredFilters.forEach((f) => {
       params = { ...params, ...f.getRouteParams() };
     });
@@ -1045,9 +1057,21 @@ class CdSearchResults extends Vue {
     }
   }
 
+  public onSortChange() {
+    this.pushSearchRoute();
+  }
+
   /** Load route query parameters into component values. */
   private _loadRouteParams() {
     this.searchQuery = this.$route.query[EnumShortParams.QUERY] as string;
+    if (this.$route.query.sortBy) {
+      this.sortBy = [
+        {
+          key: this.$route.query.sortBy as string,
+          order: this.$route.query.order === "desc" ? "desc" : "asc",
+        },
+      ];
+    }
     this.registeredFilters.forEach((f) => f.loadFromRoute(this.$route.query));
   }
 
@@ -1067,14 +1091,15 @@ export default toNative(CdSearchResults);
 
 :deep(.v-table .v-data-table__tr:nth-child(even) td) {
   background: #f7f7f7;
+  &.isSorted {
+    background: #eee !important;
+  }
 }
 
 :deep(.v-table) {
-  .v-data-table__th--sorted {
-    background: #ddd;
-  }
+  .v-data-table__th--sorted,
   .v-data-table__td.isSorted {
-    background: #eee !important;
+    background: #f7f7f7 !important;
   }
 }
 
