@@ -37,3 +37,43 @@ export const ENDPOINTS: { [key: string]: string } = {
   // logout: `${API_BASE}/logout`,
 };
 export const INITIAL_RANGE: [number, number] = [MIN_YEAR, MAX_YEAR];
+
+export const contentTypeLogos: { [key: string]: string } = {
+  CompositeResource: new URL("/img/composite48x48.png", import.meta.url).href,
+  CollectionResource: new URL("/img/collection48x48.png", import.meta.url).href,
+  GeographicRasterAggregation: new URL(
+    "/img/geographicraster48x48.png",
+    import.meta.url,
+  ).href,
+  TimeSeriesAggregation: new URL("/img/timeseries48x48.png", import.meta.url)
+    .href,
+  GeographicFeatureAggregation: new URL(
+    "/img/geographicfeature48x48.png",
+    import.meta.url,
+  ).href,
+  MultidimensionalAggregation: new URL(
+    "/img/multidimensional48x48.png",
+    import.meta.url,
+  ).href,
+};
+
+export const sharingStatusIcons: { [key: string]: string } = {
+  PUBLIC: new URL("/img/public.png", import.meta.url).href,
+  PRIVATE: new URL("/img/private.png", import.meta.url).href,
+  DISCOVERABLE: new URL("/img/discoverable.png", import.meta.url).href,
+  PUBLISHED: new URL("/img/published.png", import.meta.url).href,
+  SPATIAL: new URL("/img/Globe-Green.png", import.meta.url).href,
+};
+
+export const contentTypeLabels: { [key: string]: string } = {
+  CollectionResource: "Collection",
+  TimeSeriesAggregation: "Time Series",
+  "CSV Data": "CSV Data",
+  Document: "Document",
+  "File Set": "File Set",
+  "Generic Data": "Generic Data",
+  GeographicFeatureAggregation: "Geographic Feature (ESRI Shapefiles)",
+  GeographicRasterAggregation: "Geographic Raster",
+  MultidimensionalAggregation: "Multidimensional (NetCDF)",
+  Image: "Image",
+};

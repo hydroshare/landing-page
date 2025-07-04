@@ -16,11 +16,12 @@
           <div class="text-h6 mb-6">Filters</div>
 
           <v-expansion-panels multiple v-model="panels">
+            <!-- AVAILABILITY -->
             <v-expansion-panel tile key="0">
               <v-expansion-panel-title class="py-0 px-4" color="grey-lighten-3">
                 <v-switch
                   @click.stop=""
-                  v-model="filter.availability.isActive"
+                  v-model="filter.availability.isEnabled"
                   @update:model-value="pushSearchRoute()"
                   density="compact"
                   hide-details
@@ -40,47 +41,29 @@
                       onFilterControlChange(filter.availability)
                     "
                     color="primary"
-                    :label="option"
+                    :label="option.label"
                     :key="index"
-                    :value="option"
+                    :value="option.value"
                     hide-details
                     density="compact"
                   ></v-checkbox>
                   <v-img
-                    v-if="option === 'Public'"
-                    :src="sharingStatusIcons.PUBLIC"
+                    :src="option.icon"
                     class="img-access-icon flex-grow-0"
                     width="25"
-                    title="Public"
+                    :title="option.label"
                     alt="Public"
-                  />
-
-                  <v-img
-                    v-else-if="option === 'Published'"
-                    :src="sharingStatusIcons.PUBLISHED"
-                    class="img-access-icon flex-grow-0"
-                    width="25"
-                    title="Published"
-                    alt="Published"
-                  />
-
-                  <v-img
-                    v-else-if="option === 'Discoverable'"
-                    :src="sharingStatusIcons.DISCOVERABLE"
-                    class="img-access-icon flex-grow-0"
-                    width="25"
-                    title="Discoverable"
-                    alt="Discoverable"
                   />
                 </div>
               </v-expansion-panel-text>
             </v-expansion-panel>
 
+            <!-- CONTENT TYPE -->
             <v-expansion-panel tile key="1">
               <v-expansion-panel-title class="py-0 px-4" color="grey-lighten-3">
                 <v-switch
                   @click.stop=""
-                  v-model="filter.contentType.isActive"
+                  v-model="filter.contentType.isEnabled"
                   @update:model-value="pushSearchRoute()"
                   density="compact"
                   hide-details
@@ -96,27 +79,40 @@
               ></v-progress-linear>
 
               <v-expansion-panel-text>
-                <v-checkbox
-                  v-for="(option, index) of contentTypes"
-                  v-model="filter.contentType.value"
-                  @update:model-value="
-                    onFilterControlChange(filter.contentType)
-                  "
-                  :label="contentTypeLabels[option] || option"
-                  :key="index"
-                  :value="option"
-                  hide-details
-                  density="compact"
-                  color="primary"
-                ></v-checkbox>
+                <div
+                  v-for="(option, index) of filter.contentType.options"
+                  class="d-flex justify-space-between align-center"
+                >
+                  <v-checkbox
+                    v-model="filter.contentType.value"
+                    @update:model-value="
+                      onFilterControlChange(filter.contentType)
+                    "
+                    :label="option.label"
+                    :key="index"
+                    :value="option.value"
+                    hide-details
+                    density="compact"
+                    color="primary"
+                  ></v-checkbox>
+
+                  <v-img
+                    v-if="option.logo"
+                    :src="option.logo"
+                    :title="option.label"
+                    width="30"
+                    max-width="30"
+                  />
+                </div>
               </v-expansion-panel-text>
             </v-expansion-panel>
 
+            <!-- TEMPORAL COVERAGE -->
             <v-expansion-panel tile key="2">
               <v-expansion-panel-title class="py-0 px-4" color="grey-lighten-4">
                 <v-switch
                   @click.stop=""
-                  v-model="filter.dataCoverage.isActive"
+                  v-model="filter.dataCoverage.isEnabled"
                   @update:model-value="pushSearchRoute()"
                   density="compact"
                   hide-details
@@ -129,8 +125,8 @@
 
               <v-expansion-panel-text>
                 <cd-range-input
-                  v-model="dataCoverage"
-                  v-model:isActive="filter.dataCoverage.isActive"
+                  v-model="filter.dataCoverage.value"
+                  v-model:isActive="filter.dataCoverage.isEnabled"
                   @update:is-active="pushSearchRoute"
                   @end="onFilterControlChange(filter.dataCoverage)"
                   :min="filter.dataCoverage.min"
@@ -140,11 +136,12 @@
               </v-expansion-panel-text>
             </v-expansion-panel>
 
+            <!-- DATE CREATED -->
             <v-expansion-panel tile key="3">
               <v-expansion-panel-title class="py-0 px-4" color="grey-lighten-4">
                 <v-switch
                   @click.stop=""
-                  v-model="filter.creationDate.isActive"
+                  v-model="filter.creationDate.isEnabled"
                   @update:model-value="pushSearchRoute()"
                   density="compact"
                   hide-details
@@ -155,10 +152,9 @@
               </v-expansion-panel-title>
 
               <v-expansion-panel-text key="4">
-                <!-- DATA COVERAGE -->
                 <cd-range-input
-                  v-model="creationDate"
-                  v-model:isActive="filter.creationDate.isActive"
+                  v-model="filter.creationDate.value"
+                  v-model:isActive="filter.creationDate.isEnabled"
                   @update:is-active="pushSearchRoute"
                   @end="onFilterControlChange(filter.creationDate)"
                   :min="filter.creationDate.min"
@@ -168,11 +164,12 @@
               </v-expansion-panel-text>
             </v-expansion-panel>
 
+            <!-- PUBLICATION YEAR -->
             <v-expansion-panel tile>
               <v-expansion-panel-title class="py-0 px-4" color="grey-lighten-4">
                 <v-switch
                   @click.stop=""
-                  v-model="filter.publicationYear.isActive"
+                  v-model="filter.publicationYear.isEnabled"
                   @update:model-value="pushSearchRoute()"
                   density="compact"
                   hide-details
@@ -185,10 +182,9 @@
               </v-expansion-panel-title>
 
               <v-expansion-panel-text>
-                <!-- PUBLICATION YEAR -->
                 <cd-range-input
-                  v-model="publicationYear"
-                  v-model:isActive="filter.publicationYear.isActive"
+                  v-model="filter.publicationYear.value"
+                  v-model:isActive="filter.publicationYear.isEnabled"
                   @update:is-active="pushSearchRoute"
                   @end="onFilterControlChange(filter.publicationYear)"
                   :min="filter.publicationYear.min"
@@ -199,8 +195,9 @@
             </v-expansion-panel>
           </v-expansion-panels>
 
+          <!-- SUBJECT/KEYWORDS -->
           <cd-search
-            v-model="filter.subject"
+            v-model="filter.subject.value"
             :target-field="EnumHistoryTypes.SUBJECT"
             :append-search-button="false"
             :is-eager="true"
@@ -208,20 +205,21 @@
             @keyup.enter="pushSearchRoute"
             @hint-selected="pushSearchRoute()"
             @clear="
-              filter.subject = '';
+              filter.subject.value = '';
               pushSearchRoute();
             "
             :inputAttrs="{
               variant: 'outlined',
-              prependInnerIcon: 'mdi-pen',
-              label: 'Subject',
+              prependInnerIcon: filter.subject.icon,
+              label: filter.subject.title,
             }"
             class="mt-6"
           >
           </cd-search>
 
+          <!-- CREATOR NAME -->
           <cd-search
-            v-model="filter.creatorName"
+            v-model="filter.creatorName.value"
             :target-field="EnumHistoryTypes.CREATOR"
             :append-search-button="false"
             :is-eager="true"
@@ -229,13 +227,13 @@
             @keyup.enter="pushSearchRoute"
             @hint-selected="pushSearchRoute()"
             @clear="
-              filter.creatorName = '';
+              filter.creatorName.value = '';
               pushSearchRoute();
             "
             :inputAttrs="{
               variant: 'outlined',
               prependInnerIcon: 'mdi-account-edit',
-              label: 'Author\'s Name',
+              label: filter.creatorName.title,
             }"
             class="mt-6"
           >
@@ -255,8 +253,9 @@
             density="compact"
           /> -->
 
+          <!-- CONTRIBUTOR NAME -->
           <cd-search
-            v-model="filter.contributorName"
+            v-model="filter.contributorName.value"
             :target-field="EnumHistoryTypes.CONTRIBUTOR"
             :append-search-button="false"
             :is-eager="true"
@@ -264,20 +263,21 @@
             @keyup.enter="pushSearchRoute"
             @hint-selected="pushSearchRoute()"
             @clear="
-              filter.contributorName = '';
+              filter.contributorName.value = '';
               pushSearchRoute();
             "
             :inputAttrs="{
               variant: 'outlined',
               prependInnerIcon: 'mdi-account-group',
-              label: 'Contributor\'s Name',
+              label: filter.contributorName.title,
             }"
             class="mt-6"
           >
           </cd-search>
 
+          <!-- FUNDER -->
           <cd-search
-            v-model="filter.fundingFunderName"
+            v-model="filter.fundingFunderName.value"
             :target-field="EnumHistoryTypes.FUNDER"
             :append-search-button="false"
             :is-eager="true"
@@ -285,12 +285,12 @@
             @keyup.enter="pushSearchRoute"
             @hint-selected="pushSearchRoute()"
             @clear="
-              filter.fundingFunderName = '';
+              filter.fundingFunderName.value = '';
               pushSearchRoute();
             "
             :inputAttrs="{
               variant: 'outlined',
-              prependInnerIcon: 'mdi-domain',
+              prependInnerIcon: filter.fundingFunderName.icon,
               label: 'Funder',
             }"
             class="mt-6"
@@ -326,24 +326,45 @@
                 placeholder: $t(`home.search.inputPlaceholder`),
               }"
             />
-            <v-card
-              v-if="isSomeFilterActive"
-              density="compact"
-              flat
-              variant="outlined"
+          </div>
+
+          <div v-if="isSomeFilterActive" class="d-flex gap-1 mb-4 flex-wrap">
+            <v-chip
+              v-for="f of activeFilters"
+              color="primary"
+              closable
+              label
+              @click:close="
+                f.clear();
+                pushSearchRoute();
+              "
             >
-              <v-card-text class="d-flex align-center py-2">
-                <div class="text-body-2 mr-1">Active filters</div>
-                <v-btn
-                  @click="clearFilters"
-                  variant="text"
-                  density="compact"
-                  icon="mdi-close"
-                  size="small"
-                  title="Clear filters"
-                ></v-btn>
-              </v-card-text>
-            </v-card>
+              <v-icon v-if="f.icon" class="mr-2" :icon="f.icon"></v-icon>
+              <p>
+                <span>{{ f.title }}: </span>
+                <b v-if="f.type === enumFilterTypes.RANGE">{{
+                  `${f.value[0]} to ${f.value[1]}`
+                }}</b>
+                <b
+                  v-else-if="
+                    f.type === enumFilterTypes.SELECT_MULTIPLE &&
+                    Array.isArray(f.value)
+                  "
+                  >{{
+                    f.value
+                      .map(
+                        (opt: string) =>
+                          f.options?.find((fi) => fi.value === opt)?.label,
+                      )
+                      .join(", ")
+                  }}</b
+                >
+                <b v-else-if="Array.isArray(f.value)">{{
+                  f.value.join(", ")
+                }}</b>
+                <b v-else>{{ f.value }}</b>
+              </p>
+            </v-chip>
           </div>
 
           <div class="results-container mb-12">
@@ -542,8 +563,15 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue, toNative } from "vue-facing-decorator";
-import { MIN_YEAR, MAX_YEAR } from "@/constants";
+import { Component, Vue, Watch, toNative } from "vue-facing-decorator";
+import {
+  MIN_YEAR,
+  MAX_YEAR,
+  contentTypeLogos,
+  sharingStatusIcons,
+  contentTypeLabels,
+  INITIAL_RANGE,
+} from "@/constants";
 import { sameRouteNavigationErrorHandler } from "@/constants";
 import { Loader, LoaderOptions } from "google-maps";
 import { formatDate } from "@/util";
@@ -554,7 +582,6 @@ import SearchHistory from "@/models/search-history.model";
 import Search from "@/models/search.model";
 import { Notifications } from "@cznethub/cznet-vue-core";
 import {
-  ISearchFilter,
   ISearchParams,
   IResult,
   EnumShortParams,
@@ -563,52 +590,13 @@ import {
 } from "@/types";
 import CdRangeInput from "./cd.range-input.vue";
 import { useRoute, useRouter } from "vue-router";
+import { EnumFilterTypes, Filter } from "./filter";
 
 const options: LoaderOptions = { libraries: ["drawing"] };
 const loader: Loader = new Loader(
   import.meta.env.VITE_APP_GOOGLE_MAPS_API_KEY,
   options,
 );
-
-const contentTypeLogos: { [key: string]: string } = {
-  CompositeResource: new URL("/img/composite48x48.png", import.meta.url).href,
-  CollectionResource: new URL("/img/collection48x48.png", import.meta.url).href,
-  GeographicRasterAggregation: new URL(
-    "/img/geographicraster48x48.png",
-    import.meta.url,
-  ).href,
-  TimeSeriesAggregation: new URL("/img/timeseries48x48.png", import.meta.url)
-    .href,
-  GeographicFeatureAggregation: new URL(
-    "/img/geographicfeature48x48.png",
-    import.meta.url,
-  ).href,
-  MultidimensionalAggregation: new URL(
-    "/img/multidimensional48x48.png",
-    import.meta.url,
-  ).href,
-};
-
-const sharingStatusIcons: { [key: string]: string } = {
-  PUBLIC: new URL("/img/public.png", import.meta.url).href,
-  PRIVATE: new URL("/img/private.png", import.meta.url).href,
-  DISCOVERABLE: new URL("/img/discoverable.png", import.meta.url).href,
-  PUBLISHED: new URL("/img/published.png", import.meta.url).href,
-  SPATIAL: new URL("/img/Globe-Green.png", import.meta.url).href,
-};
-
-const contentTypeLabels: { [key: string]: string } = {
-  CollectionResource: "Collection",
-  TimeSeriesAggregation: "Time Series",
-  "CSV Data": "CSV Data",
-  Document: "Document",
-  "File Set": "File Set",
-  "Generic Data": "Generic Data",
-  GeographicFeatureAggregation: "Geographic Feature (ESRI Shapefiles)",
-  GeographicRasterAggregation: "Geographic Raster",
-  MultidimensionalAggregation: "Multidimensional (NetCDF)",
-  Image: "Image",
-};
 
 @Component({
   name: "cd-search-results",
@@ -625,42 +613,148 @@ class CdSearchResults extends Vue {
   isSearching = false;
   isFetchingMore = false;
   // public view: 'list' | 'map' = 'list'
-
-  filter: ISearchFilter = {
-    publicationYear: {
+  filter: { [key: string]: Filter } = {
+    availability: new Filter({
+      name: "creativeWorkStatus",
+      title: "Availability",
+      icon: "mdi-lock-outline",
+      urlLabel: EnumShortParams.AVAILABILITY,
+      type: EnumFilterTypes.SELECT_MULTIPLE,
+      options: [
+        {
+          value: "Discoverable",
+          label: "Discoverable",
+          icon: sharingStatusIcons.DISCOVERABLE,
+        },
+        {
+          value: "Public",
+          label: "Public",
+          icon: sharingStatusIcons.PUBLIC,
+        },
+        {
+          value: "Published",
+          label: "Published",
+          icon: sharingStatusIcons.PUBLISHED,
+        },
+      ],
+    }),
+    contentType: new Filter({
+      name: "contentType",
+      title: "Content type",
+      icon: "mdi-card-multiple-outline",
+      urlLabel: EnumShortParams.CONTENT_TYPE,
+      type: EnumFilterTypes.SELECT_MULTIPLE,
+      options: this._contentTypes.map((contentType: string) => {
+        return {
+          value: contentType,
+          label: contentTypeLabels[contentType],
+          logo: contentTypeLogos[contentType],
+        };
+      }),
+    }),
+    dataCoverage: new Filter({
+      name: "dataCoverage",
+      title: "Temporal coverage",
+      icon: "mdi-calendar-range",
+      urlLabel: EnumShortParams.DATA_COVERAGE,
+      type: EnumFilterTypes.RANGE,
       min: MIN_YEAR,
       max: MAX_YEAR,
-      isActive: false,
-    },
-    creationDate: {
+      getter: () => {
+        return SearchResults.$state.dataCoverage;
+      },
+      setter: (range: [number, number]) => {
+        SearchResults.commit((state) => {
+          state.dataCoverage = range;
+        });
+      },
+      clear: () => {
+        SearchResults.commit((state) => {
+          state.dataCoverage = INITIAL_RANGE;
+        });
+      },
+    }),
+    creationDate: new Filter({
+      name: "dateCreated",
+      title: "Date created",
+      icon: "mdi-calendar-plus",
+      urlLabel: EnumShortParams.CREATION_DATE,
+      type: EnumFilterTypes.RANGE,
       min: MIN_YEAR,
       max: MAX_YEAR,
-      isActive: false,
-    },
-    dataCoverage: {
+      getter: () => {
+        return SearchResults.$state.creationDate;
+      },
+      setter: (range: [number, number]) => {
+        SearchResults.commit((state) => {
+          state.creationDate = range;
+        });
+      },
+      clear: () => {
+        SearchResults.commit((state) => {
+          state.creationDate = INITIAL_RANGE;
+        });
+      },
+    }),
+    publicationYear: new Filter({
+      name: "published",
+      title: "Publication year",
+      icon: "mdi-calendar-star-four-points",
+      urlLabel: EnumShortParams.PUBLICATION_YEAR,
+      type: EnumFilterTypes.RANGE,
       min: MIN_YEAR,
       max: MAX_YEAR,
-      isActive: false,
-    },
-    contentType: {
-      value: null,
-      isActive: false,
-    },
-
-    availability: {
-      options: ["Discoverable", "Public", "Published"],
-      value: null,
-      isActive: false,
-    },
-    creatorName: "",
-    contributorName: "",
-    ownerName: "",
-    subject: "",
-    fundingFunderName: "",
+      getter: () => {
+        return SearchResults.$state.publicationYear;
+      },
+      setter: (range: [number, number]) => {
+        SearchResults.commit((state) => {
+          state.publicationYear = range;
+        });
+      },
+      clear: () => {
+        SearchResults.commit((state) => {
+          state.publicationYear = INITIAL_RANGE;
+        });
+      },
+    }),
+    subject: new Filter({
+      title: "Subject keywords",
+      name: "keyword",
+      historyType: EnumHistoryTypes.SUBJECT,
+      urlLabel: EnumShortParams.SUBJECT,
+      type: EnumFilterTypes.STRING,
+      icon: "mdi-pen",
+    }),
+    creatorName: new Filter({
+      name: "creatorName",
+      title: "Author's name",
+      historyType: EnumHistoryTypes.CREATOR,
+      urlLabel: EnumShortParams.AUTHOR_NAME,
+      type: EnumFilterTypes.STRING,
+      icon: "mdi-account-outline",
+    }),
+    contributorName: new Filter({
+      name: "contributorName",
+      title: "Contributor's name",
+      historyType: EnumHistoryTypes.CONTRIBUTOR,
+      urlLabel: EnumShortParams.CONTRIBUTOR_NAME,
+      type: EnumFilterTypes.STRING,
+      icon: "mdi-account-group-outline",
+    }),
+    fundingFunderName: new Filter({
+      name: "fundingFunderName",
+      title: "Funder",
+      historyType: EnumHistoryTypes.FUNDER,
+      urlLabel: EnumShortParams.FUNDER,
+      type: EnumFilterTypes.STRING,
+      icon: "mdi-domain",
+    }),
   };
   contentTypeLogos = contentTypeLogos;
   sharingStatusIcons = sharingStatusIcons;
   contentTypeLabels = contentTypeLabels;
+  enumFilterTypes = EnumFilterTypes;
 
   headers = reactive([
     {
@@ -706,37 +800,12 @@ class CdSearchResults extends Vue {
   router = useRouter();
   EnumHistoryTypes = EnumHistoryTypes;
 
-  public get creationDate() {
-    return SearchResults.$state.creationDate;
+  public get registeredFilters() {
+    return Object.values(this.filter);
   }
 
-  public set creationDate(range: [number, number]) {
-    // TODO: validate input
-    SearchResults.commit((state) => {
-      state.creationDate = range;
-    });
-  }
-
-  public get publicationYear() {
-    return SearchResults.$state.publicationYear;
-  }
-
-  public set publicationYear(range: [number, number]) {
-    // TODO: validate input
-    SearchResults.commit((state) => {
-      state.publicationYear = range;
-    });
-  }
-
-  public get dataCoverage() {
-    return SearchResults.$state.dataCoverage;
-  }
-
-  public set dataCoverage(range: [number, number]) {
-    // TODO: validate input
-    SearchResults.commit((state) => {
-      state.dataCoverage = range;
-    });
+  public get activeFilters() {
+    return this.registeredFilters.filter((f) => f.isActive());
   }
 
   public get panels() {
@@ -744,7 +813,6 @@ class CdSearchResults extends Vue {
   }
 
   public set panels(range: number[]) {
-    // TODO: validate input
     SearchResults.commit((state) => {
       state.panels = range;
     });
@@ -755,23 +823,23 @@ class CdSearchResults extends Vue {
   }
 
   public get isSomeFilterActive() {
-    return (
-      this.filter.creationDate.isActive ||
-      this.filter.publicationYear.isActive ||
-      this.filter.dataCoverage.isActive ||
-      (this.filter.availability.isActive &&
-        this.filter.availability.value?.length) ||
-      (this.filter.contentType.isActive &&
-        this.filter.contentType.value?.length) ||
-      this.filter.creatorName ||
-      this.filter.contributorName ||
-      this.filter.ownerName ||
-      this.filter.subject ||
-      this.filter.fundingFunderName
+    return this.registeredFilters.some((f) => f.isActive());
+  }
+
+  @Watch("_contentTypes")
+  onContentTypesChanged() {
+    this.filter.contentType.options = this._contentTypes.map(
+      (contentType: string) => {
+        return {
+          value: contentType,
+          label: contentTypeLabels[contentType],
+          logo: contentTypeLogos[contentType],
+        };
+      },
     );
   }
 
-  public get contentTypes() {
+  private get _contentTypes() {
     return Search.$state.contentTypes;
   }
 
@@ -781,96 +849,28 @@ class CdSearchResults extends Vue {
 
   /** Search query parameters */
   get queryParams(): ISearchParams {
-    const queryParams: ISearchParams = {
+    let params: ISearchParams = {
       term: this.searchQuery,
       pageSize: this.pageSize,
       pageNumber: this.pageNumber,
     };
 
-    // CREATION DATE
-    if (this.filter.creationDate.isActive) {
-      queryParams.dateCreatedStart = this.creationDate[0];
-      queryParams.dateCreatedEnd = this.creationDate[1];
-    }
+    this.registeredFilters.forEach((f) => {
+      params = { ...params, ...f.getQueryParams() };
+    });
 
-    // PUBLICATION YEAR
-    if (this.filter.publicationYear.isActive) {
-      queryParams.publishedStart = this.publicationYear[0];
-      queryParams.publishedEnd = this.publicationYear[1];
-    }
-
-    // DATA COVERAGE
-    if (this.filter.dataCoverage.isActive) {
-      queryParams.dataCoverageStart = this.dataCoverage[0];
-      queryParams.dataCoverageEnd = this.dataCoverage[1];
-    }
-
-    // CREATOR NAME
-    if (this.filter.creatorName) {
-      queryParams.creatorName = this.filter.creatorName;
-    }
-
-    // CONTRIBUTOR NAME
-    if (this.filter.contributorName) {
-      queryParams.contributorName = this.filter.contributorName;
-    }
-
-    if (this.filter.ownerName) {
-      queryParams.ownerName = this.filter.ownerName;
-    }
-
-    // FUNDER
-    if (this.filter.fundingFunderName) {
-      queryParams.fundingFunderName = this.filter.fundingFunderName;
-    }
-
-    // SUBJECT
-    if (this.filter.subject) {
-      queryParams.keyword = this.filter.subject;
-    }
-
-    // AVAILABILITY
-    if (this.filter.availability.isActive && this.filter.availability.value) {
-      queryParams.creativeWorkStatus = this.filter.availability.value;
-    }
-
-    // CONTENT TYPE
-    if (
-      this.filter.contentType.isActive &&
-      this.filter.contentType.value?.length
-    ) {
-      queryParams.contentType = this.filter.contentType.value;
-    }
-
-    return queryParams;
+    return params;
   }
 
   /** Route query parameters with short keys. These are parameters needed to replicate a search. */
   public get routeParams(): EnumDictionary<EnumShortParams, any> {
-    return {
+    let params = {
       [EnumShortParams.QUERY]: this.searchQuery,
-      [EnumShortParams.AUTHOR_NAME]: this.filter.creatorName || undefined,
-      [EnumShortParams.CONTRIBUTOR_NAME]:
-        this.filter.contributorName || undefined,
-      [EnumShortParams.OWNER_NAME]: this.filter.ownerName || undefined,
-      [EnumShortParams.FUNDER]: this.filter.fundingFunderName || undefined,
-      [EnumShortParams.SUBJECT]: this.filter.subject || undefined,
-      [EnumShortParams.AVAILABILITY]: this.filter.availability.isActive
-        ? this.filter.availability.value || undefined
-        : undefined,
-      [EnumShortParams.CONTENT_TYPE]: this.filter.contentType.isActive
-        ? this.filter.contentType.value || undefined
-        : undefined,
-      [EnumShortParams.CREATION_DATE]: this.filter.creationDate.isActive
-        ? this.creationDate.map((n) => n.toString()) || undefined
-        : undefined,
-      [EnumShortParams.PUBLICATION_YEAR]: this.filter.publicationYear.isActive
-        ? this.publicationYear.map((n) => n.toString()) || undefined
-        : undefined,
-      [EnumShortParams.DATA_COVERAGE]: this.filter.dataCoverage.isActive
-        ? this.dataCoverage.map((n) => n.toString()) || undefined
-        : undefined,
     };
+    this.registeredFilters.forEach((f) => {
+      params = { ...params, ...f.getRouteParams() };
+    });
+    return params as EnumDictionary<EnumShortParams, any>;
   }
 
   created() {
@@ -895,21 +895,12 @@ class CdSearchResults extends Vue {
     if (this.queryParams.term) {
       SearchHistory.log(this.queryParams.term, EnumHistoryTypes.TERM);
     }
-    if (this.filter.creatorName) {
-      SearchHistory.log(this.filter.creatorName, EnumHistoryTypes.CREATOR);
-    }
-    if (this.filter.contributorName) {
-      SearchHistory.log(
-        this.filter.contributorName,
-        EnumHistoryTypes.CONTRIBUTOR,
-      );
-    }
-    if (this.filter.subject) {
-      SearchHistory.log(this.filter.subject, EnumHistoryTypes.SUBJECT);
-    }
-    if (this.filter.fundingFunderName) {
-      SearchHistory.log(this.filter.fundingFunderName, EnumHistoryTypes.FUNDER);
-    }
+
+    this.registeredFilters.forEach((f) => {
+      if (f.historyType && f.value?.trim()) {
+        SearchHistory.log(f.value?.trim(), f.historyType);
+      }
+    });
   }
 
   /** Pushes the desired search to the router, which will reload the route with the new query parameters */
@@ -963,12 +954,8 @@ class CdSearchResults extends Vue {
     this.isFetchingMore = false;
   }
 
-  public onFilterControlChange(
-    filter: Partial<{
-      isActive: boolean;
-    }>,
-  ) {
-    filter.isActive = true;
+  public onFilterControlChange(filter: Filter) {
+    filter.isEnabled = true;
 
     this.pushSearchRoute();
   }
@@ -1026,27 +1013,7 @@ class CdSearchResults extends Vue {
 
   public clearFilters() {
     const wasSomeActive = this.isSomeFilterActive;
-
-    this.filter.creationDate.isActive = false;
-    this.creationDate = [MIN_YEAR, MAX_YEAR];
-
-    this.filter.publicationYear.isActive = false;
-    this.publicationYear = [MIN_YEAR, MAX_YEAR];
-
-    this.filter.dataCoverage.isActive = false;
-    this.dataCoverage = [MIN_YEAR, MAX_YEAR];
-
-    this.filter.availability.value = null;
-    this.filter.availability.isActive = false;
-
-    this.filter.contentType.value = null;
-    this.filter.contentType.isActive = false;
-
-    this.filter.creatorName = "";
-    this.filter.contributorName = "";
-    this.filter.ownerName = "";
-    this.filter.subject = "";
-    this.filter.fundingFunderName = "";
+    this.registeredFilters.forEach((f) => f.clear());
 
     if (wasSomeActive) {
       this.pushSearchRoute();
@@ -1055,69 +1022,8 @@ class CdSearchResults extends Vue {
 
   /** Load route query parameters into component values. */
   private _loadRouteParams() {
-    // SEARCH QUERY
     this.searchQuery = this.$route.query[EnumShortParams.QUERY] as string;
-
-    this.filter.creatorName =
-      (this.$route.query[EnumShortParams.AUTHOR_NAME] as string) || "";
-    this.filter.contributorName =
-      (this.$route.query[EnumShortParams.CONTRIBUTOR_NAME] as string) || "";
-    this.filter.ownerName =
-      (this.$route.query[EnumShortParams.OWNER_NAME] as string) || "";
-    this.filter.fundingFunderName =
-      (this.$route.query[EnumShortParams.FUNDER] as string) || "";
-    this.filter.subject =
-      (this.$route.query[EnumShortParams.SUBJECT] as string) || "";
-
-    // CONTENT TYPE
-    if (this.$route.query[EnumShortParams.CONTENT_TYPE]) {
-      this.filter.contentType.isActive = true;
-      this.filter.contentType.value = this.$route.query[
-        EnumShortParams.CONTENT_TYPE
-      ]
-        ? ([this.$route.query[EnumShortParams.CONTENT_TYPE]].flat() as string[])
-        : null;
-    }
-
-    // AVAILABILITY
-    if (this.$route.query[EnumShortParams.AVAILABILITY]) {
-      this.filter.availability.isActive = true;
-      this.filter.availability.value = this.$route.query[
-        EnumShortParams.AVAILABILITY
-      ]
-        ? ([this.$route.query[EnumShortParams.AVAILABILITY]].flat() as string[])
-        : null;
-    }
-
-    // CREATION DATE
-    if (this.$route.query[EnumShortParams.CREATION_DATE]) {
-      this.filter.creationDate.isActive = true;
-      this.creationDate =
-        ((
-          this.$route.query[EnumShortParams.CREATION_DATE] as [string, string]
-        )?.map((n) => +n) as [number, number]) || this.creationDate;
-    }
-
-    // PUBLICATION YEAR
-    if (this.$route.query[EnumShortParams.PUBLICATION_YEAR]) {
-      this.filter.publicationYear.isActive = true;
-      this.publicationYear =
-        ((
-          this.$route.query[EnumShortParams.PUBLICATION_YEAR] as [
-            string,
-            string,
-          ]
-        )?.map((n) => +n) as [number, number]) || this.publicationYear;
-    }
-
-    // DATA COVERAGE
-    if (this.$route.query[EnumShortParams.DATA_COVERAGE]) {
-      this.filter.dataCoverage.isActive = true;
-      this.dataCoverage =
-        ((
-          this.$route.query[EnumShortParams.DATA_COVERAGE] as [string, string]
-        )?.map((n) => +n) as [number, number]) || this.dataCoverage;
-    }
+    this.registeredFilters.forEach((f) => f.loadFromRoute(this.$route.query));
   }
 
   public hasSpatialFeatures(result: IResult): boolean {

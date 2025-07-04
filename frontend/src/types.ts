@@ -35,38 +35,6 @@ export interface IHint {
   key: string;
 }
 
-export interface ISearchFilter {
-  publicationYear: {
-    min: number;
-    max: number;
-    isActive: boolean;
-  };
-  creationDate: {
-    min: number;
-    max: number;
-    isActive: boolean;
-  };
-  dataCoverage: {
-    min: number;
-    max: number;
-    isActive: boolean;
-  };
-  contentType: {
-    value: string[] | null;
-    isActive: boolean;
-  };
-  availability: {
-    options: string[];
-    value: string[] | null;
-    isActive: boolean;
-  };
-  creatorName: string;
-  contributorName: string;
-  ownerName: string;
-  subject: string;
-  fundingFunderName: string;
-}
-
 export interface ISearchParams {
   term: string;
   pageSize: number;
@@ -79,7 +47,7 @@ export interface ISearchParams {
   dataCoverageEnd?: number;
   creatorName?: string;
   contributorName?: string;
-  ownerName?: string;
+  // ownerName?: string;
   fundingFunderName?: string;
   keyword?: string;
   creativeWorkStatus?: string[];
