@@ -51,8 +51,8 @@
                     :src="option.icon"
                     class="img-access-icon flex-grow-0"
                     width="25"
-                    :title="option.label"
-                    alt="Public"
+                    v-tooltip="option.label"
+                    :alt="option.label"
                   />
                 </div>
               </v-expansion-panel-text>
@@ -99,7 +99,8 @@
                   <v-img
                     v-if="option.logo"
                     :src="option.logo"
-                    :title="option.label"
+                    v-tooltip="option.label"
+                    :alt="option.label"
                     width="30"
                     max-width="30"
                   />
@@ -238,20 +239,6 @@
             class="mt-6"
           >
           </cd-search>
-
-          <!-- <v-text-field
-            @blur="pushSearchRoute"
-            @keyup.enter="pushSearchRoute"
-            @click:clear="pushSearchRoute"
-            v-model="filter.ownerName"
-            label="Owner's name"
-            class="mt-6"
-            prepend-inner-icon="mdi-account-key"
-            hide-details
-            clearable
-            variant="outlined"
-            density="compact"
-          /> -->
 
           <!-- CONTRIBUTOR NAME -->
           <cd-search
@@ -403,6 +390,7 @@
                 expand-on-click
                 show-expand
                 density="compact"
+                :loading="isFetchingMore"
               >
                 <template v-slot:item.icons="{ item }">
                   <div class="d-flex align-center justify-start">
@@ -410,48 +398,48 @@
                       class="mr-2"
                       v-if="contentTypeLogos[item.contentType]"
                       :src="contentTypeLogos[item.contentType]"
-                      :title="item.contentType"
+                      v-tooltip="contentTypeLabels[item.contentType]"
                       width="30"
                       max-width="30"
                     />
                     <v-img
+                      v-if="item.sharingStatus === 'Public'"
                       class="img-access-icon flex-grow-0"
                       width="25"
-                      v-if="item.sharingStatus === 'Public'"
                       :src="sharingStatusIcons.PUBLIC"
-                      title="Public"
+                      v-tooltip="'Public'"
                       alt="Public"
                     />
                     <v-img
+                      v-else-if="item.sharingStatus === 'Private'"
                       class="img-access-icon flex-grow-0"
                       width="25"
-                      v-else-if="item.sharingStatus === 'Private'"
                       :src="sharingStatusIcons.PRIVATE"
-                      title="Private"
+                      v-tooltip="'Private'"
                       alt="Private"
                     />
                     <v-img
+                      v-else-if="item.sharingStatus === 'Discoverable'"
                       class="img-access-icon flex-grow-0"
                       width="25"
-                      v-else-if="item.sharingStatus === 'Discoverable'"
                       :src="sharingStatusIcons.DISCOVERABLE"
-                      title="Discoverable"
+                      v-tooltip="'Discoverable'"
                       alt="Discoverable"
                     />
                     <v-img
+                      v-else-if="item.sharingStatus === 'Published'"
                       class="img-access-icon flex-grow-0"
                       width="25"
-                      v-if="item.sharingStatus === 'Published'"
                       :src="sharingStatusIcons.PUBLISHED"
-                      title="Published"
+                      v-tooltip="'Published'"
                       alt="Published"
                     />
                     <v-img
+                      v-if="hasSpatialFeatures(item)"
                       class="img-access-icon flex-grow-0"
                       width="25"
-                      v-if="hasSpatialFeatures(item)"
                       :src="sharingStatusIcons.SPATIAL"
-                      title="Contains Spatial Coverage"
+                      v-tooltip="'Contains Spatial Coverage'"
                       alt="Contains Spatial Coverage"
                     />
                   </div>
@@ -459,7 +447,7 @@
                 <template #item.title="{ item }">
                   <a
                     v-if="item.identifier"
-                    class="text-decoration-none"
+                    class="text-decoration-none text-body-1"
                     :href="item.identifier"
                     target="_blank"
                     v-html="highlight(item, 'name')"

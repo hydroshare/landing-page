@@ -66,6 +66,7 @@ export const sharingStatusIcons: { [key: string]: string } = {
 };
 
 export const contentTypeLabels: { [key: string]: string } = {
+  CompositeResource: "Composite Resource",
   CollectionResource: "Collection",
   TimeSeriesAggregation: "Time Series",
   "CSV Data": "CSV Data",
