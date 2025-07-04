@@ -387,10 +387,15 @@
                 :items="results"
                 class="elevation-2 text-body-1"
                 hover
-                expand-on-click
                 show-expand
                 density="compact"
                 :loading="isFetchingMore"
+                v-model:sort-by="sortBy"
+                :cell-props="
+                  (item) => ({
+                    class: { isSorted: item.column.key === sortBy[0]?.key },
+                  })
+                "
               >
                 <template v-slot:item.icons="{ item }">
                   <div class="d-flex align-center justify-start">
@@ -520,6 +525,29 @@
                     </td>
                   </div>
                 </template>
+                <template
+                  v-slot:item.data-table-expand="{
+                    internalItem,
+                    isExpanded,
+                    toggleExpand,
+                  }"
+                >
+                  <v-btn
+                    :append-icon="
+                      isExpanded(internalItem)
+                        ? 'mdi-chevron-up'
+                        : 'mdi-chevron-down'
+                    "
+                    :text="isExpanded(internalItem) ? 'Collapse' : 'Show more'"
+                    class="text-none"
+                    color="medium-emphasis"
+                    size="small"
+                    variant="text"
+                    border
+                    slim
+                    @click="toggleExpand(internalItem)"
+                  ></v-btn>
+                </template>
 
                 <!-- <div class="my-1" v-if="result.datePublished">
                   Publication Date: {{ formatDate(result.datePublished) }}
@@ -600,6 +628,7 @@ class CdSearchResults extends Vue {
   hasMore = true;
   isSearching = false;
   isFetchingMore = false;
+  sortBy: { key: string; order?: boolean | "asc" | "desc" }[] = [];
   // public view: 'list' | 'map' = 'list'
   filter: { [key: string]: Filter } = {
     availability: new Filter({
@@ -758,28 +787,36 @@ class CdSearchResults extends Vue {
       key: "title",
       visible: true,
       minWidth: 200,
-      sortable: false,
     },
     {
       title: "First Author",
       key: "firstAuthor",
       visible: true,
       minWidth: 200,
-      sortable: false,
+      sortRaw: (a, b) => {
+        return a.creator[0].localeCompare(b.creator[0], undefined, {
+          numeric: false,
+          sensitivity: "base",
+        });
+      },
     },
     {
       title: "Date Created",
       key: "dateCreated",
       visible: true,
       minWidth: 200,
-      sortable: false,
+      sortRaw: (a, b) => {
+        return a.dateCreated.localeCompare(b.dateCreated);
+      },
     },
     {
       title: "Last Modified",
       key: "lastModified",
       visible: true,
       minWidth: 200,
-      sortable: false,
+      sortRaw: (a, b) => {
+        return a.lastModified.localeCompare(b.lastModified);
+      },
     },
   ]);
 
@@ -1030,6 +1067,15 @@ export default toNative(CdSearchResults);
 
 :deep(.v-table .v-data-table__tr:nth-child(even) td) {
   background: #f7f7f7;
+}
+
+:deep(.v-table) {
+  .v-data-table__th--sorted {
+    background: #ddd;
+  }
+  .v-data-table__td.isSorted {
+    background: #eee !important;
+  }
 }
 
 :deep(.v-table tr.v-data-table__tr td) {
