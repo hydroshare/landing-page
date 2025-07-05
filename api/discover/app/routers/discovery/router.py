@@ -235,9 +235,10 @@ class SearchQuery(BaseModel):
     def stages(self):
         highlightPaths = ['name', 'description', 'keywords', 'creator.name']
         stages = []
-        compound = {'filter': self._filters, 'must': self._must}
+        compound = {'filter': self._filters, 'must': self._must, 'should': []}
 
         # The term is searched for in name, description, keywords and creator name
+        # TODO: should the term be searched for in all fields?
         if self.term:
             compound['should'] = [
                 # https://www.mongodb.com/docs/atlas/atlas-search/score/modify-score/#std-label-scoring-boost
@@ -264,21 +265,19 @@ class SearchQuery(BaseModel):
             '$search': {
                 'index': 'fuzzy_search',
                 'compound': compound,
+                'highlight': {'path': highlightPaths}
             }
         }
         
-        # Sort in $search using a search index field:
         order = 1 if self.order == "asc" else - 1
+        
+        # These sorts can occur inside the $search stage
         if self.sortBy == "name":
             search_stage["$search"]['sort'] = {"name": order}
         elif self.sortBy == "dateCreated":
             search_stage["$search"]['sort'] = {"dateCreated": order}
         elif self.sortBy == "lastModified":
             search_stage["$search"]['sort'] = {"lastModified": order}
-        elif self.sortBy == "creatorName":
-            search_stage["$search"]['sort'] = {"creator.0.name": order}
-
-        search_stage["$search"]['highlight'] = {'path': highlightPaths}
 
         stages.append(search_stage)
 
@@ -286,11 +285,15 @@ class SearchQuery(BaseModel):
             {'$set': {'score': {'$meta': 'searchScore'}, 'highlights': {'$meta': 'searchHighlights'}}},
         )
 
-        if self.term or self.creatorName or self.keyword or self.contributorName:
+        if self.term or self.creatorName or self.contributorName or self.keyword or self.contributorName:
             # get only results which meet minimum relevance score threshold
             stages.append({'$match': {'score': {'$gt': get_settings().search_relevance_score_threshold}}})
         # TODO: To exclude resource level metadata documents for now.
         stages.append({'$match': {"dateCreated": {"$not": {"$eq": None}}}})
+
+        # Sorting using an index for an array item requires a $sort stage.
+        if self.sortBy == "creatorName":
+            stages.append({ "$sort": {"creator.0.name": order}})
 
         return stages
 

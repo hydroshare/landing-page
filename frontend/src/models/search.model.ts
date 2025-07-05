@@ -130,7 +130,6 @@ export default class Search extends Model {
 
   /** Transform raw result data from API into `IResult` shaped objects */
   private static _parseResult(rawResult: any): IResult {
-    // TODO: get resource type and access
     return {
       creator: rawResult.creator.map((c: any) => c.name) || [],
       dateCreated: rawResult.dateCreated || "",

@@ -125,6 +125,7 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       port: 8080,
+      strictPort: true,
       // proxy: {
       //   "/sockjs-node": {
       //     target: "ws://127.0.0.1:8081",
