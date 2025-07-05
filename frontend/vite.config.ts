@@ -6,7 +6,7 @@ import Components from "unplugin-vue-components/vite";
 import AutoImport from "unplugin-auto-import/vite";
 import VueMacros from "unplugin-vue-macros/vite";
 import { VitePWA } from "vite-plugin-pwa";
-import WebfontDownload from "vite-plugin-webfont-dl";
+// import WebfontDownload from "vite-plugin-webfont-dl";
 import vuetify from "vite-plugin-vuetify";
 
 export default defineConfig(({ mode }) => {
@@ -94,7 +94,7 @@ export default defineConfig(({ mode }) => {
       }),
 
       // https://github.com/feat-agency/vite-plugin-webfont-dl
-      WebfontDownload(),
+      // WebfontDownload(),
 
       vuetify({
         styles: { configFile: "src/assets/css/settings.scss" },
@@ -125,7 +125,7 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       port: 8080,
-      strictPort: true,
+      // strictPort: true,
       // proxy: {
       //   "/sockjs-node": {
       //     target: "ws://127.0.0.1:8081",
