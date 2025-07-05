@@ -355,206 +355,191 @@
           </div>
 
           <div class="results-container mb-12">
-            <template v-if="isSearching">
-              <!-- TODO: refactor into a component -->
-              <!-- <v-skeleton-loader type="list-item" width="150" /> -->
-              <v-card elevation="2">
-                <v-card-text>
-                  <div v-for="index in 4" :key="index">
-                    <v-skeleton-loader type="table-tbody" />
-                  </div>
-                </v-card-text>
-              </v-card>
-            </template>
-
-            <template v-else>
-              <v-card
-                elevation="2"
-                v-if="!results.length"
-                class="text-body-2 text-center mt-8 py-12"
-              >
-                <v-card-text>
+            <v-data-table-virtual
+              :headers="headers.filter((header) => header.visible)"
+              :items="results"
+              class="elevation-2 text-body-1"
+              hover
+              show-expand
+              density="compact"
+              :loading="isFetchingMore || isSearching"
+              v-model:sort-by="sortBy"
+              @update:sort-by="onSortChange()"
+              :cell-props="
+                (item) => ({
+                  class: { isSorted: item.column.key === sortBy[0]?.key },
+                })
+              "
+            >
+              <template #no-data>
+                <div class="text-body-2 text-center py-4">
                   <v-empty-state
                     text="No results found."
                     icon="mdi-text-box-remove"
                   />
-                </v-card-text>
-              </v-card>
-
-              <v-data-table-virtual
-                v-if="results.length"
-                :headers="headers.filter((header) => header.visible)"
-                :items="results"
-                class="elevation-2 text-body-1"
-                hover
-                show-expand
-                density="compact"
-                :loading="isFetchingMore"
-                v-model:sort-by="sortBy"
-                @update:sort-by="onSortChange()"
-                :cell-props="
-                  (item) => ({
-                    class: { isSorted: item.column.key === sortBy[0]?.key },
-                  })
-                "
-              >
-                <template v-slot:item.icons="{ item }">
-                  <div class="d-flex align-center justify-start">
-                    <v-img
-                      class="mr-2"
-                      v-if="contentTypeLogos[item.contentType]"
-                      :src="contentTypeLogos[item.contentType]"
-                      v-tooltip="contentTypeLabels[item.contentType]"
-                      width="30"
-                      max-width="30"
-                    />
-                    <v-img
-                      v-if="item.sharingStatus === 'Public'"
-                      class="img-access-icon flex-grow-0"
-                      width="25"
-                      :src="sharingStatusIcons.PUBLIC"
-                      v-tooltip="'Public'"
-                      alt="Public"
-                    />
-                    <v-img
-                      v-else-if="item.sharingStatus === 'Private'"
-                      class="img-access-icon flex-grow-0"
-                      width="25"
-                      :src="sharingStatusIcons.PRIVATE"
-                      v-tooltip="'Private'"
-                      alt="Private"
-                    />
-                    <v-img
-                      v-else-if="item.sharingStatus === 'Discoverable'"
-                      class="img-access-icon flex-grow-0"
-                      width="25"
-                      :src="sharingStatusIcons.DISCOVERABLE"
-                      v-tooltip="'Discoverable'"
-                      alt="Discoverable"
-                    />
-                    <v-img
-                      v-else-if="item.sharingStatus === 'Published'"
-                      class="img-access-icon flex-grow-0"
-                      width="25"
-                      :src="sharingStatusIcons.PUBLISHED"
-                      v-tooltip="'Published'"
-                      alt="Published"
-                    />
-                    <v-img
-                      v-if="hasSpatialFeatures(item)"
-                      class="img-access-icon flex-grow-0"
-                      width="25"
-                      :src="sharingStatusIcons.SPATIAL"
-                      v-tooltip="'Contains Spatial Coverage'"
-                      alt="Contains Spatial Coverage"
-                    />
-                  </div>
-                </template>
-                <template #item.name="{ item }">
-                  <a
-                    v-if="item.identifier"
-                    class="text-decoration-none text-body-1"
-                    :href="item.identifier"
-                    target="_blank"
-                    v-html="highlight(item, 'name')"
-                  ></a>
-                  <p v-else v-html="highlight(item, 'name')"></p>
-                </template>
-                <template #item.creatorName="{ item }">
-                  <div v-html="highlightCreators(item)"></div>
-                </template>
-                <template #item.dateCreated="{ item }">
-                  <span v-if="item.dateCreated">{{
-                    formatDate(item.dateCreated)
-                  }}</span>
-                </template>
-                <template #item.lastModified="{ item }">
-                  <span v-if="item.lastModified">{{
-                    formatDate(item.lastModified)
-                  }}</span>
-                </template>
-                <template #expanded-row="{ item }">
-                  <div class="d-table-row">
-                    <td class="d-table-cell" colspan="6">
-                      <v-card class="mx-4" flat>
-                        <v-card-text>
-                          <div class="d-flex gap-2">
-                            <div class="flex-grow-1">
-                              <div class="text-h6">Subject Keywords</div>
-                              <div>
-                                <v-chip
-                                  v-for="keyword of item.keywords"
-                                  size="small"
-                                  style="margin: 0.25rem"
-                                  variant="outlined"
-                                  class="bg-grey-lighten-5"
-                                  border="thin"
-                                  >{{ keyword }}</v-chip
-                                >
-                              </div>
-                              <div class="text-h6 mt-4">Abstract</div>
-                              <p
-                                :class="{ 'snip-3': !item._showMore }"
-                                v-html="highlight(item, 'description')"
-                              ></p>
-
-                              <v-btn
-                                size="x-small"
-                                variant="text"
-                                color="primary"
-                                @click="item._showMore = !item._showMore"
-                                >Show
-                                {{ item._showMore ? "less" : "more" }}...</v-btn
+                </div>
+              </template>
+              <template #loading>
+                <div class="text-subtitle-2 text-center">
+                  Loading results...
+                </div>
+              </template>
+              <template #item.icons="{ item }">
+                <div class="d-flex align-center justify-start">
+                  <v-img
+                    class="mr-2"
+                    v-if="contentTypeLogos[item.contentType]"
+                    :src="contentTypeLogos[item.contentType]"
+                    v-tooltip="contentTypeLabels[item.contentType]"
+                    width="30"
+                    max-width="30"
+                  />
+                  <v-img
+                    v-if="item.sharingStatus === 'Public'"
+                    class="img-access-icon flex-grow-0"
+                    width="25"
+                    :src="sharingStatusIcons.PUBLIC"
+                    v-tooltip="'Public'"
+                    alt="Public"
+                  />
+                  <v-img
+                    v-else-if="item.sharingStatus === 'Private'"
+                    class="img-access-icon flex-grow-0"
+                    width="25"
+                    :src="sharingStatusIcons.PRIVATE"
+                    v-tooltip="'Private'"
+                    alt="Private"
+                  />
+                  <v-img
+                    v-else-if="item.sharingStatus === 'Discoverable'"
+                    class="img-access-icon flex-grow-0"
+                    width="25"
+                    :src="sharingStatusIcons.DISCOVERABLE"
+                    v-tooltip="'Discoverable'"
+                    alt="Discoverable"
+                  />
+                  <v-img
+                    v-else-if="item.sharingStatus === 'Published'"
+                    class="img-access-icon flex-grow-0"
+                    width="25"
+                    :src="sharingStatusIcons.PUBLISHED"
+                    v-tooltip="'Published'"
+                    alt="Published"
+                  />
+                  <v-img
+                    v-if="hasSpatialFeatures(item)"
+                    class="img-access-icon flex-grow-0"
+                    width="25"
+                    :src="sharingStatusIcons.SPATIAL"
+                    v-tooltip="'Contains Spatial Coverage'"
+                    alt="Contains Spatial Coverage"
+                  />
+                </div>
+              </template>
+              <template #item.name="{ item }">
+                <a
+                  v-if="item.identifier"
+                  class="text-decoration-none text-body-1"
+                  :href="item.identifier"
+                  target="_blank"
+                  v-html="highlight(item, 'name')"
+                ></a>
+                <p v-else v-html="highlight(item, 'name')"></p>
+              </template>
+              <template #item.creatorName="{ item }">
+                <div v-html="highlightCreators(item)"></div>
+              </template>
+              <template #item.dateCreated="{ item }">
+                <span v-if="item.dateCreated">{{
+                  formatDate(item.dateCreated)
+                }}</span>
+              </template>
+              <template #item.lastModified="{ item }">
+                <span v-if="item.lastModified">{{
+                  formatDate(item.lastModified)
+                }}</span>
+              </template>
+              <template #expanded-row="{ item }">
+                <div class="d-table-row">
+                  <td class="d-table-cell" colspan="6">
+                    <v-card class="mx-4" flat>
+                      <v-card-text>
+                        <div class="d-flex gap-2">
+                          <div class="flex-grow-1">
+                            <div class="text-h6">Subject Keywords</div>
+                            <div>
+                              <v-chip
+                                v-for="keyword of item.keywords"
+                                size="small"
+                                style="margin: 0.25rem"
+                                variant="outlined"
+                                class="bg-grey-lighten-5"
+                                border="thin"
+                                >{{ keyword }}</v-chip
                               >
                             </div>
+                            <div class="text-h6 mt-4">Abstract</div>
+                            <p
+                              :class="{ 'snip-3': !item._showMore }"
+                              v-html="highlight(item, 'description')"
+                            ></p>
 
-                            <div v-if="hasSpatialFeatures(item)">
-                              <div class="text-h6">Spatial Coverage</div>
+                            <v-btn
+                              size="x-small"
+                              variant="text"
+                              color="primary"
+                              @click="item._showMore = !item._showMore"
+                              >Show
+                              {{ item._showMore ? "less" : "more" }}...</v-btn
+                            >
+                          </div>
 
-                              <div :id="`map-${item.id}`" class="mb-4">
-                                <cd-spatial-coverage-map
-                                  :loader="loader"
-                                  :loader-options="options"
-                                  :feature="item.spatialCoverage"
-                                />
-                              </div>
+                          <div v-if="hasSpatialFeatures(item)">
+                            <div class="text-h6">Spatial Coverage</div>
+
+                            <div :id="`map-${item.id}`" class="mb-4">
+                              <cd-spatial-coverage-map
+                                :loader="loader"
+                                :loader-options="options"
+                                :feature="item.spatialCoverage"
+                              />
                             </div>
                           </div>
-                        </v-card-text>
-                      </v-card>
-                      <v-divider></v-divider>
-                    </td>
-                  </div>
-                </template>
-                <template
-                  v-slot:item.data-table-expand="{
-                    internalItem,
-                    isExpanded,
-                    toggleExpand,
-                  }"
-                >
-                  <v-btn
-                    :append-icon="
-                      isExpanded(internalItem)
-                        ? 'mdi-chevron-up'
-                        : 'mdi-chevron-down'
-                    "
-                    :text="isExpanded(internalItem) ? 'Collapse' : 'Show more'"
-                    class="text-none"
-                    color="medium-emphasis"
-                    size="small"
-                    variant="text"
-                    border
-                    slim
-                    @click="toggleExpand(internalItem)"
-                  ></v-btn>
-                </template>
+                        </div>
+                      </v-card-text>
+                    </v-card>
+                    <v-divider></v-divider>
+                  </td>
+                </div>
+              </template>
+              <template
+                #item.data-table-expand="{
+                  internalItem,
+                  isExpanded,
+                  toggleExpand,
+                }"
+              >
+                <v-btn
+                  :append-icon="
+                    isExpanded(internalItem)
+                      ? 'mdi-chevron-up'
+                      : 'mdi-chevron-down'
+                  "
+                  :text="isExpanded(internalItem) ? 'Collapse' : 'Show more'"
+                  class="text-none"
+                  color="medium-emphasis"
+                  size="small"
+                  variant="text"
+                  border
+                  slim
+                  @click="toggleExpand(internalItem)"
+                ></v-btn>
+              </template>
 
-                <!-- <div class="my-1" v-if="result.datePublished">
+              <!-- <div class="my-1" v-if="result.datePublished">
                   Publication Date: {{ formatDate(result.datePublished) }}
                 </div> -->
-              </v-data-table-virtual>
-            </template>
+            </v-data-table-virtual>
           </div>
 
           <div
@@ -788,36 +773,28 @@ class CdSearchResults extends Vue {
       key: "name",
       visible: true,
       minWidth: 200,
+      sortRaw: () => 1,
     },
     {
       title: "First Author",
       key: "creatorName",
       visible: true,
       minWidth: 200,
-      sortRaw: (a, b) => {
-        return a.creator[0].localeCompare(b.creator[0], undefined, {
-          numeric: false,
-          sensitivity: "base",
-        });
-      },
+      sortRaw: () => 1,
     },
     {
       title: "Date Created",
       key: "dateCreated",
       visible: true,
       minWidth: 200,
-      sortRaw: (a, b) => {
-        return a.dateCreated.localeCompare(b.dateCreated);
-      },
+      sortRaw: () => 1,
     },
     {
       title: "Last Modified",
       key: "lastModified",
       visible: true,
       minWidth: 200,
-      sortRaw: (a, b) => {
-        return a.lastModified.localeCompare(b.lastModified);
-      },
+      sortRaw: () => 1,
     },
   ]);
 

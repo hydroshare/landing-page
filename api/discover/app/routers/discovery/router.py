@@ -14,6 +14,8 @@ router = APIRouter()
 
 class SearchQuery(BaseModel):
     term: Optional[str] = None
+    sortBy: Optional[str] = None
+    order: Optional[str] = None
     contentType: Optional[list[str]] = []
     providerName: Optional[str] = None
     creatorName: Optional[str] = None
@@ -245,26 +247,18 @@ class SearchQuery(BaseModel):
                 {'autocomplete': {'query': self.term, 'path': 'creator.name', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 5 } }}},
             ]
         
-        # Dedicated input filters. Boost the score further if matched.
+        # Dedicated input filters boost the score further if matched.
         if self.creatorName:
-            compound['should'] = [
-                {'autocomplete': {'query': self.creatorName, 'path': 'creator.name', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 5 } }}},
-            ]
+            compound['should'].append({'autocomplete': {'query': self.creatorName, 'path': 'creator.name', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 5 } }}})
 
         if self.contributorName:
-            compound['should'] = [
-                {'autocomplete': {'query': self.contributorName, 'path': 'contributor.name', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 5 } }}},
-            ]
+            compound['should'].append({'autocomplete': {'query': self.contributorName, 'path': 'contributor.name', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 5 } }}})
 
         if self.keyword:
-            compound['should'] = [
-                {'autocomplete': {'query': self.keyword, 'path': 'keywords', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 3 } }}},
-            ]
+            compound['should'].append( {'autocomplete': {'query': self.keyword, 'path': 'keywords', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 3 } }}})
 
         if self.fundingFunderName:
-            compound['should'] = [
-                {'autocomplete': {'query': self.fundingFunderName, 'path': 'funding.funder.name', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 3 } }}},
-            ]
+            compound['should'].append({'autocomplete': {'query': self.fundingFunderName, 'path': 'funding.funder.name', 'fuzzy': {'maxEdits': 1}, 'score': { "boost": { "value": 3 } }}})
 
         search_stage = {
             '$search': {
@@ -272,6 +266,17 @@ class SearchQuery(BaseModel):
                 'compound': compound,
             }
         }
+        
+        # Sort in $search using a search index field:
+        order = 1 if self.order == "asc" else - 1
+        if self.sortBy == "name":
+            search_stage["$search"]['sort'] = {"name": order}
+        elif self.sortBy == "dateCreated":
+            search_stage["$search"]['sort'] = {"dateCreated": order}
+        elif self.sortBy == "lastModified":
+            search_stage["$search"]['sort'] = {"lastModified": order}
+        elif self.sortBy == "creatorName":
+            search_stage["$search"]['sort'] = {"creator.0.name": order}
 
         search_stage["$search"]['highlight'] = {'path': highlightPaths}
 
@@ -284,7 +289,6 @@ class SearchQuery(BaseModel):
         if self.term or self.creatorName or self.keyword or self.contributorName:
             # get only results which meet minimum relevance score threshold
             stages.append({'$match': {'score': {'$gt': get_settings().search_relevance_score_threshold}}})
-        
         # TODO: To exclude resource level metadata documents for now.
         stages.append({'$match': {"dateCreated": {"$not": {"$eq": None}}}})
 
@@ -293,6 +297,8 @@ class SearchQuery(BaseModel):
 
 def get_search_query(
     term: Optional[str] = None,
+    sortBy: Optional[str] = None,
+    order: Optional[str] = None,
     contentType: list[str] = Query(default=[]),
     providerName: Optional[str] = None,
     creatorName: Optional[str] = None,
@@ -320,6 +326,8 @@ def get_search_query(
     # Create SearchQuery instance with processed parameters
     return SearchQuery(
         term=term,
+        sortBy=sortBy,
+        order=order,
         contentType=contentType,
         providerName=providerName,
         creatorName=creatorName,
@@ -351,7 +359,7 @@ async def search(request: Request, search_query: SearchQuery = Depends(get_searc
     return json.loads(json_str)
 
 
-async def aggregate_stages(request, stages, pageNumber=1, pageSize=20):
+async def aggregate_stages(request, stages, pageNumber=1, pageSize=20):        
     stages.append({"$skip": (pageNumber - 1) * pageSize})
     stages.append({"$limit": pageSize})
     aggregation = await request.app.mongodb["discovery"].aggregate(stages).to_list(None)
