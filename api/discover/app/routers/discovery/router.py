@@ -35,8 +35,8 @@ class SearchQuery(BaseModel):
     fundingGrantName: Optional[str] = None
     fundingFunderName: Optional[str] = None
     creativeWorkStatus: Optional[list[str]] = []
-    pageNumber: int = 1
     pageSize: int = 20
+    paginationToken: Optional[str]
 
     @field_validator('*')
     def empty_str_to_none(cls, v, info: ValidationInfo):
@@ -86,7 +86,7 @@ class SearchQuery(BaseModel):
         if self.dateModifiedStart and self.dateModifiedEnd and self.dateModifiedEnd < self.dateModifiedStart:
             raise ValueError('dateModifiedEnd must be greater or equal to dateModifiedStart')
 
-    @field_validator('pageNumber', 'pageSize')
+    @field_validator('pageSize')
     def validate_page(cls, v, info: ValidationInfo):
         if v <= 0:
             raise ValueError(f'{info.field_name} must be greater than 0')
@@ -161,6 +161,10 @@ class SearchQuery(BaseModel):
                 {'range': {'path': 'temporalCoverage.endDate', 'lt': datetime(self.dataCoverageEnd + 1, 1, 1)}}
             )
 
+        # TODO: To exclude resource level metadata documents for now.
+        filters.append({'exists': {'path': 'dateCreated'}})
+        filters.append({'term': {'path': 'type', 'query': "Dataset"}})
+
         return filters
 
     @property
@@ -172,7 +176,6 @@ class SearchQuery(BaseModel):
     @property
     def _must(self):
         must = []
-        must.append({'term': {'path': 'type', 'query': "Dataset"}})
         if self.contentType and len(self.contentType) > 0:
             # Use exact term matching for each content type to ensure precise filtering
             if len(self.contentType) == 1:
@@ -268,6 +271,9 @@ class SearchQuery(BaseModel):
                 'highlight': {'path': highlightPaths}
             }
         }
+
+        if self.paginationToken:
+            search_stage["$search"]['searchAfter'] = self.paginationToken
         
         order = 1 if self.order == "asc" else - 1
         
@@ -282,14 +288,12 @@ class SearchQuery(BaseModel):
         stages.append(search_stage)
 
         stages.append(
-            {'$set': {'score': {'$meta': 'searchScore'}, 'highlights': {'$meta': 'searchHighlights'}}},
+            {'$set': {'score': {'$meta': 'searchScore'}, 'highlights': {'$meta': 'searchHighlights'}, "paginationToken" : { "$meta" : "searchSequenceToken" }}},
         )
 
         if self.term or self.creatorName or self.contributorName or self.keyword or self.contributorName:
             # get only results which meet minimum relevance score threshold
             stages.append({'$match': {'score': {'$gt': get_settings().search_relevance_score_threshold}}})
-        # TODO: To exclude resource level metadata documents for now.
-        stages.append({'$match': {"dateCreated": {"$not": {"$eq": None}}}})
 
         # Sorting using an index for an array item requires a $sort stage.
         if self.sortBy == "creatorName":
@@ -321,8 +325,8 @@ def get_search_query(
     fundingGrantName: Optional[str] = None,
     fundingFunderName: Optional[str] = None,
     creativeWorkStatus: list[str] = Query(default=[]),
-    pageNumber: int = 1,
-    pageSize: int = 30
+    pageSize: int = 30,
+    paginationToken: Optional[str] = None
 ) -> SearchQuery:
     """Custom dependency to handle contentType/creativeWorkStatus as both single values and lists"""
 
@@ -350,20 +354,19 @@ def get_search_query(
         fundingGrantName=fundingGrantName,
         fundingFunderName=fundingFunderName,
         creativeWorkStatus=creativeWorkStatus,
-        pageNumber=pageNumber,
-        pageSize=pageSize
+        pageSize=pageSize,
+        paginationToken=paginationToken
     )
 
 
 @router.get("/search")
 async def search(request: Request, search_query: SearchQuery = Depends(get_search_query)):
-    result = await aggregate_stages(request, search_query.stages, search_query.pageNumber, search_query.pageSize)
+    result = await aggregate_stages(request, search_query.stages, search_query.pageSize)
     json_str = json.dumps(result, default=str)
     return json.loads(json_str)
 
 
-async def aggregate_stages(request, stages, pageNumber=1, pageSize=20):        
-    stages.append({"$skip": (pageNumber - 1) * pageSize})
+async def aggregate_stages(request, stages, pageSize=20):        
     stages.append({"$limit": pageSize})
     aggregation = await request.app.mongodb["discovery"].aggregate(stages).to_list(None)
     return aggregation

@@ -28,6 +28,7 @@ export interface IResult {
   contentType: string;
   sharingStatus: string;
   _showMore?: boolean; // Used to toggle 'show more...' button
+  _paginationToken: string;
 }
 
 export interface IHint {
@@ -40,7 +41,6 @@ export interface ISearchParams {
   sortBy?: string;
   order?: 'asc' | 'desc';
   pageSize: number;
-  pageNumber: number;
   publishedStart?: number;
   publishedEnd?: number;
   dateCreatedStart?: number;
@@ -54,6 +54,7 @@ export interface ISearchParams {
   keyword?: string;
   creativeWorkStatus?: string[];
   contentType?: string[];
+  paginationToken?: string;
 }
 
 export interface ITypeaheadParams {

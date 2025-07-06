@@ -73,10 +73,11 @@ export default class Search extends Model {
     });
   }
 
-  /** Fetches the next page indicated by params.pageNumber and appends the incoming items to `state.results`
+  /** Fetches the next page indicated by params. Appends the incoming items to `state.results`
    * @returns a boolean indicating if the query has more pages that can be fetched
    */
   public static async fetchMore(params: ISearchParams): Promise<boolean> {
+    params.paginationToken = this.$state.results[this.$state.results.length - 1]._paginationToken
     const response: Response = await fetch(
       `${ENDPOINTS.search}?${getQueryString(params)}`,
     );
@@ -147,7 +148,8 @@ export default class Search extends Model {
       url: rawResult.url || "",
       identifier: rawResult.identifier[0] || "",
       contentType: rawResult.additionalType || "",
-      sharingStatus: rawResult.creativeWorkStatus?.name || ""
+      sharingStatus: rawResult.creativeWorkStatus?.name || "",
+      _paginationToken: rawResult.paginationToken
     };
   }
 

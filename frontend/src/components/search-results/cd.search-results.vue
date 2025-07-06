@@ -614,7 +614,6 @@ class CdSearchResults extends Vue {
   options = options;
   isIntersecting = false;
   searchQuery = "";
-  pageNumber = 1;
   pageSize = 20;
   hasMore = true;
   isSearching = false;
@@ -860,7 +859,6 @@ class CdSearchResults extends Vue {
     let params: ISearchParams = {
       term: this.searchQuery,
       pageSize: this.pageSize,
-      pageNumber: this.pageNumber,
     };
 
     if (this.sortBy[0]) {
@@ -955,7 +953,6 @@ class CdSearchResults extends Vue {
   async _onSearch() {
     this.hasMore = true;
     this.isSearching = true;
-    this.pageNumber = 1;
 
     this.hasMore = !!(await Search.search(this.queryParams));
     this.isSearching = false;
@@ -963,7 +960,6 @@ class CdSearchResults extends Vue {
 
   /** Get the next page of results. */
   public async fetchMore() {
-    this.pageNumber++;
     this.isFetchingMore = true;
     try {
       this.hasMore = await Search.fetchMore(this.queryParams);
