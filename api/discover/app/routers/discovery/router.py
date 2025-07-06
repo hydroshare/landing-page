@@ -162,7 +162,6 @@ class SearchQuery(BaseModel):
             )
 
         # TODO: To exclude resource level metadata documents for now.
-        filters.append({'exists': {'path': 'dateCreated'}})
         filters.append({'term': {'path': 'type', 'query': "Dataset"}})
 
         return filters
@@ -290,6 +289,9 @@ class SearchQuery(BaseModel):
         stages.append(
             {'$set': {'score': {'$meta': 'searchScore'}, 'highlights': {'$meta': 'searchHighlights'}, "paginationToken" : { "$meta" : "searchSequenceToken" }}},
         )
+
+        # TODO: To exclude resource level metadata documents for now.
+        stages.append({'$match': {"dateCreated": {"$not": {"$eq": None}}}})
 
         if self.term or self.creatorName or self.contributorName or self.keyword or self.contributorName:
             # get only results which meet minimum relevance score threshold
