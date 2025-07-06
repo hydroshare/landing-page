@@ -362,7 +362,7 @@
               hover
               show-expand
               density="compact"
-              :loading="isFetchingMore || isSearching"
+              :loading="isSearching"
               v-model:sort-by="sortBy"
               @update:sort-by="onSortChange()"
               :cell-props="
@@ -540,6 +540,11 @@
                   Publication Date: {{ formatDate(result.datePublished) }}
                 </div> -->
             </v-data-table-virtual>
+            <v-progress-linear
+              v-if="isFetchingMore"
+              color="primary"
+              indeterminate
+            ></v-progress-linear>
           </div>
 
           <div
@@ -550,7 +555,7 @@
             }"
           ></div>
           <div v-if="isFetchingMore" class="text-subtitle-2 text-center">
-            Loading more results...
+            <p>Loading more results...</p>
           </div>
           <div
             v-if="results.length && !hasMore"
