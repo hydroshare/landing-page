@@ -267,7 +267,9 @@ class SearchQuery(BaseModel):
             '$search': {
                 'index': 'fuzzy_search',
                 'compound': compound,
-                'highlight': {'path': highlightPaths}
+                'highlight': {'path': highlightPaths},
+                "concurrent": True,
+                "returnStoredSource": True
             }
         }
 
@@ -297,7 +299,7 @@ class SearchQuery(BaseModel):
             # get only results which meet minimum relevance score threshold
             stages.append({'$match': {'score': {'$gt': get_settings().search_relevance_score_threshold}}})
 
-        # Sorting using an index for an array item requires a $sort stage.
+        # Sorting using an index for an array item requires a $sort stage. https://www.mongodb.com/docs/atlas/atlas-search/sort/#sort-option-limitations
         if self.sortBy == "creatorName":
             stages.append({ "$sort": {"creator.0.name": order}})
 
@@ -370,13 +372,18 @@ async def search(request: Request, search_query: SearchQuery = Depends(get_searc
 
 async def aggregate_stages(request, stages, pageSize=20):        
     stages.append({"$limit": pageSize})
+    stages.append({
+        "$lookup": {
+            "from": "discovery", "localField": "_id", "foreignField": "_id", "as": "document"
+        }
+    })
     aggregation = await request.app.mongodb["discovery"].aggregate(stages).to_list(None)
     return aggregation
 
 
 @router.get("/typeahead")
 async def typeahead(request: Request, term: str, field: str = "term"):
-    search_paths = ['name', 'description', 'keywords'] # default
+    search_paths = ['name', 'description', 'keywords', "creator.name"] # default
     
     if field == "creator":
         search_paths = ["creator.name"]

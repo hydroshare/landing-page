@@ -132,24 +132,24 @@ export default class Search extends Model {
   /** Transform raw result data from API into `IResult` shaped objects */
   private static _parseResult(rawResult: any): IResult {
     return {
-      creator: rawResult.creator.map((c: any) => c.name) || [],
-      dateCreated: rawResult.dateCreated || "",
-      datePublished: rawResult.datePublished || "",
-      lastModified: rawResult.dateModified || "",
-      description: rawResult.description || "",
-      funding: rawResult.funding?.map((f: any) => f.name || f.funder.name) || [],
-      highlights: rawResult.highlights || [],
+      creator: rawResult.document[0].creator.map((c: any) => c.name) || [],
+      dateCreated: rawResult.document[0].dateCreated || "",
+      datePublished: rawResult.document[0].datePublished || "",
+      lastModified: rawResult.document[0].dateModified || "",
+      description: rawResult.document[0].description || "",
+      funding: rawResult.document[0].funding?.map((f: any) => f.name || f.funder.name) || [],
+      highlights: rawResult.document[0].highlights || [],
       id: rawResult["_id"],
-      keywords: Search._getKeywords(rawResult.keywords),
-      license: rawResult.license?.name || "",
-      name: rawResult.name || "",
-      score: rawResult.score || 0,
-      spatialCoverage: rawResult.spatialCoverage?.geo || [],
-      url: rawResult.url || "",
-      identifier: rawResult.identifier[0] || "",
-      contentType: rawResult.additionalType || "",
-      sharingStatus: rawResult.creativeWorkStatus?.name || "",
-      _paginationToken: rawResult.paginationToken
+      keywords: Search._getKeywords(rawResult.document[0].keywords),
+      license: rawResult.document[0].license?.name || "",
+      name: rawResult.document[0].name || "",
+      score: rawResult.document[0].score || 0,
+      spatialCoverage: rawResult.document[0].spatialCoverage?.geo || [],
+      url: rawResult.document[0].url || "",
+      identifier: rawResult.document[0].identifier[0] || "",
+      contentType: rawResult.document[0].additionalType || "",
+      sharingStatus: rawResult.document[0].creativeWorkStatus?.name || "",
+      _paginationToken: rawResult.document[0].paginationToken
     };
   }
 

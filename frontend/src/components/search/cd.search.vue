@@ -127,27 +127,6 @@ class CdSearch extends Vue {
     );
   }
 
-  // From https://www.30secondsofcode.org/js/s/levenshtein-distance/
-  private _levenshteinDistance(s: string, t: string) {
-    if (!s.length) return t.length;
-    if (!t.length) return s.length;
-    const arr = [];
-    for (let i = 0; i <= t.length; i++) {
-      arr[i] = [i];
-      for (let j = 1; j <= s.length; j++) {
-        arr[i][j] =
-          i === 0
-            ? j
-            : Math.min(
-                arr[i - 1][j] + 1,
-                arr[i][j - 1] + 1,
-                arr[i - 1][j - 1] + (s[j - 1] === t[i - 1] ? 0 : 1),
-              );
-      }
-    }
-    return arr[t.length][s.length];
-  }
-
   public get dbHints(): IHint[] {
     const minCharacters = 3;
     const valueInternal = this.valueInternal.toLocaleLowerCase();
@@ -167,11 +146,6 @@ class CdSearch extends Vue {
       .filter(
         (v: string) =>
           v !== valueInternal && !this.localHints.some((h) => h.key === v),
-      )
-      .sort(
-        (a, b) =>
-          this._levenshteinDistance(this.valueInternal, a) -
-          this._levenshteinDistance(this.valueInternal, b),
       );
     hints = [...new Set(hints)].slice(0, 10) as string[]; // get unique ones
     hints = hints.map((key) => ({ type: "db", key }) as IHint);

@@ -39,7 +39,7 @@ export interface IHint {
 export interface ISearchParams {
   term: string;
   sortBy?: string;
-  order?: 'asc' | 'desc';
+  order?: "asc" | "desc";
   pageSize: number;
   publishedStart?: number;
   publishedEnd?: number;
@@ -59,7 +59,7 @@ export interface ISearchParams {
 
 export interface ITypeaheadParams {
   term: string;
-  field: EnumHistoryTypes
+  field: EnumHistoryTypes;
 }
 
 export enum EnumShortParams {
@@ -88,3 +88,71 @@ export enum EnumHistoryTypes {
 export type EnumDictionary<T extends string | symbol | number, U> = {
   [K in T]: U;
 };
+
+const a = [
+  {
+    $search: {
+      index: "fuzzy_search",
+      compound: {
+        filter: [{ term: { path: "type", query: "Dataset" } }],
+        must: [],
+        should: [
+          {
+            autocomplete: {
+              query: "water",
+              path: "name",
+              fuzzy: { maxEdits: 1 },
+              score: { boost: { value: 5 } },
+            },
+          },
+          {
+            autocomplete: {
+              query: "water",
+              path: "description",
+              fuzzy: { maxEdits: 1 },
+              score: { boost: { value: 3 } },
+            },
+          },
+          {
+            autocomplete: {
+              query: "water",
+              path: "keywords",
+              fuzzy: { maxEdits: 1 },
+              score: { boost: { value: 3 } },
+            },
+          },
+          {
+            autocomplete: {
+              query: "water",
+              path: "creator.name",
+              fuzzy: { maxEdits: 1 },
+              score: { boost: { value: 5 } },
+            },
+          },
+        ],
+      },
+      highlight: { path: ["name", "description", "keywords", "creator.name"] },
+      concurrent: true,
+      returnStoredSource: true,
+      sort: { $meta: "searchScore" },
+    },
+  },
+  {
+    $set: {
+      score: { $meta: "searchScore" },
+      highlights: { $meta: "searchHighlights" },
+      paginationToken: { $meta: "searchSequenceToken" },
+    },
+  },
+  { $match: { dateCreated: { $not: { $eq: null } } } },
+  { $match: { score: { $gt: 10.0 } } },
+  { $limit: 20 },
+  {
+    $lookup: {
+      from: "discovery",
+      localField: "_id",
+      foreignField: "_id",
+      as: "document",
+    },
+  },
+];
