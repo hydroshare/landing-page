@@ -149,7 +149,7 @@ export default class Search extends Model {
       identifier: rawResult.document[0].identifier[0] || "",
       contentType: rawResult.document[0].additionalType || "",
       sharingStatus: rawResult.document[0].creativeWorkStatus?.name || "",
-      _paginationToken: rawResult.document[0].paginationToken
+      _paginationToken: rawResult.paginationToken
     };
   }
 

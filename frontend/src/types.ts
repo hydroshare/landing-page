@@ -41,6 +41,7 @@ export interface ISearchParams {
   sortBy?: string;
   order?: "asc" | "desc";
   pageSize: number;
+  pageNumber: number;
   publishedStart?: number;
   publishedEnd?: number;
   dateCreatedStart?: number;

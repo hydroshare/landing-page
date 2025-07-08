@@ -35,6 +35,7 @@ class SearchQuery(BaseModel):
     fundingGrantName: Optional[str] = None
     fundingFunderName: Optional[str] = None
     creativeWorkStatus: Optional[list[str]] = []
+    pageNumber: int = 1
     pageSize: int = 20
     paginationToken: Optional[str]
 
@@ -86,7 +87,7 @@ class SearchQuery(BaseModel):
         if self.dateModifiedStart and self.dateModifiedEnd and self.dateModifiedEnd < self.dateModifiedStart:
             raise ValueError('dateModifiedEnd must be greater or equal to dateModifiedStart')
 
-    @field_validator('pageSize')
+    @field_validator('pageNumber', 'pageSize')
     def validate_page(cls, v, info: ValidationInfo):
         if v <= 0:
             raise ValueError(f'{info.field_name} must be greater than 0')
@@ -288,9 +289,19 @@ class SearchQuery(BaseModel):
 
         stages.append(search_stage)
 
-        stages.append(
-            {'$set': {'score': {'$meta': 'searchScore'}, 'highlights': {'$meta': 'searchHighlights'}, "paginationToken" : { "$meta" : "searchSequenceToken" }}},
-        )
+        setStage = {'$set': {
+            'score': {'$meta': 'searchScore'},
+            'highlights': {'$meta': 'searchHighlights'}
+        }}
+
+        # Sorting using an index for an array item requires a $sort stage. https://www.mongodb.com/docs/atlas/atlas-search/sort/#sort-option-limitations
+        # Important to sort before appending paginationToken
+        if self.sortBy == "creatorName":
+            stages.append({ "$sort": {"creator.0.name": order}})
+        else:
+            setStage['$set']['paginationToken'] = { "$meta" : "searchSequenceToken" } # searchSequenceToken cannot be used with $sort stage
+
+        stages.append(setStage)
 
         # TODO: To exclude resource level metadata documents for now.
         stages.append({'$match': {"dateCreated": {"$not": {"$eq": None}}}})
@@ -298,10 +309,6 @@ class SearchQuery(BaseModel):
         if self.term or self.creatorName or self.contributorName or self.keyword or self.contributorName:
             # get only results which meet minimum relevance score threshold
             stages.append({'$match': {'score': {'$gt': get_settings().search_relevance_score_threshold}}})
-
-        # Sorting using an index for an array item requires a $sort stage. https://www.mongodb.com/docs/atlas/atlas-search/sort/#sort-option-limitations
-        if self.sortBy == "creatorName":
-            stages.append({ "$sort": {"creator.0.name": order}})
 
         return stages
 
@@ -329,7 +336,8 @@ def get_search_query(
     fundingGrantName: Optional[str] = None,
     fundingFunderName: Optional[str] = None,
     creativeWorkStatus: list[str] = Query(default=[]),
-    pageSize: int = 30,
+    pageNumber: int = 1,
+    pageSize: int = 20,
     paginationToken: Optional[str] = None
 ) -> SearchQuery:
     """Custom dependency to handle contentType/creativeWorkStatus as both single values and lists"""
@@ -358,6 +366,7 @@ def get_search_query(
         fundingGrantName=fundingGrantName,
         fundingFunderName=fundingFunderName,
         creativeWorkStatus=creativeWorkStatus,
+        pageNumber=pageNumber,
         pageSize=pageSize,
         paginationToken=paginationToken
     )
@@ -365,20 +374,18 @@ def get_search_query(
 
 @router.get("/search")
 async def search(request: Request, search_query: SearchQuery = Depends(get_search_query)):
-    result = await aggregate_stages(request, search_query.stages, search_query.pageSize)
-    json_str = json.dumps(result, default=str)
-    return json.loads(json_str)
-
-
-async def aggregate_stages(request, stages, pageSize=20):        
-    stages.append({"$limit": pageSize})
+    stages = search_query.stages
+    if not search_query.paginationToken:
+        stages.append({"$skip": (search_query.pageNumber - 1) * search_query.pageSize})   
+    stages.append({"$limit": search_query.pageSize})
     stages.append({
         "$lookup": {
             "from": "discovery", "localField": "_id", "foreignField": "_id", "as": "document"
         }
     })
-    aggregation = await request.app.mongodb["discovery"].aggregate(stages).to_list(None)
-    return aggregation
+    result = await request.app.mongodb["discovery"].aggregate(stages).to_list(None)
+    json_str = json.dumps(result, default=str)
+    return json.loads(json_str)
 
 
 @router.get("/typeahead")
