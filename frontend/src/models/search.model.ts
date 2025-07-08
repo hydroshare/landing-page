@@ -131,7 +131,6 @@ export default class Search extends Model {
 
   /** Transform raw result data from API into `IResult` shaped objects */
   private static _parseResult(rawResult: any): IResult {
-    console.log(rawResult)
     return {
       creator: rawResult.document[0].creator.map((c: any) => c.name) || [],
       dateCreated: rawResult.document[0].dateCreated || "",
