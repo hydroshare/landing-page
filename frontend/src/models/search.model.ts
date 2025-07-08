@@ -131,6 +131,7 @@ export default class Search extends Model {
 
   /** Transform raw result data from API into `IResult` shaped objects */
   private static _parseResult(rawResult: any): IResult {
+    console.log(rawResult)
     return {
       creator: rawResult.document[0].creator.map((c: any) => c.name) || [],
       dateCreated: rawResult.document[0].dateCreated || "",
@@ -138,7 +139,7 @@ export default class Search extends Model {
       lastModified: rawResult.document[0].dateModified || "",
       description: rawResult.document[0].description || "",
       funding: rawResult.document[0].funding?.map((f: any) => f.name || f.funder.name) || [],
-      highlights: rawResult.document[0].highlights || [],
+      highlights: rawResult.highlights || [],
       id: rawResult["_id"],
       keywords: Search._getKeywords(rawResult.document[0].keywords),
       license: rawResult.document[0].license?.name || "",
