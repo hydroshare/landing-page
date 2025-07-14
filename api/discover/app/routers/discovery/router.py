@@ -162,7 +162,6 @@ class SearchQuery(BaseModel):
                 {'range': {'path': 'temporalCoverage.endDate', 'lt': datetime(self.dataCoverageEnd + 1, 1, 1)}}
             )
 
-        # TODO: To exclude resource level metadata documents for now.
         filters.append({'term': {'path': 'type', 'query': "Dataset"}})
 
         return filters
@@ -289,7 +288,7 @@ class SearchQuery(BaseModel):
 
         stages.append(search_stage)
 
-        setStage = {'$set': {
+        set_stage = {'$set': {
             'score': {'$meta': 'searchScore'},
             'highlights': {'$meta': 'searchHighlights'}
         }}
@@ -299,9 +298,9 @@ class SearchQuery(BaseModel):
         if self.sortBy == "creatorName":
             stages.append({ "$sort": {"creator.0.name": order}})
         else:
-            setStage['$set']['paginationToken'] = { "$meta" : "searchSequenceToken" } # searchSequenceToken cannot be used with $sort stage
+            set_stage['$set']['paginationToken'] = { "$meta" : "searchSequenceToken" } # searchSequenceToken cannot be used with $sort stage
 
-        stages.append(setStage)
+        stages.append(set_stage)
 
         # TODO: To exclude resource level metadata documents for now.
         stages.append({'$match': {"dateCreated": {"$not": {"$eq": None}}}})
@@ -409,6 +408,8 @@ async def typeahead(request: Request, term: str, field: str = "term"):
                 'index': 'fuzzy_search',
                 'compound': {'should': should},
                 'highlight': {'path': search_paths},
+                "concurrent": True,
+                "returnStoredSource": True
             }
         },
         {
@@ -424,7 +425,13 @@ async def typeahead(request: Request, term: str, field: str = "term"):
             }
         },
     ]
-    result = await request.app.mongodb["discovery"].aggregate(stages).to_list(20)
+    stages.append({"$limit": 20})
+    stages.append({
+        "$lookup": {
+            "from": "discovery", "localField": "_id", "foreignField": "_id", "as": "document"
+        }
+    })
+    result = await request.app.mongodb["discovery"].aggregate(stages).to_list(None)
     return result
 
 
