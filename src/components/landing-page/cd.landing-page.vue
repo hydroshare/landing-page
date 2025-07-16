@@ -80,7 +80,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3"
 import { stringify } from '@/utils';
 
 const schemaPaths = [
-  { name: 'HydroShare', path: '../../schemas/hydroshare' },
+  { name: 'HydroShare' },
 ];
 
 @Component({
@@ -130,6 +130,32 @@ class App extends Vue {
   };
 
   async created() {
+    for (let i = 0; i < schemaPaths.length; i++) {
+      const path = schemaPaths[i].path;
+      const name = schemaPaths[i].name;
+      const { default: schema } = await import(
+        /* @vite-ignore */ `@/schemas/hydroshare/schema.json`
+      );
+      const { default: uischema } = await import(
+        /* @vite-ignore */
+        `@/schemas/hydroshare/uischema.json`
+      );
+      const { default: defaults } = await import(
+        /* @vite-ignore */
+        `@/schemas/hydroshare/defaults.json`
+      );
+
+      this.schemaCollection.push({
+        index: i,
+        name,
+        schema,
+        uischema,
+        defaults,
+      });
+    }
+    this.selectedSchema = 0; // Initial repository schema to render
+    this.data = { ...this.data, ...this.defaults };
+
     // Here is an example of how to use the AWS S3 SDK to fetch a file.
     try {
       const bareBonesS3 = new S3Client({
@@ -156,36 +182,10 @@ class App extends Vue {
       }));
 
       const bodyContents = await result.Body?.transformToString();
-      alert(`File contents read from ${bucket}/${key}:\n\n${bodyContents}`);
+      alert(`Example file contents read from ${bucket}/${key}:\n\n${bodyContents}`);
     } catch (error) {
-      alert(`Error fetching file: ${error}`);
+      alert(`Error fetching example s3 file: ${error}`);
     }
-
-    for (let i = 0; i < schemaPaths.length; i++) {
-      const path = schemaPaths[i].path;
-      const name = schemaPaths[i].name;
-      const { default: schema } = await import(
-        /* @vite-ignore */ `${path}/schema.json`
-      );
-      const { default: uischema } = await import(
-        /* @vite-ignore */
-        `${path}/uischema.json`
-      );
-      const { default: defaults } = await import(
-        /* @vite-ignore */
-        `${path}/defaults.json`
-      );
-
-      this.schemaCollection.push({
-        index: i,
-        name,
-        schema,
-        uischema,
-        defaults,
-      });
-    }
-    this.selectedSchema = 0; // Initial repository schema to render
-    this.data = { ...this.data, ...this.defaults };
   }
 
   get schema() {
