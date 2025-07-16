@@ -1,0 +1,47 @@
+{
+  "title": "Test resource...",
+  "abstract": "Test",
+  "language": "eng",
+  "subjects": [
+    "one",
+    "three",
+    "CZNet",
+    "two"
+  ],
+  "creators": [
+    {
+      "name": "Ramirez, Maurier",
+      "phone": "+1 (435) 363-5910",
+      "organization": "Utah State University",
+      "email": "mauriel.ramirez@gmail.com",
+      "creator_order": 1,
+      "identifiers": {},
+      "profile_url": "https://www.hydroshare.org/user/194/"
+    }
+  ],
+  "contributors": [],
+  "relations": [
+    {
+      "type": "The content of this resource is part of",
+      "value": "Ramirez, M. (2025). Test Collection, HydroShare, http://www.hydroshare.org/resource/55527516166440bdb159ae1cdbc80a4e"
+    }
+  ],
+  "additional_metadata": [],
+  "rights": {
+    "statement": "This resource is shared under the Creative Commons Attribution CC BY.",
+    "url": "http://creativecommons.org/licenses/by/4.0/"
+  },
+  "awards": [
+    {
+      "funding_agency_name": "UWRL",
+      "title": "Some title",
+      "number": "123123123"
+    }
+  ],
+  "citation": "Ramirez, M. (2025). Test resource..., HydroShare, http://www.hydroshare.org/resource/763798a158f748b7ab52418026763a6b",
+  "url": "http://www.hydroshare.org/resource/763798a158f748b7ab52418026763a6b",
+  "identifier": "http://www.hydroshare.org/resource/763798a158f748b7ab52418026763a6b",
+  "created": "2025-04-28T04:21:36.483283Z",
+  "modified": "2025-04-28T04:21:36.483285Z",
+  "type": "CompositeResource"
+}
