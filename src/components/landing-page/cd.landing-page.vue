@@ -2,6 +2,8 @@
 import { Component, Vue, toNative, Ref } from 'vue-facing-decorator';
 import { CzNotifications, Notifications, CzForm } from "@cznethub/cznet-vue-core";
 import { Config, IFolder, IFile } from '@/types';
+import { S3Client } from "@aws-sdk/client-s3"
+import { GetObjectCommand } from "@aws-sdk/client-s3"
 
 const schemaPaths = [
   { name: 'HydroShare', path: '../../schemas/hydroshare' },
@@ -51,6 +53,33 @@ class CdLandingPage extends Vue {
   };
 
   async created() {
+    // Here is an example of how to use the AWS S3 SDK to fetch a file.
+    try {
+      const bareBonesS3 = new S3Client({
+        region: 'us-central-2',
+        // TODO: we will have to target HS beta for this due to pending issue with micro-auth
+        endpoint: 'https://s3.hydroshare.org',
+        forcePathStyle: true, // needed with minio...
+        credentials: {
+          // Client will get this with a POST request to https://www.hydroshare.org/hsapi/resource/{ID}/s3
+          // TODO: 
+          accessKeyId: 'FILL',
+          secretAccessKey: 'ME',
+        },
+      });
+      const result = await bareBonesS3.send(new GetObjectCommand({
+        Bucket: 'sblack',
+        // hs_user_meta.json is written to /data/contents, so this will not be impacted...
+        // Key: 'd7b526e24f7e449098b428ae9363f514/data/contents/user_metadata.json',
+        Key: 'd7b526e24f7e449098b428ae9363f514/data/contents/readme.txt',
+      }));
+
+      const bodyContents = await result.Body?.transformToString();
+      alert(`File contents: ${bodyContents}`);
+    } catch (error) {
+      alert(`Error fetching file: ${error}`);
+    }
+
     for (let i = 0; i < schemaPaths.length; i++) {
       const path = schemaPaths[i].path;
       const name = schemaPaths[i].name;
