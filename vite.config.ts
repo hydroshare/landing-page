@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
   return {
     root: "./",
     base: env.VITE_APP_BASE || "/",
-    envDir: "../",
+    envDir: "å./",
     resolve: {
       alias: {
         "@/": `${path.resolve(__dirname, "src")}/`,
