@@ -61,21 +61,25 @@ class CdLandingPage extends Vue {
         endpoint: 'https://s3.hydroshare.org',
         forcePathStyle: true, // needed with minio...
         credentials: {
-          // Client will get this with a POST request to https://www.hydroshare.org/hsapi/resource/{ID}/s3
-          // TODO: 
-          accessKeyId: 'FILL',
-          secretAccessKey: 'ME',
+          // Client will get this with a POST request to https://www.hydroshare.org/hsapi/user/service/accounts/s3/
+          // TODO: https://cuahsi.atlassian.net/browse/CAM-769 build a simple component to get this info from the client
+          accessKeyId: 'GET_THIS_FROM_HS',
+          secretAccessKey: 'GET_THIS_FROM_HS',
         },
       });
+      const bucket = 'sblack'; // This is the bucket name, you can change it as needed.
+      const key = 'd7b526e24f7e449098b428ae9363f514/data/contents/readme.txt'; // This is the key for the file you want to fetch.
       const result = await bareBonesS3.send(new GetObjectCommand({
-        Bucket: 'sblack',
+        // for a given ID, you can get this using a GET request to https://www.hydroshare.org/hsapi/resource/{ID}/s3
+        // it will give you the bucket and key to use here.
+        Bucket: bucket,
         // hs_user_meta.json is written to /data/contents, so this will not be impacted...
         // Key: 'd7b526e24f7e449098b428ae9363f514/data/contents/user_metadata.json',
-        Key: 'd7b526e24f7e449098b428ae9363f514/data/contents/readme.txt',
+        Key: key,
       }));
 
       const bodyContents = await result.Body?.transformToString();
-      alert(`File contents: ${bodyContents}`);
+      alert(`File contents read from ${bucket}/${key}:\n\n${bodyContents}`);
     } catch (error) {
       alert(`Error fetching file: ${error}`);
     }
