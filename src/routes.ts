@@ -1,18 +1,30 @@
 import { RouteRecordRaw } from "vue-router";
 import CdSearchResults from "@/components/search-results/cd.search-results.vue";
+import { CdLandingPage } from "@/components/landing-page/cd.landing-page.vue";
 import CdFooter from "@/components/base/cd.footer.vue";
 import AuthRedirect from "@/components/account/auth-redirect.vue";
 
 export const routes: RouteRecordRaw[] = [
   {
     name: "search",
-    path: "/",
+    path: "/search",
     components: {
       content: CdSearchResults,
       footer: CdFooter,
     },
     meta: {
       title: "Search",
+    },
+  },
+  {
+    name: "landing",
+    path: "/",
+    components: {
+      content: CdLandingPage,
+      footer: CdFooter,
+    },
+    meta: {
+      title: "Landing Page",
     },
   },
   {
