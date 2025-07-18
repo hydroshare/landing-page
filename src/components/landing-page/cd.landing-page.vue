@@ -75,7 +75,7 @@
 import { Component, Vue, toNative, Ref } from 'vue-facing-decorator';
 import { CzNotifications, Notifications, CzForm, CzFileExplorer } from "@cznethub/cznet-vue-core";
 import { Config, IFolder, IFile } from '@/types';
-import { S3Client } from "@aws-sdk/client-s3"
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"
 import { GetObjectCommand } from "@aws-sdk/client-s3"
 import { stringify } from '@/utils';
 
@@ -182,9 +182,18 @@ class App extends Vue {
       }));
 
       const bodyContents = await result.Body?.transformToString();
-      alert(`Example file contents read from ${bucket}/${key}:\n\n${bodyContents}`);
+
+      try {
+        const parsed = JSON.parse(bodyContents || '');
+        this.data = parsed;
+        console.log(`Form data loaded from ${bucket}/${key}`);
+      } catch (jsonError) {
+        console.warn(`readme.txt is not valid JSON. Falling back to defaults.`);
+        this.data = { ...this.defaults };
+      }
     } catch (error) {
-      alert(`Error fetching example s3 file: ${error}`);
+      console.error(`S3 fetch failed:`, error);
+      this.data = { ...this.defaults };
     }
   }
 
@@ -226,10 +235,50 @@ class App extends Vue {
       },
     });
   }
+  async updateReadmeInS3() {
+    try {
+      const s3 = new S3Client({
+        region: 'us-central-2',
+        endpoint: 'https://s3.hydroshare.org',
+        forcePathStyle: true,
+        credentials: {
+          accessKeyId: 'HRE9GZTZ9SHL3IVDONKS',
+          secretAccessKey: 'FEKjArh3IwzHXrWdzorQyplsLUZ2UUXbmD7ALOFn',
+        },
+      });
 
-  submit() {
-    console.log(this.data);
+      const bucket = 'sblack';
+      const key = 'd7b526e24f7e449098b428ae9363f514/data/contents/readme.txt';
+
+      const content = JSON.stringify(this.data, null, 2); // Convert form data to readable JSON
+
+      await s3.send(new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: content,
+        ContentType: 'text/plain',
+      }));
+
+      Notifications.toast({
+        title: 'Success',
+        message: 'readme.txt updated successfully!',
+        type: 'success',
+      });
+    } catch (error) {
+      console.error('Error uploading to S3:', error);
+      Notifications.toast({
+        title: 'Error',
+        message: 'Failed to update readme.txt in S3.',
+        type: 'error',
+      });
+    }
   }
+
+  async submit() {
+    console.log('Form data to upload:', this.data);
+    await this.updateReadmeInS3(); // upload to S3
+  }
+
 
   onUpdateErrors(errors: { title: string; message: string }[]) {
     this.errors = errors;
