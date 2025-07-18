@@ -242,8 +242,8 @@ class App extends Vue {
         endpoint: 'https://s3.hydroshare.org',
         forcePathStyle: true,
         credentials: {
-          accessKeyId: 'HRE9GZTZ9SHL3IVDONKS',
-          secretAccessKey: 'FEKjArh3IwzHXrWdzorQyplsLUZ2UUXbmD7ALOFn',
+          accessKeyId: 'GET FROM_HS',
+          secretAccessKey: 'GET_FROM_HS',
         },
       });
 
