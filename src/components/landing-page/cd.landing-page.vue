@@ -161,10 +161,10 @@ class App extends Vue {
       const bareBonesS3 = new S3Client({
         region: 'us-central-2',
         // TODO: we will have to target HS beta for this due to pending issue with micro-auth
-        endpoint: 'https://s3.hydroshare.org',
+        endpoint: 'https://s3.beta.hydroshare.org',
         forcePathStyle: true, // needed with minio...
         credentials: {
-          // Client will get this with a POST request to https://www.hydroshare.org/hsapi/user/service/accounts/s3/
+          // Client will get this with a POST request to https://beta.hydroshare.org/hsapi/user/service/accounts/s3/
           // TODO: https://cuahsi.atlassian.net/browse/CAM-769 build a simple component to get this info from the client
           accessKeyId: 'GET_THIS_FROM_HS',
           secretAccessKey: 'GET_THIS_FROM_HS',
@@ -173,7 +173,7 @@ class App extends Vue {
       const bucket = 'sblack'; // This is the bucket name, you can change it as needed.
       const key = 'd7b526e24f7e449098b428ae9363f514/data/contents/readme.txt'; // This is the key for the file you want to fetch.
       const result = await bareBonesS3.send(new GetObjectCommand({
-        // for a given ID, you can get this using a GET request to https://www.hydroshare.org/hsapi/resource/{ID}/s3
+        // for a given ID, you can get this using a GET request to https://beta.hydroshare.org/hsapi/resource/{ID}/s3
         // it will give you the bucket and key to use here.
         Bucket: bucket,
         // hs_user_meta.json is written to /data/contents, so this will not be impacted...
