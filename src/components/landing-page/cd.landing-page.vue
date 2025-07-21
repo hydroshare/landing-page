@@ -250,7 +250,10 @@ class App extends Vue {
       const bucket = 'sblack';
       const key = 'd7b526e24f7e449098b428ae9363f514/data/contents/readme.txt';
 
-      const content = JSON.stringify(this.data, null, 2); // Convert form data to readable JSON
+      const content = JSON.stringify({
+        title: this.data.title,
+        abstract: this.data.abstract
+      }, null, 2);
 
       await s3.send(new PutObjectCommand({
         Bucket: bucket,
