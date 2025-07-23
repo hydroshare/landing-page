@@ -161,25 +161,10 @@ class App extends Vue {
       this.resourceId = 'd7b526e24f7e449098b428ae9363f514'; // Fallback example resourceId
     }
 
-    const schema: SchemaDefinition = {
-      title: "EditableScientificDataset",
-      type: "object",
-      additionalProperties: true,
-      properties: {
-        name: {
-          type: "string",
-          default: null,
-          title: "Name or title",
-          description: "A text string with a descriptive name or title for the resource."
-        },
-        description: {
-          type: "string",
-          default: null,
-          title: "Description or abstract",
-          description: "A text string containing a description/abstract for the resource."
-        }
-      }
-    };
+    const schema: SchemaDefinition = await import(
+      /* @vite-ignore */
+      `@/schemas/hydroshare/edit_schema.json`
+    );
 
     const { default: uischema } = await import(
         /* @vite-ignore */
