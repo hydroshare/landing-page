@@ -18,7 +18,9 @@ export const routes: RouteRecordRaw[] = [
   },
   {
     name: "landing",
-    path: "/",
+    path: "/:resourceId?",
+    props: true,
+    alias: ["/", "/home"],
     components: {
       content: CdLandingPage,
       footer: CdFooter,

@@ -113,6 +113,9 @@ interface SchemaCollectionItem {
   name: 'App',
 })
 class App extends Vue {
+  // Add prop for resourceId
+  resourceId!: string;
+
   @Ref('form') form!: InstanceType<typeof CzForm>;
 
   isValid: boolean = false;
@@ -147,6 +150,17 @@ class App extends Vue {
   };
 
   async created() {
+    // Get resourceId from route params if not passed as prop
+    if (!this.resourceId && this.$route && this.$route.params && this.$route.params.resourceId) {
+      this.resourceId = this.$route.params.resourceId;
+    }
+
+    // notify if the resourceId is not set
+    if (!this.resourceId) {
+      alert("No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.");
+      this.resourceId = 'd7b526e24f7e449098b428ae9363f514'; // Fallback example resourceId
+    }
+
     const schema: SchemaDefinition = {
       title: "EditableScientificDataset",
       type: "object",
@@ -213,7 +227,9 @@ class App extends Vue {
           secretAccessKey: 'GET_SECRET_KEY',
         },
       });
-      const resourceId = 'd7b526e24f7e449098b428ae9363f514'; // Example resource ID
+
+      // Use resourceId from prop or fallback to example
+      const resourceId = this.resourceId;
       const response = await fetch(`https://beta.hydroshare.org/hsapi/resource/s3/${resourceId}`, {
         method: 'GET',
         headers: {
@@ -303,8 +319,10 @@ class App extends Vue {
         },
       });
 
+      // Use resourceId from prop or fallback to example
+      const resourceId = this.resourceId;
       const bucket = 'sblack';
-      const key = 'd7b526e24f7e449098b428ae9363f514/data/contents/hs_user_meta.json';
+      const key = `${resourceId}/data/contents/hs_user_meta.json`;
 
       const content = JSON.stringify({ name: this.data.name, description: this.data.description }, null, 2);
       const command = new PutObjectCommand({
@@ -330,6 +348,17 @@ class App extends Vue {
     }
   }
 }
+
+// Add prop decorator for resourceId
+App.__decorators__ = [
+  (options: any) => {
+    options.props = options.props || {};
+    options.props.resourceId = {
+      type: String,
+      required: false,
+    };
+  }
+];
 
 export default toNative(App);
 </script>
