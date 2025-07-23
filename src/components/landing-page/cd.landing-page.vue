@@ -241,7 +241,7 @@ class App extends Vue {
       const bucket = s3Info.bucket;
       const prefix = s3Info.prefix;
 
-      const key = `${prefix}data/contents/hs_user_meta.json`;
+      const key = `${prefix}hs_user_meta.json`;
 
       console.log(`Fetching metadata from S3: ${bucket}/${key}`);
       const result = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
