@@ -126,6 +126,9 @@ class App extends Vue {
   selectedSchema: number = -1;
   schemaCollection: SchemaCollectionItem[] = [];
 
+  accessKey = localStorage.getItem('s3AccessKey') || '';
+  secretKey = localStorage.getItem('s3SecretKey') || '';
+
   config: Config = {
     restrict: true,
     trim: true,
@@ -166,17 +169,15 @@ class App extends Vue {
     // Replace when we update to Pinia
 
     // Check localStorage for access key and secret key
-    let accessKey = localStorage.getItem('s3AccessKey');
-    let secretKey = localStorage.getItem('s3SecretKey');
 
-    if (!accessKey || !secretKey) {
+    if (!this.accessKey || !this.secretKey) {
       // Prompt user for access key and secret key
-      accessKey = prompt('Enter your S3 Access Key:');
-      secretKey = prompt('Enter your S3 Secret Key:');
+      this.accessKey = prompt('Enter your S3 Access Key:');
+      this.secretKey = prompt('Enter your S3 Secret Key:');
 
-      if (accessKey && secretKey) {
-        localStorage.setItem('s3AccessKey', accessKey);
-        localStorage.setItem('s3SecretKey', secretKey);
+      if (this.accessKey && this.secretKey) {
+        localStorage.setItem('s3AccessKey', this.accessKey);
+        localStorage.setItem('s3SecretKey', this.secretKey);
       } else {
         alert('Access key and secret key are required to proceed.');
         return;
@@ -215,8 +216,8 @@ class App extends Vue {
         endpoint: 'https://s3.beta.hydroshare.org',
         forcePathStyle: true,
         credentials: {
-          accessKeyId: accessKey,
-          secretAccessKey: secretKey,
+          accessKeyId: this.accessKey,
+          secretAccessKey: this.secretKey,
         },
       });
 
@@ -306,8 +307,8 @@ class App extends Vue {
         endpoint: 'https://s3.beta.hydroshare.org',
         forcePathStyle: true,
         credentials: {
-          accessKeyId: accessKey,
-          secretAccessKey: secretkey,
+          accessKeyId: this.accessKey,
+          secretAccessKey: this.secretKey,
         },
       });
 
