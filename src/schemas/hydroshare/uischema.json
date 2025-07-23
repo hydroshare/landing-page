@@ -7,14 +7,16 @@
       "elements": [
         {
           "type": "Control",
-          "scope": "#/properties/title"
+          "scope": "#/properties/name",
+          "options": {
+            "multi": false
+          }
         },
         {
           "type": "Control",
-          "scope": "#/properties/abstract",
+          "scope": "#/properties/description",
           "options": {
-            "multi": true,
-            "trim": true
+            "multi": false
           }
         }
       ]

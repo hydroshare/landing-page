@@ -181,25 +181,10 @@ class App extends Vue {
       }
     };
 
-    const uischema = {
-      type: "VerticalLayout",
-      elements: [
-        {
-          type: "Control",
-          scope: "#/properties/name",
-          options: {
-            multi: false // Disable multi-option rendering for anyOf
-          }
-        },
-        {
-          type: "Control",
-          scope: "#/properties/description",
-          options: {
-            multi: false // Disable multi-option rendering for anyOf
-          }
-        }
-      ]
-    };
+    const { default: uischema } = await import(
+        /* @vite-ignore */
+        `@/schemas/hydroshare/uischema.json`
+      );
 
     const defaults = {
       name: null,
