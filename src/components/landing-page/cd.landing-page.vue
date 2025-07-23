@@ -161,6 +161,28 @@ class App extends Vue {
       this.resourceId = 'd7b526e24f7e449098b428ae9363f514'; // Fallback example resourceId
     }
 
+    // https://cuahsi.atlassian.net/browse/CAM-769
+    // TODO: for now we store access and secret keys in localStorage
+    // Replace when we update to Pinia
+
+    // Check localStorage for access key and secret key
+    let accessKey = localStorage.getItem('s3AccessKey');
+    let secretKey = localStorage.getItem('s3SecretKey');
+
+    if (!accessKey || !secretKey) {
+      // Prompt user for access key and secret key
+      accessKey = prompt('Enter your S3 Access Key:');
+      secretKey = prompt('Enter your S3 Secret Key:');
+
+      if (accessKey && secretKey) {
+        localStorage.setItem('s3AccessKey', accessKey);
+        localStorage.setItem('s3SecretKey', secretKey);
+      } else {
+        alert('Access key and secret key are required to proceed.');
+        return;
+      }
+    }
+
     const schema: SchemaDefinition = await import(
       /* @vite-ignore */
       `@/schemas/hydroshare/edit_schema.json`
@@ -193,8 +215,8 @@ class App extends Vue {
         endpoint: 'https://s3.beta.hydroshare.org',
         forcePathStyle: true,
         credentials: {
-          accessKeyId: 'GET_ACCESS_KEY',
-          secretAccessKey: 'GET_SECRET_KEY',
+          accessKeyId: accessKey,
+          secretAccessKey: secretKey,
         },
       });
 
@@ -284,8 +306,8 @@ class App extends Vue {
         endpoint: 'https://s3.beta.hydroshare.org',
         forcePathStyle: true,
         credentials: {
-          accessKeyId: 'GET_ACCESS_KEY',
-          secretAccessKey: 'GET_SECRET_KEY',
+          accessKeyId: accesskey,
+          secretAccessKey: secretkey,
         },
       });
 
