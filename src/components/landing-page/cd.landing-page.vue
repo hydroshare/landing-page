@@ -213,10 +213,21 @@ class App extends Vue {
           secretAccessKey: 'GET_SECRET_KEY',
         },
       });
+      const resourceId = 'd7b526e24f7e449098b428ae9363f514'; // Example resource ID
+      const response = await fetch(`https://beta.hydroshare.org/hsapi/resource/s3/${resourceId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const s3Info = await response.json();
 
-      const bucket = 'sblack';
-      const key = 'd7b526e24f7e449098b428ae9363f514/data/contents/hs_user_meta.json';
+      const bucket = s3Info.bucket;
+      const prefix = s3Info.prefix;
 
+      const key = `${prefix}data/contents/hs_user_meta.json`;
+
+      console.log(`Fetching metadata from S3: ${bucket}/${key}`);
       const result = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
       const bodyContents = await result.Body?.transformToString();
 
