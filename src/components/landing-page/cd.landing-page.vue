@@ -306,7 +306,7 @@ class App extends Vue {
         endpoint: 'https://s3.beta.hydroshare.org',
         forcePathStyle: true,
         credentials: {
-          accessKeyId: accesskey,
+          accessKeyId: accessKey,
           secretAccessKey: secretkey,
         },
       });
