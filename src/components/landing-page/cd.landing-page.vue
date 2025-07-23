@@ -6,11 +6,11 @@
       <v-card class="my-5">
         <v-card-title class="d-flex justify-space-between align-center flex-column flex-md-row">
           <span>CzForm</span>
-
           <v-select v-if="selectedSchema >= 0" class="my-2" label="Schema" :items="schemaCollection"
-            v-model="selectedSchema" @update:model-value="data = defaults" item-value="index" item-title="name"
+            v-model="selectedSchema" @update:model-value="updateData" item-value="index" item-title="name"
             max-width="200px" variant="outlined" hide-details density="compact"></v-select>
         </v-card-title>
+
         <v-divider />
         <v-card-text class="d-flex">
           <v-checkbox label="ReadOnly" v-model="config.isReadOnly" class="mr-4" hide-details />
@@ -23,6 +23,7 @@
           <cz-form :schema="schema" :uischema="uischema" v-model="data" :errors.sync="errors"
             @update:errors="onUpdateErrors" :isValid.sync="isValid" :config="config" ref="form" />
         </v-card-text>
+
         <v-divider />
         <v-card-text>
           <v-expansion-panels :model-value="0">
@@ -31,33 +32,31 @@
                 <div class="text-overline">Form Data</div>
               </v-expansion-panel-title>
               <v-expansion-panel-text>
-                <pre>{{ data }}</pre>
+                <pre>{{ sanitizeData(data) }}</pre>
               </v-expansion-panel-text>
             </v-expansion-panel>
           </v-expansion-panels>
         </v-card-text>
+
         <v-divider />
         <v-card-actions>
           <v-spacer></v-spacer>
-
           <v-menu open-on-hover bottom left offset-y transition="fade">
             <template #activator="{ props }">
               <div v-bind="props" class="d-flex form-controls flex-column flex-sm-row">
                 <v-badge :model-value="!isValid" bordered color="error" icon="mdi-exclamation-thick" overlap>
-                  <v-btn color="primary" depressed @click="submit" :disabled="config.isReadOnly || config.isViewMode || !isValid
-                    ">
+                  <v-btn color="primary" depressed @click="submit"
+                    :disabled="config.isReadOnly || config.isViewMode || config.isDisabled || !isValid">
                     Submit
                   </v-btn>
                 </v-badge>
               </div>
             </template>
-
             <v-card>
               <v-card-text>
                 <ul class="text-subtitle-1 ml-4">
                   <li v-for="(error, index) of errors" :key="index">
-                    <b>{{ error.title }}</b>
-                    {{ error.message }}.
+                    <b>{{ error.title }}</b> {{ error.message }}.
                   </li>
                 </ul>
               </v-card-text>
@@ -68,42 +67,68 @@
     </v-container>
     <cz-notifications />
   </v-app>
-  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet" />
 </template>
 
 <script lang="ts">
-import { Component, Vue, toNative, Ref } from 'vue-facing-decorator';
-import { CzNotifications, Notifications, CzForm, CzFileExplorer } from "@cznethub/cznet-vue-core";
-import { Config, IFolder, IFile } from '@/types';
-import { S3Client } from "@aws-sdk/client-s3"
-import { GetObjectCommand } from "@aws-sdk/client-s3"
+import { Component, Vue, toNative, Ref, Watch } from 'vue-facing-decorator';
+import { CzForm, CzNotifications, Notifications } from '@cznethub/cznet-vue-core';
+import { Config } from '@/types';
+import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { stringify } from '@/utils';
 
-const schemaPaths = [
-  { name: 'HydroShare' },
-];
+// Define interfaces for better type safety
+interface FormError {
+  title: string;
+  message: string;
+}
+
+interface SchemaDefinition {
+  title: string;
+  type: string;
+  additionalProperties?: boolean;
+  properties: {
+    [key: string]: {
+      anyOf?: Array<{ type: string }>;
+      default?: any;
+      title?: string;
+      description?: string;
+      minLength?: number;
+      maxLength?: number;
+      pattern?: string;
+    };
+  };
+  required?: string[];
+}
+
+interface SchemaCollectionItem {
+  index: number;
+  name: string;
+  schema: SchemaDefinition;
+  uischema: any | null;
+  defaults: Record<string, any>;
+}
 
 @Component({
-  components: { CzNotifications, CzFileExplorer, CzForm },
+  components: { CzForm, CzNotifications },
   name: 'App',
 })
 class App extends Vue {
+  // Add prop for resourceId
+  resourceId!: string;
+
   @Ref('form') form!: InstanceType<typeof CzForm>;
 
-  isValid = false;
-  errors: { title: string; message: string }[] = [];
-  data = {};
+  isValid: boolean = false;
+  errors: FormError[] = [];
+  data: Record<string, any> = {};
   stringify = stringify;
-  selectedMetadata: any = false;
-  validItems = [];
-  schemaCollection: any = [];
+
   selectedSchema: number = -1;
-  fileNameRegex = /^[^\\/:*?"<>|]+$/;
-  folderNameRegex = /^[^\\/:*?"<>|]+$/;
+  schemaCollection: SchemaCollectionItem[] = [];
 
   config: Config = {
     restrict: true,
-    trim: false,
+    trim: true,
     showUnfocusedDescription: false,
     hideRequiredAsterisk: false,
     collapseNewItems: false,
@@ -124,148 +149,186 @@ class App extends Vue {
     isDisabled: false,
   };
 
-  fileExplorerConfig = {
-    isReadOnly: false,
-    hasFolders: true,
-  };
-
   async created() {
-    for (let i = 0; i < schemaPaths.length; i++) {
-      const path = schemaPaths[i].path;
-      const name = schemaPaths[i].name;
-      const { default: schema } = await import(
-        /* @vite-ignore */ `@/schemas/hydroshare/schema.json`
-      );
-      const { default: uischema } = await import(
+    // Get resourceId from route params if not passed as prop
+    if (!this.resourceId && this.$route && this.$route.params && this.$route.params.resourceId) {
+      this.resourceId = this.$route.params.resourceId;
+    }
+
+    // notify if the resourceId is not set
+    if (!this.resourceId) {
+      alert("No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.");
+      this.resourceId = 'd7b526e24f7e449098b428ae9363f514'; // Fallback example resourceId
+    }
+
+    const schema: SchemaDefinition = await import(
+      /* @vite-ignore */
+      `@/schemas/hydroshare/edit_schema.json`
+    );
+
+    const { default: uischema } = await import(
         /* @vite-ignore */
         `@/schemas/hydroshare/uischema.json`
       );
-      const { default: defaults } = await import(
-        /* @vite-ignore */
-        `@/schemas/hydroshare/defaults.json`
-      );
 
-      this.schemaCollection.push({
-        index: i,
-        name,
-        schema,
-        uischema,
-        defaults,
-      });
-    }
-    this.selectedSchema = 0; // Initial repository schema to render
-    this.data = { ...this.data, ...this.defaults };
+    const defaults = {
+      name: null,
+      description: null
+    };
 
-    // Here is an example of how to use the AWS S3 SDK to fetch a file.
+    this.schemaCollection.push({
+      index: 0,
+      name: 'EditableScientificDataset',
+      schema,
+      uischema,
+      defaults,
+    });
+
+    this.selectedSchema = 0;
+    this.updateData();
+
     try {
-      const bareBonesS3 = new S3Client({
+      const s3 = new S3Client({
         region: 'us-central-2',
-        // TODO: we will have to target HS beta for this due to pending issue with micro-auth
         endpoint: 'https://s3.beta.hydroshare.org',
-        forcePathStyle: true, // needed with minio...
+        forcePathStyle: true,
         credentials: {
-          // Client will get this with a POST request to https://beta.hydroshare.org/hsapi/user/service/accounts/s3/
-          // TODO: https://cuahsi.atlassian.net/browse/CAM-769 build a simple component to get this info from the client
-          accessKeyId: 'GET_THIS_FROM_HS',
-          secretAccessKey: 'GET_THIS_FROM_HS',
+          accessKeyId: 'GET_ACCESS_KEY',
+          secretAccessKey: 'GET_SECRET_KEY',
         },
       });
-      const bucket = 'sblack'; // This is the bucket name, you can change it as needed.
-      const key = 'd7b526e24f7e449098b428ae9363f514/data/contents/readme.txt'; // This is the key for the file you want to fetch.
-      const result = await bareBonesS3.send(new GetObjectCommand({
-        // for a given ID, you can get this using a GET request to https://beta.hydroshare.org/hsapi/resource/{ID}/s3
-        // it will give you the bucket and key to use here.
-        Bucket: bucket,
-        // hs_user_meta.json is written to /data/contents, so this will not be impacted...
-        // Key: 'd7b526e24f7e449098b428ae9363f514/data/contents/user_metadata.json',
-        Key: key,
-      }));
 
+      // Use resourceId from prop or fallback to example
+      const resourceId = this.resourceId;
+      const response = await fetch(`https://beta.hydroshare.org/hsapi/resource/s3/${resourceId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const s3Info = await response.json();
+
+      const bucket = s3Info.bucket;
+      const prefix = s3Info.prefix;
+
+      const key = `${prefix}hs_user_meta.json`;
+
+      console.log(`Fetching metadata from S3: ${bucket}/${key}`);
+      const result = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
       const bodyContents = await result.Body?.transformToString();
-      alert(`Example file contents read from ${bucket}/${key}:\n\n${bodyContents}`);
+
+      try {
+        const parsed = JSON.parse(bodyContents || '');
+        this.data = parsed;
+        console.log(`Form data loaded from ${bucket}/${key}`);
+      } catch (error) {
+        console.warn('JSON parse failed, loading defaults:', error);
+        this.data = { ...this.defaults };
+      }
     } catch (error) {
-      alert(`Error fetching example s3 file: ${error}`);
+      console.error('S3 fetch failed:', error);
+      this.data = { ...this.defaults };
+      Notifications.toast({
+        title: 'Error',
+        message: 'Failed to load metadata from S3.',
+        type: 'error',
+      });
     }
   }
 
-  get schema() {
+  get schema(): SchemaDefinition | undefined {
     return this.schemaCollection[this.selectedSchema]?.schema;
   }
 
-  get uischema() {
+  get uischema(): any | null {
     return this.schemaCollection[this.selectedSchema]?.uischema;
   }
 
-  get defaults() {
-    return this.schemaCollection[this.selectedSchema]?.defaults;
+  get defaults(): Record<string, any> {
+    return this.schemaCollection[this.selectedSchema]?.defaults || {};
   }
 
-  openDialog() {
-    Notifications.openDialog({
-      title: `Dialog Title`,
-      content: 'Some message for the dialog',
-      onConfirm: () => { },
-    });
+  updateData() {
+    this.data = { ...this.data, ...this.defaults };
   }
 
-  onShowMetadata(item: any) {
-    this.selectedMetadata = item;
+  @Watch('errors')
+  onErrorsChange(newErrors: FormError[]) {
+    console.log('Errors changed:', newErrors);
+    if (newErrors.length === 0) {
+      this.isValid = true;
+    }
   }
 
-  toast() {
-    Notifications.toast({
-      title: 'Important Note: drink water.',
-      message: `Stay hydrated.`,
-      type: 'info',
-      location: 'top center',
-      isInfinite: true,
-      hasDoNotShowAgain: true,
-      onDismissed: (doNotShowAgain: boolean) => {
-        // Use in your app to not show the notification again
-        console.log(doNotShowAgain);
-      },
-    });
-  }
-
-  submit() {
-    console.log(this.data);
-  }
-
-  onUpdateErrors(errors: { title: string; message: string }[]) {
+  onUpdateErrors(errors: FormError[]) {
     this.errors = errors;
+    console.log('onUpdateErrors called with:', errors);
   }
 
-  // =======================
-  // MOCK FUNCTIONS
-  // =======================
-
-  async uploadMock(_items: (IFile | IFolder)[]) {
-    return new Promise((_resolve, _reject) => {
-      setTimeout(() => {
-        _resolve(_items.map(_i => true));
-        // _reject(_items.map(_i => false));
-      }, 500);
-    });
+  sanitizeData(data: Record<string, any>): Record<string, any> {
+    const sanitized = { ...data };
+    if (sanitized.name) {
+      sanitized.name = sanitized.name.replace(/\t/g, ' ').trim();
+    }
+    if (sanitized.description) {
+      sanitized.description = sanitized.description.replace(/\t/g, ' ').trim();
+    }
+    return sanitized;
   }
 
-  async deleteFileOrFolderMock(_item: IFile | IFolder) {
-    return new Promise((_resolve, _reject) => {
-      setTimeout(() => {
-        _resolve(true);
-        // _reject(false);
-      }, 500);
-    });
-  }
+  async submit() {
+    console.log('Submitting data:', this.data, 'isValid:', this.isValid);
+    try {
+      const s3 = new S3Client({
+        region: 'us-central-2',
+        endpoint: 'https://s3.beta.hydroshare.org',
+        forcePathStyle: true,
+        credentials: {
+          accessKeyId: 'GET_ACCESS_KEY',
+          secretAccessKey: 'GET_SECRET_KEY',
+        },
+      });
 
-  async renameFileOrFolderMock(_item: IFile | IFolder) {
-    return new Promise((_resolve, _reject) => {
-      setTimeout(() => {
-        _resolve(true);
-        // _reject(false);
-      }, 500);
-    });
+      // Use resourceId from prop or fallback to example
+      const resourceId = this.resourceId;
+      const bucket = 'sblack';
+      const key = `${resourceId}/data/contents/hs_user_meta.json`;
+
+      const content = JSON.stringify({ name: this.data.name, description: this.data.description }, null, 2);
+      const command = new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: content,
+        ContentType: 'application/json',
+      });
+      await s3.send(command);
+
+      Notifications.toast({
+        title: 'Success',
+        message: 'Metadata uploaded to S3 successfully!',
+        type: 'success',
+      });
+    } catch (error) {
+      console.error('Error uploading to S3:', error);
+      Notifications.toast({
+        title: 'Error',
+        message: `Failed to upload metadata to S3. Details: ${error.message}`,
+        type: 'error',
+      });
+    }
   }
 }
+
+// Add prop decorator for resourceId
+App.__decorators__ = [
+  (options: any) => {
+    options.props = options.props || {};
+    options.props.resourceId = {
+      type: String,
+      required: false,
+    };
+  }
+];
 
 export default toNative(App);
 </script>
