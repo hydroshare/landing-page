@@ -8,7 +8,7 @@ export const routes: RouteRecordRaw[] = [
   {
     name: "search",
     path: "/",
-    alias: ["/", "/home"],
+    alias: ["/", "/home", "/search"],
     components: {
       content: CdSearchResults,
       footer: CdFooter,

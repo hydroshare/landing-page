@@ -214,29 +214,14 @@ class App extends Vue {
   };
   public paths: any[] = [
     {
-      attrs: { to: "/home" },
-      label: "Home",
+      attrs: { to: "/search" },
+      label: "Search",
       icon: "mdi-home",
     },
     {
-      attrs: { to: "/my-resources" },
-      label: "My Resources",
-      icon: "mdi-home",
-    },
-    {
-      attrs: { to: "/discover" },
-      label: "Discover",
-      icon: "mdi-home",
-    },
-    {
-      attrs: { to: "/apps" },
-      label: "Apps",
-      icon: "mdi-home",
-    },
-    {
-      attrs: { to: "/help" },
-      label: "Help",
-      icon: "mdi-home",
+      attrs: { to: "/resource/d7b526e24f7e449098b428ae9363f514" },
+      label: "Example",
+      icon: "mdi-test-tube",
     },
   ];
 
