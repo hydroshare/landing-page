@@ -184,7 +184,6 @@ interface FileItem {
   name: 'App',
 })
 class App extends Vue {
-  // Add prop for resourceId
   resourceId!: string;
 
   @Ref('form') form!: InstanceType<typeof CzForm>;
@@ -202,10 +201,11 @@ class App extends Vue {
   accessKey = localStorage.getItem('s3AccessKey') || '';
   secretKey = localStorage.getItem('s3SecretKey') || '';
 
-  // File browser properties
   fileList: FileItem[] = [];
   isLoadingFiles: boolean = false;
-  currentPath: string = ''; // Tracks current folder path relative to /contents/
+  currentPath: string = '';
+  deletedFolders: Set<string> = new Set();
+
   fileHeaders = [
     { title: 'Name', key: 'name' },
     { title: 'Size', key: 'size' },
@@ -236,7 +236,17 @@ class App extends Vue {
     isDisabled: false,
   };
 
-  // Define formatSize method
+  created() {
+    const stored = sessionStorage.getItem('deletedFolders');
+    if (stored) {
+      this.deletedFolders = new Set(JSON.parse(stored));
+    }
+  }
+
+  private saveDeletedFolders() {
+    sessionStorage.setItem('deletedFolders', JSON.stringify([...this.deletedFolders]));
+  }
+
   formatSize(size: number): string {
     if (!size) return '-';
     if (size < 1024) return `${size} B`;
@@ -244,26 +254,21 @@ class App extends Vue {
     return `${(size / (1024 * 1024)).toFixed(2)} MB`;
   }
 
-  // Define formatDate method
   formatDate(date: Date): string {
     return date ? date.toLocaleString() : '-';
   }
 
   async created() {
-    // Get resourceId from route params if not passed as prop
     if (!this.resourceId && this.$route && this.$route.params && this.$route.params.resourceId) {
       this.resourceId = this.$route.params.resourceId;
     }
 
-    // Notify if the resourceId is not set
     if (!this.resourceId) {
       alert("No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.");
-      this.resourceId = 'd7b526e24f7e449098b428ae9363f514'; // Fallback example resourceId
+      this.resourceId = 'd7b526e24f7e449098b428ae9363f514';
     }
 
-    // Check localStorage for access key and secret key
     if (!this.accessKey || !this.secretKey) {
-      // Prompt user for access key and secret key
       this.accessKey = prompt('Enter your S3 Access Key:') || '';
       this.secretKey = prompt('Enter your S3 Secret Key:') || '';
 
@@ -313,7 +318,6 @@ class App extends Vue {
         },
       });
 
-      // Use resourceId from prop or fallback to example
       const resourceId = this.resourceId;
       const response = await fetch(`https://beta.hydroshare.org/hsapi/resource/s3/${resourceId}`, {
         method: 'GET',
@@ -341,7 +345,6 @@ class App extends Vue {
         this.data = { ...this.defaults };
       }
 
-      // Load initial file list
       await this.loadFileList(bucket, `${resourceId}/data/contents/`);
     } catch (error) {
       console.error('S3 fetch failed:', error);
@@ -407,7 +410,6 @@ class App extends Vue {
         },
       });
 
-      // Use resourceId from prop or fallback to example
       const resourceId = this.resourceId;
       const bucket = 'sblack';
       const key = `${resourceId}/data/contents/hs_user_meta.json`;
@@ -438,58 +440,104 @@ class App extends Vue {
 
   async loadFileList(bucket: string, prefix: string) {
     this.isLoadingFiles = true;
+    this.fileList = [];
     try {
-      const s3 = new S3Client({
-        region: 'us-central-2',
-        endpoint: 'https://s3.beta.hydroshare.org',
-        forcePathStyle: true,
-        credentials: {
-          accessKeyId: this.accessKey,
-          secretAccessKey: this.secretKey,
+      // Fetch from backend API
+      const apiResponse = await fetch(`https://beta.hydroshare.org/hsapi/resource/s3/${this.resourceId}?prefix=${encodeURIComponent(prefix)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         },
       });
-
-      const command = new ListObjectsV2Command({
-        Bucket: bucket,
-        Prefix: prefix,
-        Delimiter: '/',
-      });
-      const response = await s3.send(command);
+      const s3Info = await apiResponse.json();
+      console.log('Backend API response:', s3Info);
 
       const files: FileItem[] = [];
 
-      // Add folders (CommonPrefixes)
-      if (response.CommonPrefixes) {
-        response.CommonPrefixes.forEach((prefixItem) => {
-          if (prefixItem.Prefix) {
-            const name = prefixItem.Prefix.replace(prefix, '').replace(/\/$/, '');
+      // Process directories and files from API (assuming API returns directories and files)
+      if (s3Info.directories) {
+        s3Info.directories.forEach((dir: string) => {
+          const dirKey = `${prefix}${dir}/`;
+          if (!this.deletedFolders.has(dirKey)) {
             files.push({
-              key: prefixItem.Prefix,
-              name,
+              key: dirKey,
+              name: dir,
               size: 0,
               lastModified: new Date(),
               isFolder: true,
             });
+          } else {
+            console.log(`Filtered out deleted folder from UI: ${dirKey}`);
           }
         });
       }
 
-      // Add files (Contents)
-      if (response.Contents) {
-        response.Contents.forEach((item) => {
-          if (item.Key && item.Key !== prefix && !item.Key.endsWith('/')) {
-            files.push({
-              key: item.Key,
-              name: item.Key.replace(prefix, ''),
-              size: item.Size || 0,
-              lastModified: item.LastModified || new Date(),
-              isFolder: false,
-            });
-          }
+      if (s3Info.files) {
+        s3Info.files.forEach((file: { name: string, size: number, lastModified: string }, index: number) => {
+          files.push({
+            key: `${prefix}${file.name}`,
+            name: file.name,
+            size: s3Info.file_sizes ? s3Info.file_sizes[index] : file.size,
+            lastModified: new Date(file.lastModified || Date.now()),
+            isFolder: false,
+          });
         });
+      }
+
+      // Fallback to direct S3 listing if API response is incomplete
+      if (!s3Info.directories && !s3Info.files) {
+        console.warn('API response incomplete, falling back to S3 ListObjectsV2');
+        const s3 = new S3Client({
+          region: 'us-central-2',
+          endpoint: 'https://s3.beta.hydroshare.org',
+          forcePathStyle: true,
+          credentials: {
+            accessKeyId: this.accessKey,
+            secretAccessKey: this.secretKey,
+          },
+        });
+
+        const command = new ListObjectsV2Command({
+          Bucket: bucket,
+          Prefix: prefix,
+          Delimiter: '/',
+        });
+        const s3Response = await s3.send(command);
+
+        if (s3Response.CommonPrefixes) {
+          s3Response.CommonPrefixes.forEach((prefixItem) => {
+            if (prefixItem.Prefix && !this.deletedFolders.has(prefixItem.Prefix)) {
+              const name = prefixItem.Prefix.replace(prefix, '').replace(/\/$/, '');
+              files.push({
+                key: prefixItem.Prefix,
+                name,
+                size: 0,
+                lastModified: new Date(),
+                isFolder: true,
+              });
+            } else if (prefixItem.Prefix && this.deletedFolders.has(prefixItem.Prefix)) {
+              console.log(`Filtered out deleted folder from UI: ${prefixItem.Prefix}`);
+            }
+          });
+        }
+
+        if (s3Response.Contents) {
+          s3Response.Contents.forEach((item) => {
+            if (item.Key && item.Key !== prefix && !item.Key.endsWith('/')) {
+              files.push({
+                key: item.Key,
+                name: item.Key.replace(prefix, ''),
+                size: item.Size || 0,
+                lastModified: item.LastModified || new Date(),
+                isFolder: false,
+              });
+            }
+          });
+        }
       }
 
       this.fileList = files;
+      console.log('Loaded file list:', files.map(item => ({ name: item.name, key: item.key, isFolder: item.isFolder })));
       Notifications.toast({
         title: 'Success',
         message: 'File list loaded successfully!',
@@ -499,7 +547,7 @@ class App extends Vue {
       console.error('Error listing files:', error);
       Notifications.toast({
         title: 'Error',
-        message: 'Failed to load file list.',
+        message: `Failed to load file list: ${error.message}`,
         type: 'error',
       });
     } finally {
@@ -509,8 +557,6 @@ class App extends Vue {
 
   async handleFileUpload(event: Event) {
     const input = event.target as HTMLInputElement;
-    if (!input.files || input.files.length === 0) return;
-
     const bucket = 'sblack';
     const basePrefix = `${this.resourceId}/data/contents/${this.currentPath}`;
 
@@ -525,44 +571,71 @@ class App extends Vue {
         },
       });
 
-      // Collect unique folder paths for empty folders
       const folderPaths = new Set<string>();
-      for (const file of Array.from(input.files)) {
-        const relativePath = file.webkitRelativePath || file.name;
-        // Extract folder paths from webkitRelativePath
-        if (file.webkitRelativePath) {
-          const pathParts = file.webkitRelativePath.split('/').slice(0, -1);
-          let currentPath = '';
-          for (const part of pathParts) {
-            currentPath = currentPath ? `${currentPath}/${part}` : part;
-            folderPaths.add(`${basePrefix}${currentPath}/`);
+
+      if (input === this.folderInput) {
+        if (!input.files || input.files.length === 0) {
+          const folderName = prompt('Enter folder name to create (e.g., "NewFolder"):');
+          if (folderName) {
+            const sanitizedFolderName = folderName.replace(/[^a-zA-Z0-9-_ ]/g, '').trim();
+            if (sanitizedFolderName) {
+              const folderPath = `${basePrefix}${sanitizedFolderName}/`;
+              folderPaths.add(folderPath);
+              console.log(`Added empty folder path for upload: ${folderPath}`);
+            } else {
+              throw new Error('Invalid folder name: must contain valid characters');
+            }
+          } else {
+            console.log('Folder upload canceled by user');
+            return;
+          }
+        } else {
+          console.log('Files selected for folder upload:', Array.from(input.files).map(f => ({ name: f.name, webkitRelativePath: f.webkitRelativePath })));
+          for (const file of Array.from(input.files)) {
+            const relativePath = file.webkitRelativePath || file.name;
+            const pathParts = relativePath.split('/').slice(0, -1);
+            let currentPath = '';
+            for (const part of pathParts) {
+              currentPath = currentPath ? `${currentPath}/${part}` : part;
+              folderPaths.add(`${basePrefix}${currentPath}/`);
+            }
           }
         }
       }
 
-      // Upload empty folder markers
       for (const folderPath of folderPaths) {
-        await s3.send(new PutObjectCommand({
-          Bucket: bucket,
-          Key: folderPath,
-          Body: '',
-          ContentType: 'application/x-directory',
-        }));
-        console.log(`Created empty folder ${folderPath}`);
+        try {
+          await s3.send(new PutObjectCommand({
+            Bucket: bucket,
+            Key: folderPath,
+            Body: '',
+            ContentType: 'application/x-directory',
+          }));
+          console.log(`Created empty folder ${folderPath}`);
+        } catch (error) {
+          console.error(`Failed to create folder marker ${folderPath}:`, error);
+          throw new Error(`Failed to create folder ${folderPath}: ${error.message}`);
+        }
       }
 
-      // Upload files
-      for (const file of Array.from(input.files)) {
-        const relativePath = file.webkitRelativePath || file.name;
-        const key = `${basePrefix}${relativePath}`;
-        const arrayBuffer = await file.arrayBuffer();
-        await s3.send(new PutObjectCommand({
-          Bucket: bucket,
-          Key: key,
-          Body: arrayBuffer,
-          ContentType: file.type || 'application/octet-stream',
-        }));
-        console.log(`Uploaded ${file.name} to ${bucket}/${key}`);
+      if (input.files && input.files.length > 0) {
+        for (const file of Array.from(input.files)) {
+          const relativePath = file.webkitRelativePath || file.name;
+          const key = `${basePrefix}${relativePath}`;
+          const arrayBuffer = await file.arrayBuffer();
+          try {
+            await s3.send(new PutObjectCommand({
+              Bucket: bucket,
+              Key: key,
+              Body: arrayBuffer,
+              ContentType: file.type || 'application/octet-stream',
+            }));
+            console.log(`Uploaded ${file.name} to ${bucket}/${key}`);
+          } catch (error) {
+            console.error(`Failed to upload file ${file.name}:`, error);
+            throw new Error(`Failed to upload file ${file.name}: ${error.message}`);
+          }
+        }
       }
 
       Notifications.toast({
@@ -570,17 +643,15 @@ class App extends Vue {
         message: 'Files and folders uploaded successfully!',
         type: 'success',
       });
-      // Refresh file list after upload
       await this.loadFileList(bucket, `${this.resourceId}/data/contents/${this.currentPath}`);
     } catch (error) {
-      console.error('Error uploading files:', error);
+      console.error('Error uploading files or folders:', error);
       Notifications.toast({
         title: 'Error',
-        message: `Failed to upload files: ${error.message}`,
+        message: `Failed to upload files or folders: ${error.message}`,
         type: 'error',
       });
     } finally {
-      // Reset file input
       input.value = '';
     }
   }
@@ -639,7 +710,6 @@ class App extends Vue {
       });
 
       if (item.isFolder) {
-        // Recursively list all objects (files and folder markers) under the folder prefix
         let continuationToken: string | undefined;
         const objectsToDelete: { Key: string }[] = [];
 
@@ -651,42 +721,69 @@ class App extends Vue {
           });
           const listResponse = await s3.send(listCommand);
 
-          // Collect all objects, including folder markers (keys ending with '/')
           if (listResponse.Contents) {
             listResponse.Contents.forEach((obj) => {
               if (obj.Key) {
                 objectsToDelete.push({ Key: obj.Key });
+                console.log(`Added to delete: ${obj.Key}`);
               }
             });
           }
 
-          // Update continuation token for next page
           continuationToken = listResponse.NextContinuationToken;
         } while (continuationToken);
 
-        // Ensure the top-level folder marker is included
         if (!objectsToDelete.some((obj) => obj.Key === item.key)) {
           objectsToDelete.push({ Key: item.key });
+          console.log(`Added top-level folder marker: ${item.key}`);
         }
 
-        // Delete all objects in batches of up to 1000 (S3 limit)
         const batchSize = 1000;
-        for (let i = 0; i < objectsToDelete.length; i += batchSize) {
-          const batch = objectsToDelete.slice(i, i + batchSize);
-          if (batch.length > 0) {
+        if (objectsToDelete.length === 0) {
+          console.log(`No objects found to delete for folder: ${item.key}`);
+        } else {
+          for (let i = 0; i < objectsToDelete.length; i += batchSize) {
+            const batch = objectsToDelete.slice(i, i + batchSize);
             await s3.send(new DeleteObjectsCommand({
               Bucket: bucket,
               Delete: { Objects: batch },
             }));
-            console.log(`Deleted batch of ${batch.length} objects`);
+            console.log(`Deleted batch of ${batch.length} objects:`, batch.map((obj) => obj.Key));
           }
         }
+
+        this.deletedFolders.add(item.key);
+        this.saveDeletedFolders();
+        console.log(`Marked folder as deleted in session: ${item.key}`);
+
+        const verifyCommand = new ListObjectsV2Command({
+          Bucket: bucket,
+          Prefix: item.key,
+        });
+        const verifyResponse = await s3.send(verifyCommand);
+        if (verifyResponse.Contents && verifyResponse.Contents.length > 0) {
+          console.warn(`Objects still exist after deletion for ${item.key}:`, verifyResponse.Contents.map((obj) => obj.Key));
+        } else {
+          console.log(`Verified: No objects remain under ${item.key}`);
+        }
+
+        const listParentCommand = new ListObjectsV2Command({
+          Bucket: bucket,
+          Prefix: `${this.resourceId}/data/contents/${this.currentPath}`,
+          Delimiter: '/',
+        });
+        const parentResponse = await s3.send(listParentCommand);
+        if (parentResponse.CommonPrefixes && parentResponse.CommonPrefixes.some(p => p.Prefix === item.key)) {
+          console.warn(`Folder ${item.key} still appears in CommonPrefixes after deletion`);
+        } else {
+          console.log(`Verified: ${item.key} no longer in CommonPrefixes`);
+        }
       } else {
-        // Delete single file
         await s3.send(new DeleteObjectsCommand({
           Bucket: bucket,
           Delete: { Objects: [{ Key: item.key }] },
         }));
+        console.log(`Deleted file: ${item.key}`);
       }
 
       Notifications.toast({
@@ -694,7 +791,8 @@ class App extends Vue {
         message: `${item.isFolder ? 'Folder' : 'File'} deleted successfully!`,
         type: 'success',
       });
-      // Refresh file list after deletion
+
+      await new Promise(resolve => setTimeout(resolve, 3000));
       await this.loadFileList(bucket, `${this.resourceId}/data/contents/${this.currentPath}`);
     } catch (error) {
       console.error(`Error deleting ${item.isFolder ? 'folder' : 'file'}:`, error);
@@ -714,13 +812,12 @@ class App extends Vue {
 
   navigateUp() {
     const parts = this.currentPath.split('/').filter(Boolean);
-    parts.pop(); // Remove the last folder
+    parts.pop();
     this.currentPath = parts.join('/') + (parts.length ? '/' : '');
     this.loadFileList('sblack', `${this.resourceId}/data/contents/${this.currentPath}`);
   }
 }
 
-// Add prop decorator for resourceId
 App.__decorators__ = [
   (options: any) => {
     options.props = options.props || {};
