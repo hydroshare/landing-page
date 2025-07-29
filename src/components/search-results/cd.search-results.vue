@@ -440,7 +440,7 @@
                 <a
                   v-if="item.identifier"
                   class="text-decoration-none text-body-1"
-                  :href="`/resource/${item.identifier.split('/').pop()}`"
+                  :href="item.identifier"
                   target="_blank"
                   v-html="highlight(item, 'name')"
                 ></a>
