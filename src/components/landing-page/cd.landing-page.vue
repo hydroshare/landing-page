@@ -169,6 +169,7 @@ interface FileItem {
 
 @Component({
   components: { CzForm, CzNotifications },
+  components: { CzForm, CzNotifications },
   name: 'App',
 })
 class App extends Vue {
@@ -181,7 +182,11 @@ class App extends Vue {
   isValid: boolean = false;
   errors: FormError[] = [];
   data: Record<string, any> = {};
+  isValid: boolean = false;
+  errors: FormError[] = [];
+  data: Record<string, any> = {};
   stringify = stringify;
+
 
   selectedSchema: number = -1;
   schemaCollection: SchemaCollectionItem[] = [];
@@ -203,6 +208,7 @@ class App extends Vue {
 
   config: Config = {
     restrict: true,
+    trim: true,
     trim: true,
     showUnfocusedDescription: false,
     hideRequiredAsterisk: false,
@@ -297,8 +303,10 @@ class App extends Vue {
 
     try {
       const s3 = new S3Client({
+      const s3 = new S3Client({
         region: 'us-central-2',
         endpoint: 'https://s3.beta.hydroshare.org',
+        forcePathStyle: true,
         forcePathStyle: true,
         credentials: {
           accessKeyId: this.accessKey,
@@ -313,6 +321,15 @@ class App extends Vue {
           'Content-Type': 'application/json',
         },
       });
+      const s3Info = await response.json();
+
+      const bucket = s3Info.bucket;
+      const prefix = s3Info.prefix;
+
+      const key = `${prefix}hs_user_meta.json`;
+
+      console.log(`Fetching metadata from S3: ${bucket}/${key}`);
+      const result = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
       const s3Info = await response.json();
 
       const bucket = s3Info.bucket;
@@ -342,13 +359,22 @@ class App extends Vue {
         message: 'Failed to load metadata from S3.',
         type: 'error',
       });
+      console.error('S3 fetch failed:', error);
+      this.data = { ...this.defaults };
+      Notifications.toast({
+        title: 'Error',
+        message: 'Failed to load metadata from S3.',
+        type: 'error',
+      });
     }
   }
 
   get schema(): SchemaDefinition | undefined {
+  get schema(): SchemaDefinition | undefined {
     return this.schemaCollection[this.selectedSchema]?.schema;
   }
 
+  get uischema(): any | null {
   get uischema(): any | null {
     return this.schemaCollection[this.selectedSchema]?.uischema;
   }

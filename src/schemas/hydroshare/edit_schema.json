@@ -1,0 +1,19 @@
+{
+  "title": "EditableScientificDataset",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "name": {
+      "type": "string",
+      "default": null,
+      "title": "Name or title",
+      "description": "A text string with a descriptive name or title for the resource."
+    },
+    "description": {
+      "type": "string",
+      "default": null,
+      "title": "Description or abstract",
+      "description": "A text string containing a description/abstract for the resource."
+    }
+  }
+}

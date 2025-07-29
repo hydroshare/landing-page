@@ -7,7 +7,8 @@ import AuthRedirect from "@/components/account/auth-redirect.vue";
 export const routes: RouteRecordRaw[] = [
   {
     name: "search",
-    path: "/search",
+    path: "/",
+    alias: ["/", "/home", "/search"],
     components: {
       content: CdSearchResults,
       footer: CdFooter,
@@ -18,7 +19,8 @@ export const routes: RouteRecordRaw[] = [
   },
   {
     name: "landing",
-    path: "/",
+    path: "/resource/:resourceId?",
+    props: true,
     components: {
       content: CdLandingPage,
       footer: CdFooter,
