@@ -505,9 +505,32 @@ class App extends Vue {
         const s3Response = await s3.send(command);
 
         if (s3Response.CommonPrefixes) {
-          s3Response.CommonPrefixes.forEach((prefixItem) => {
-            if (prefixItem.Prefix && !this.deletedFolders.has(prefixItem.Prefix)) {
-              const name = prefixItem.Prefix.replace(prefix, '').replace(/\/$/, '');
+          for (const prefixItem of s3Response.CommonPrefixes) {
+            const folderKey = prefixItem.Prefix;
+            if (!folderKey) continue;
+
+            if (this.deletedFolders.has(folderKey)) {
+              console.log(`Filtered out deleted folder from UI: ${folderKey}`);
+              continue;
+            }
+            
+            try {
+              const checkCommand = new ListObjectsV2Command({
+                Bucket: bucket,
+                Prefix: folderKey,
+              });
+              const checkResult = await s3.send(checkCommand);
+
+              const hasFiles =
+                (checkResult.Contents && checkResult.Contents.length > 0) ||
+                (checkResult.CommonPrefixes && checkResult.CommonPrefixes.length > 0);
+
+              if (!hasFiles) {
+                console.log(`Skipping empty folder from listing: ${folderKey}`);
+                continue;
+              }
+
+              const name = folderKey.replace(prefix, '').replace(/\/$/, '');
               files.push({
                 key: prefixItem.Prefix,
                 name,
