@@ -70,14 +70,17 @@
         <v-card-title class="d-flex justify-space-between align-center">
           <span>File Browser - {{ currentPath || 'contents' }}</span>
           <div>
-            <v-btn color="primary" variant="outlined" @click="$refs.fileInput.click()" :disabled="config.isReadOnly || config.isDisabled">
+            <v-btn color="primary" variant="outlined" @click="$refs.fileInput.click()"
+              :disabled="config.isReadOnly || config.isDisabled">
               Upload Files
             </v-btn>
-            <v-btn color="primary" variant="outlined" @click="$refs.folderInput.click()" :disabled="config.isReadOnly || config.isDisabled" class="ml-2">
+            <v-btn color="primary" variant="outlined" @click="$refs.folderInput.click()"
+              :disabled="config.isReadOnly || config.isDisabled" class="ml-2">
               Upload Folder
             </v-btn>
             <input ref="fileInput" type="file" multiple style="display: none" @change="handleFileUpload" />
-            <input ref="folderInput" type="file" multiple webkitdirectory style="display: none" @change="handleFileUpload" />
+            <input ref="folderInput" type="file" multiple webkitdirectory style="display: none"
+              @change="handleFileUpload" />
           </div>
         </v-card-title>
 
@@ -86,14 +89,8 @@
           <v-btn v-if="currentPath" color="secondary" variant="text" @click="navigateUp">
             <v-icon left>mdi-arrow-up</v-icon>Up
           </v-btn>
-          <v-data-table
-            :headers="fileHeaders"
-            :items="fileList"
-            :loading="isLoadingFiles"
-            class="elevation-1"
-            hide-default-footer
-            :items-per-page="-1"
-          >
+          <v-data-table :headers="fileHeaders" :items="fileList" :loading="isLoadingFiles" class="elevation-1"
+            hide-default-footer :items-per-page="-1">
             <template v-slot:item="{ item }">
               <tr>
                 <td>
@@ -104,21 +101,12 @@
                 <td>{{ formatSize(item.size) }}</td>
                 <td>{{ formatDate(item.lastModified) }}</td>
                 <td>
-                  <v-btn
-                    v-if="!item.isFolder"
-                    icon
-                    color="primary"
-                    @click="downloadFile(item.key)"
-                    :disabled="config.isReadOnly || config.isDisabled"
-                  >
+                  <v-btn v-if="!item.isFolder" icon color="primary" @click="downloadFile(item.key)"
+                    :disabled="config.isReadOnly || config.isDisabled">
                     <v-icon>mdi-download</v-icon>
                   </v-btn>
-                  <v-btn
-                    icon
-                    color="error"
-                    @click="deleteItem(item)"
-                    :disabled="config.isReadOnly || config.isDisabled"
-                  >
+                  <v-btn icon color="error" @click="deleteItem(item)"
+                    :disabled="config.isReadOnly || config.isDisabled">
                     <v-icon>mdi-delete</v-icon>
                   </v-btn>
                 </td>
@@ -513,7 +501,7 @@ class App extends Vue {
               console.log(`Filtered out deleted folder from UI: ${folderKey}`);
               continue;
             }
-            
+
             try {
               const checkCommand = new ListObjectsV2Command({
                 Bucket: bucket,
@@ -532,17 +520,18 @@ class App extends Vue {
 
               const name = folderKey.replace(prefix, '').replace(/\/$/, '');
               files.push({
-                key: prefixItem.Prefix,
+                key: folderKey,
                 name,
                 size: 0,
                 lastModified: new Date(),
                 isFolder: true,
               });
-            } else if (prefixItem.Prefix && this.deletedFolders.has(prefixItem.Prefix)) {
-              console.log(`Filtered out deleted folder from UI: ${prefixItem.Prefix}`);
+            } catch (err) {
+              console.warn(`Failed to verify folder contents for ${folderKey}:`, err);
             }
-          });
+          }
         }
+
 
         if (s3Response.Contents) {
           s3Response.Contents.forEach((item) => {
