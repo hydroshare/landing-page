@@ -597,7 +597,7 @@ class App extends Vue {
         message: 'Files and folders uploaded successfully!',
         type: 'success',
       });
-      await this.loadFileList(this.bucket, `${this.prefix}/${this.currentPath}`);
+      await this.loadFileList(this.bucket, `${this.prefix}${this.currentPath}`);
     } catch (error) {
       console.error('Error uploading files or folders:', error);
       Notifications.toast({
