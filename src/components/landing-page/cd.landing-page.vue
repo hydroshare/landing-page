@@ -1,244 +1,94 @@
 <template>
-  <v-app class="bg-grey-lighten-4">
-    <v-container>
-      <div class="text-h5 text-center">HS Landing Page</div>
-
-      <v-card class="my-5">
-        <v-card-title
-          class="d-flex justify-space-between align-center flex-column flex-md-row"
+  <v-container>
+    <v-card class="my-5" flat>
+      <v-card-text>
+        <cz-file-explorer
+          v-if="!isLoadingFiles"
+          ref="fileExplorer"
+          id="cz-folder-structure"
+          v-model:valid-items="toUpload"
+          :root-directory="rootDirectory"
+          :has-folders="fileExplorerConfig.hasFolders"
+          :is-read-only="config.isViewMode"
+          :has-file-metadata="() => false"
+          :folder-name-regex="folderNameRegex"
+          :upload="!config.isViewMode ? uploadFiles : undefined"
+          :delete-file-or-folder="
+            !config.isViewMode ? deleteFileOrFolder : undefined
+          "
         >
-          <span>CzForm</span>
-          <v-select
-            v-if="selectedSchema >= 0"
-            class="my-2"
-            label="Schema"
-            :items="schemaCollection"
-            v-model="selectedSchema"
-            @update:model-value="updateData"
-            item-value="index"
-            item-title="name"
-            max-width="200px"
-            variant="outlined"
-            hide-details
-            density="compact"
-          ></v-select>
-        </v-card-title>
+          <template #prepend>
+            <span />
+          </template>
+        </cz-file-explorer>
+        <center v-else>
+          <div class="text-body-2 mb-4">Loading files...</div>
+          <v-progress-circular indeterminate></v-progress-circular>
+        </center>
+      </v-card-text>
+      <v-card-text>
+        <cz-form
+          :schema="schema"
+          :uischema="uischema"
+          v-model="data"
+          :errors.sync="errors"
+          @update:errors="onUpdateErrors"
+          :isValid.sync="isValid"
+          :config="config"
+          ref="form"
+        />
+      </v-card-text>
 
-        <v-divider />
-        <v-card-text class="d-flex">
-          <v-checkbox
-            label="ReadOnly"
-            v-model="config.isReadOnly"
-            class="mr-4"
-            hide-details
-          />
-          <v-checkbox
-            label="View mode"
-            v-model="config.isViewMode"
-            class="mr-4"
-            hide-details
-          />
-          <v-checkbox
-            label="Disabled"
-            v-model="config.isDisabled"
-            class="mr-4"
-            hide-details
-          />
-        </v-card-text>
-
-        <v-divider />
-        <v-card-text>
-          <cz-file-explorer
-            ref="fileExplorer"
-            v-model:valid-items="toUpload"
-            :root-directory="rootDirectory"
-            :has-folders="fileExplorerConfig.hasFolders"
-            :is-read-only="fileExplorerConfig.isReadOnly"
-            :has-file-metadata="() => false"
-          >
-            <template #prepend>
-              <span />
-            </template>
-          </cz-file-explorer>
-        </v-card-text>
-        <v-card-text>
-          <cz-form
-            :schema="schema"
-            :uischema="uischema"
-            v-model="data"
-            :errors.sync="errors"
-            @update:errors="onUpdateErrors"
-            :isValid.sync="isValid"
-            :config="config"
-            ref="form"
-          />
-        </v-card-text>
-
-        <v-divider />
-        <v-card-text>
-          <v-expansion-panels :model-value="0">
-            <v-expansion-panel>
-              <v-expansion-panel-title class="bg-grey-lighten-4">
-                <div class="text-overline">Form Data</div>
-              </v-expansion-panel-title>
-              <v-expansion-panel-text>
-                <pre>{{ sanitizeData(data) }}</pre>
-              </v-expansion-panel-text>
-            </v-expansion-panel>
-          </v-expansion-panels>
-        </v-card-text>
-
-        <v-divider />
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-menu open-on-hover bottom left offset-y transition="fade">
-            <template #activator="{ props }">
-              <div
-                v-bind="props"
-                class="d-flex form-controls flex-column flex-sm-row"
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-menu open-on-hover bottom left offset-y transition="fade">
+          <template #activator="{ props }">
+            <div
+              v-bind="props"
+              class="d-flex form-controls flex-column flex-sm-row"
+            >
+              <v-badge
+                :model-value="!isValid"
+                bordered
+                color="error"
+                icon="mdi-exclamation-thick"
+                overlap
               >
-                <v-badge
-                  :model-value="!isValid"
-                  bordered
-                  color="error"
-                  icon="mdi-exclamation-thick"
-                  overlap
+                <v-btn
+                  color="primary"
+                  depressed
+                  @click="submit"
+                  :disabled="
+                    config.isReadOnly ||
+                    config.isViewMode ||
+                    config.isDisabled ||
+                    !isValid
+                  "
                 >
-                  <v-btn
-                    color="primary"
-                    depressed
-                    @click="submit"
-                    :disabled="
-                      config.isReadOnly ||
-                      config.isViewMode ||
-                      config.isDisabled ||
-                      !isValid
-                    "
-                  >
-                    Submit
-                  </v-btn>
-                </v-badge>
-              </div>
-            </template>
-            <v-card>
-              <v-card-text>
-                <ul class="text-subtitle-1 ml-4">
-                  <li v-for="(error, index) of errors" :key="index">
-                    <b>{{ error.title }}</b> {{ error.message }}.
-                  </li>
-                </ul>
-              </v-card-text>
-            </v-card>
-          </v-menu>
-        </v-card-actions>
-      </v-card>
-
-      <!-- File Browser Section -->
-      <v-card class="my-5">
-        <v-card-title class="d-flex justify-space-between align-center">
-          <span>File Browser - {{ currentPath || "contents" }}</span>
-          <div>
-            <v-btn
-              color="primary"
-              variant="outlined"
-              @click="$refs.fileInput.click()"
-              :disabled="config.isReadOnly || config.isDisabled"
-            >
-              Upload Files
-            </v-btn>
-            <v-btn
-              color="primary"
-              variant="outlined"
-              @click="$refs.folderInput.click()"
-              :disabled="config.isReadOnly || config.isDisabled"
-              class="ml-2"
-            >
-              Upload Folder
-            </v-btn>
-            <input
-              ref="fileInput"
-              type="file"
-              multiple
-              style="display: none"
-              @change="handleFileUpload"
-            />
-            <input
-              ref="folderInput"
-              type="file"
-              multiple
-              webkitdirectory
-              style="display: none"
-              @change="handleFileUpload"
-            />
-          </div>
-        </v-card-title>
-
-        <v-divider />
-        <v-card-text>
-          <v-btn
-            v-if="currentPath"
-            color="secondary"
-            variant="text"
-            @click="navigateUp"
-          >
-            <v-icon left>mdi-arrow-up</v-icon>Up
-          </v-btn>
-          <v-data-table
-            :headers="fileHeaders"
-            :items="fileList"
-            :loading="isLoadingFiles"
-            class="elevation-1"
-            hide-default-footer
-            :items-per-page="-1"
-          >
-            <template v-slot:item="{ item }">
-              <tr>
-                <td>
-                  <v-icon v-if="item.isFolder" left>mdi-folder</v-icon>
-                  <a
-                    v-if="item.isFolder"
-                    href="#"
-                    @click.prevent="navigateFolder(item.key)"
-                    >{{ item.name }}</a
-                  >
-                  <span v-else>{{ item.name }}</span>
-                </td>
-                <td>{{ formatSize(item.size) }}</td>
-                <td>{{ formatDate(item.lastModified) }}</td>
-                <td>
-                  <v-btn
-                    v-if="!item.isFolder"
-                    icon
-                    color="primary"
-                    @click="downloadFile(item.key)"
-                    :disabled="config.isReadOnly || config.isDisabled"
-                  >
-                    <v-icon>mdi-download</v-icon>
-                  </v-btn>
-                  <v-btn
-                    icon
-                    color="error"
-                    @click="deleteItem(item)"
-                    :disabled="config.isReadOnly || config.isDisabled"
-                  >
-                    <v-icon>mdi-delete</v-icon>
-                  </v-btn>
-                </td>
-              </tr>
-            </template>
-          </v-data-table>
-        </v-card-text>
-      </v-card>
-    </v-container>
-    <cz-notifications />
-  </v-app>
+                  Submit
+                </v-btn>
+              </v-badge>
+            </div>
+          </template>
+          <v-card>
+            <v-card-text>
+              <ul class="text-subtitle-1 ml-4">
+                <li v-for="(error, index) of errors" :key="index">
+                  <b>{{ error.title }}</b> {{ error.message }}.
+                </li>
+              </ul>
+            </v-card-text>
+          </v-card>
+        </v-menu>
+      </v-card-actions>
+    </v-card>
+  </v-container>
 </template>
 
 <script lang="ts">
 import { Component, Vue, toNative, Ref, Watch } from "vue-facing-decorator";
 import {
   CzForm,
-  CzNotifications,
   CzFileExplorer,
   Notifications,
 } from "@cznethub/cznet-vue-core";
@@ -295,7 +145,7 @@ interface FileItem {
 }
 
 @Component({
-  components: { CzForm, CzNotifications, CzFileExplorer },
+  components: { CzForm, CzFileExplorer },
   name: "App",
 })
 class App extends Vue {
@@ -305,6 +155,7 @@ class App extends Vue {
   @Ref("form") form!: InstanceType<typeof CzForm>;
   @Ref("fileInput") fileInput!: HTMLInputElement;
   @Ref("folderInput") folderInput!: HTMLInputElement;
+  @Ref("fileExplorer") fileExplorer!: InstanceType<typeof CzFileExplorer>;
 
   isValid: boolean = false;
   errors: FormError[] = [];
@@ -318,8 +169,19 @@ class App extends Vue {
   secretKey = localStorage.getItem("s3SecretKey") || "";
 
   fileList: FileItem[] = [];
-  isLoadingFiles: boolean = false;
+  isLoadingFiles: boolean = true;
   currentPath: string = "";
+  folderNameRegex = /^[-()\w\s]*$/;
+
+  s3 = new S3Client({
+    region: "us-central-2",
+    endpoint: "https://s3.beta.hydroshare.org",
+    forcePathStyle: true,
+    credentials: {
+      accessKeyId: this.accessKey,
+      secretAccessKey: this.secretKey,
+    },
+  });
 
   fileHeaders = [
     { title: "Name", key: "name" },
@@ -435,16 +297,6 @@ class App extends Vue {
     this.updateData();
 
     try {
-      const s3 = new S3Client({
-        region: "us-central-2",
-        endpoint: "https://s3.beta.hydroshare.org",
-        forcePathStyle: true,
-        credentials: {
-          accessKeyId: this.accessKey,
-          secretAccessKey: this.secretKey,
-        },
-      });
-
       // Use resourceId from prop or fallback to example
       const resourceId = this.resourceId;
       const response = await fetch(
@@ -464,7 +316,7 @@ class App extends Vue {
       const key = `${prefix}hs_user_meta.json`;
 
       console.log(`Fetching metadata from S3: ${bucket}/${key}`);
-      const result = await s3.send(
+      const result = await this.s3.send(
         new GetObjectCommand({ Bucket: bucket, Key: key }),
       );
       const bodyContents = await result.Body?.transformToString();
@@ -478,8 +330,6 @@ class App extends Vue {
         this.data = { ...this.defaults };
       }
 
-      // await this.loadFileList(bucket, `${resourceId}/data/contents/`);
-
       try {
         const initialStructure = await await this.readRootFolder(
           bucket,
@@ -488,12 +338,14 @@ class App extends Vue {
         // @ts-expect-error The key property is generated when the component is initialized
         // TODO: this component should have a load function instead of populating the `children` object directly
         this.rootDirectory.children = initialStructure;
+        this.isLoadingFiles = false;
       } catch (e) {
         Notifications.toast({
           message: "Failed to load existing files.",
           type: "error",
           location: "top center",
         });
+        this.isLoadingFiles = false;
       }
     } catch (error) {
       console.error("S3 fetch failed:", error);
@@ -524,7 +376,6 @@ class App extends Vue {
 
   @Watch("errors")
   onErrorsChange(newErrors: FormError[]) {
-    console.log("Errors changed:", newErrors);
     if (newErrors.length === 0) {
       this.isValid = true;
     }
@@ -532,7 +383,6 @@ class App extends Vue {
 
   onUpdateErrors(errors: FormError[]) {
     this.errors = errors;
-    console.log("onUpdateErrors called with:", errors);
   }
 
   sanitizeData(data: Record<string, any>): Record<string, any> {
@@ -549,16 +399,6 @@ class App extends Vue {
   async submit() {
     console.log("Submitting data:", this.data, "isValid:", this.isValid);
     try {
-      const s3 = new S3Client({
-        region: "us-central-2",
-        endpoint: "https://s3.beta.hydroshare.org",
-        forcePathStyle: true,
-        credentials: {
-          accessKeyId: this.accessKey,
-          secretAccessKey: this.secretKey,
-        },
-      });
-
       // Use resourceId from prop or fallback to example
       const resourceId = this.resourceId;
       const bucket = "sblack";
@@ -575,7 +415,7 @@ class App extends Vue {
         Body: content,
         ContentType: "application/json",
       });
-      await s3.send(command);
+      await this.s3.send(command);
 
       Notifications.toast({
         title: "Success",
@@ -603,24 +443,13 @@ class App extends Vue {
     bucket: string,
     path: string,
   ): Promise<Partial<IFile | IFolder>[]> {
-    console.log(bucket, path);
     try {
-      const s3 = new S3Client({
-        region: "us-central-2",
-        endpoint: "https://s3.beta.hydroshare.org",
-        forcePathStyle: true,
-        credentials: {
-          accessKeyId: this.accessKey,
-          secretAccessKey: this.secretKey,
-        },
-      });
-
       const command = new ListObjectsV2Command({
         Bucket: bucket,
         Prefix: path,
         Delimiter: "/",
       });
-      const s3Response = await s3.send(command);
+      const s3Response = await this.s3.send(command);
 
       let files: Partial<IFile>[] = [];
       let folders: Partial<IFolder>[] = [];
@@ -632,6 +461,7 @@ class App extends Vue {
             name: f.Key?.replace(path, ""),
             isUploaded: true,
             file: null,
+            uploadedSize: f.Size,
           };
         });
       }
@@ -671,283 +501,140 @@ class App extends Vue {
 
     return [];
   }
-
-  /**
-   * @deprecated use readRootFolder instead
-   * @param bucket
-   * @param prefix
-   */
-  async loadFileList(bucket: string, prefix: string) {
-    this.isLoadingFiles = true;
-    this.fileList = [];
-    try {
-      // Fetch from backend API
-      const apiResponse = await fetch(
-        `https://beta.hydroshare.org/hsapi/resource/s3/${this.resourceId}?prefix=${encodeURIComponent(prefix)}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-      );
-      const s3Info = await apiResponse.json();
-      console.log("Backend API response:", s3Info);
-
-      const files: FileItem[] = [];
-
-      if (s3Info.files) {
-        console.log(s3Info.files);
-        s3Info.files.forEach(
-          (
-            file: { name: string; size: number; lastModified: string },
-            index: number,
-          ) => {
-            files.push({
-              key: `${prefix}${file.name}`,
-              name: file.name,
-              size: s3Info.file_sizes ? s3Info.file_sizes[index] : file.size,
-              lastModified: new Date(file.lastModified || Date.now()),
-              isFolder: false,
-            });
-          },
-        );
-      }
-
-      // Fallback to direct S3 listing if API response is incomplete
-      if (!s3Info.directories && !s3Info.files) {
-        console.warn(
-          "API response incomplete, falling back to S3 ListObjectsV2",
-        );
-        const s3 = new S3Client({
-          region: "us-central-2",
-          endpoint: "https://s3.beta.hydroshare.org",
-          forcePathStyle: true,
-          credentials: {
-            accessKeyId: this.accessKey,
-            secretAccessKey: this.secretKey,
-          },
-        });
-
-        const command = new ListObjectsV2Command({
-          Bucket: bucket,
-          Prefix: prefix,
-          Delimiter: "/",
-        });
-        const s3Response = await s3.send(command);
-
-        if (s3Response.CommonPrefixes) {
-          for (const prefixItem of s3Response.CommonPrefixes) {
-            const folderKey = prefixItem.Prefix;
-            if (!folderKey) continue;
-
-            try {
-              const checkCommand = new ListObjectsV2Command({
-                Bucket: bucket,
-                Prefix: folderKey,
-              });
-              const checkResult = await s3.send(checkCommand);
-
-              const hasFiles =
-                (checkResult.Contents && checkResult.Contents.length > 0) ||
-                (checkResult.CommonPrefixes &&
-                  checkResult.CommonPrefixes.length > 0);
-
-              if (!hasFiles) {
-                console.log(`Skipping empty folder from listing: ${folderKey}`);
-                continue;
-              }
-
-              const name = folderKey.replace(prefix, "").replace(/\/$/, "");
-              files.push({
-                key: folderKey,
-                name,
-                size: 0,
-                lastModified: new Date(),
-                isFolder: true,
-              });
-            } catch (err) {
-              console.warn(
-                `Failed to verify folder contents for ${folderKey}:`,
-                err,
-              );
-            }
-          }
-        }
-
-        if (s3Response.Contents) {
-          s3Response.Contents.forEach((item) => {
-            if (item.Key && item.Key !== prefix && !item.Key.endsWith("/")) {
-              files.push({
-                key: item.Key,
-                name: item.Key.replace(prefix, ""),
-                size: item.Size || 0,
-                lastModified: item.LastModified || new Date(),
-                isFolder: false,
-              });
-            }
-          });
-        }
-      }
-
-      this.fileList = files;
-
-      Notifications.toast({
-        title: "Success",
-        message: "File list loaded successfully!",
-        type: "success",
+  async uploadFiles(files: IFile[]): Promise<boolean[]> {
+    if (files.length) {
+      // Annotate file paths before uploading
+      files.forEach((f) => {
+        f.isDisabled = true;
+        f.path = this.fileExplorer.getPathString(f);
       });
-    } catch (error) {
-      console.error("Error listing files:", error);
-      Notifications.toast({
-        title: "Error",
-        message: `Failed to load file list: ${error.message}`,
-        type: "error",
-      });
-    } finally {
-      this.isLoadingFiles = false;
+      return this._uploadFiles(files);
     }
+    return [];
   }
 
-  async handleFileUpload(event: Event) {
-    const input = event.target as HTMLInputElement;
+  private async _uploadFiles(
+    itemsToUpload: (IFile | IFolder)[],
+  ): Promise<boolean[]> {
+    itemsToUpload.map((i) => (i.isDisabled = true));
+    const filesToUpload = itemsToUpload.filter((i) =>
+      Object.prototype.hasOwnProperty.call(i, "file"),
+    ) as IFile[];
+    const foldersToUpload = itemsToUpload.filter((i) =>
+      Object.prototype.hasOwnProperty.call(i, "children"),
+    ) as IFolder[];
+
     const bucket = "sblack";
     const basePrefix = `${this.resourceId}/data/contents/${this.currentPath}`;
 
-    try {
-      const s3 = new S3Client({
-        region: "us-central-2",
-        endpoint: "https://s3.beta.hydroshare.org",
-        forcePathStyle: true,
-        credentials: {
-          accessKeyId: this.accessKey,
-          secretAccessKey: this.secretKey,
-        },
+    // TODO: compute folder paths
+    let folderPaths = foldersToUpload
+      .map((f) => f.path)
+      .filter((f) => !!f) as string[];
+
+    // Get unique paths
+    folderPaths = [...new Set(folderPaths)].sort(
+      (a, b) => b.split("/").length - a.split("/").length,
+    );
+
+    // HydroShare can only create multiple folders at a time if the parent folder already exists
+    // So we traverse the tree by depth and create folders in each depth at a time
+    const that = this;
+    let responses;
+    itemsToUpload.map((i) => (i.isDisabled = false));
+
+    if (folderPaths.length) {
+      // Create folders
+      responses = await _createFoldersByDepth(folderPaths, 1);
+    } else {
+      // No folders to create. Just upload files directly.
+      responses = await _uploadFiles();
+    }
+
+    async function _createFoldersByDepth(
+      paths: string[],
+      depth: number,
+    ): Promise<boolean[]> {
+      const depthPaths = paths.filter((p) => p.split("/").length === depth);
+
+      const folderCreatePromises = depthPaths.map((path: string) => {
+        const basePrefix = `${that.resourceId}/data/contents/`;
+
+        // TODO: how to create an empty folder
+        return that.s3.send(
+          new PutObjectCommand({
+            Bucket: bucket,
+            Key: `${basePrefix}${path}`,
+            Body: "",
+            ContentType: "application/x-directory",
+          }),
+        );
       });
 
-      const folderPaths = new Set<string>();
+      await Promise.allSettled(folderCreatePromises);
+      const remaining = paths.filter((p) => p.split("/").length > depth);
 
-      if (input === this.folderInput) {
-        if (!input.files || input.files.length === 0) {
-          const folderName = prompt(
-            'Enter folder name to create (e.g., "NewFolder"):',
-          );
-          if (folderName) {
-            const sanitizedFolderName = folderName
-              .replace(/[^a-zA-Z0-9-_ ]/g, "")
-              .trim();
-            if (sanitizedFolderName) {
-              const folderPath = `${basePrefix}${sanitizedFolderName}/`;
-              folderPaths.add(folderPath);
-              console.log(`Added empty folder path for upload: ${folderPath}`);
-            } else {
-              throw new Error(
-                "Invalid folder name: must contain valid characters",
-              );
-            }
-          } else {
-            console.log("Folder upload canceled by user");
-            return;
-          }
-        } else {
-          console.log(
-            "Files selected for folder upload:",
-            Array.from(input.files).map((f) => ({
-              name: f.name,
-              webkitRelativePath: f.webkitRelativePath,
-            })),
-          );
-          for (const file of Array.from(input.files)) {
-            const relativePath = file.webkitRelativePath || file.name;
-            const pathParts = relativePath.split("/").slice(0, -1);
-            let currentPath = "";
-            for (const part of pathParts) {
-              currentPath = currentPath ? `${currentPath}/${part}` : part;
-              folderPaths.add(`${basePrefix}${currentPath}/`);
-            }
-          }
-        }
-      }
+      return remaining.length
+        ? _createFoldersByDepth(remaining, depth + 1)
+        : _uploadFiles(); // Finished creating folders. Files can be added.
+    }
 
-      for (const folderPath of folderPaths) {
+    async function _uploadFiles(): Promise<boolean[]> {
+      const fileUploadPromises = filesToUpload.map(async (file: IFile) => {
+        const form = new window.FormData();
+        if (file.file) form.append("file", file.file, file.name);
+        const path = that.fileExplorer.getPathString(file);
         try {
-          await s3.send(
+          const key = `${basePrefix}${path}`;
+          const arrayBuffer = await file.file?.arrayBuffer();
+          await that.s3.send(
             new PutObjectCommand({
               Bucket: bucket,
-              Key: folderPath,
-              Body: "",
-              ContentType: "application/x-directory",
+              Key: key,
+              Body: arrayBuffer,
+              ContentType: file.file?.type || "application/octet-stream",
             }),
           );
-          console.log(`Created empty folder ${folderPath}`);
-        } catch (error) {
-          console.error(`Failed to create folder marker ${folderPath}:`, error);
-          throw new Error(
-            `Failed to create folder ${folderPath}: ${error.message}`,
-          );
+          return true;
+        } catch (e) {
+          return false;
         }
-      }
-
-      if (input.files && input.files.length > 0) {
-        for (const file of Array.from(input.files)) {
-          const relativePath = file.webkitRelativePath || file.name;
-          const key = `${basePrefix}${relativePath}`;
-          const arrayBuffer = await file.arrayBuffer();
-          try {
-            await s3.send(
-              new PutObjectCommand({
-                Bucket: bucket,
-                Key: key,
-                Body: arrayBuffer,
-                ContentType: file.type || "application/octet-stream",
-              }),
-            );
-            console.log(`Uploaded ${file.name} to ${bucket}/${key}`);
-          } catch (error) {
-            console.error(`Failed to upload file ${file.name}:`, error);
-            throw new Error(
-              `Failed to upload file ${file.name}: ${error.message}`,
-            );
-          }
-        }
-      }
-
-      Notifications.toast({
-        title: "Success",
-        message: "Files and folders uploaded successfully!",
-        type: "success",
       });
 
-      // await this.loadFileList(
-      //   bucket,
-      //   `${this.resourceId}/data/contents/${this.currentPath}`,
-      // );
-    } catch (error) {
-      console.error("Error uploading files or folders:", error);
-      Notifications.toast({
-        title: "Error",
-        message: `Failed to upload files or folders: ${error.message}`,
-        type: "error",
+      const response: PromiseSettledResult<any>[] =
+        await Promise.allSettled(fileUploadPromises);
+
+      filesToUpload.forEach((f, index) => {
+        // @ts-expect-error TODO: typing
+        if (response[index].status === "fulfilled") {
+          f.isUploaded = true;
+        } else {
+          // Uplaod failed for this file
+          response[index].status = "rejected";
+          // f.parent.children = f.parent.children.filter(
+          //   file => file.name !== f.name,
+          // )
+        }
       });
-    } finally {
-      input.value = "";
+
+      // TODO: figure out how to identify that fail was due to a name that already exists
+      if (response.some((r) => r.status === "rejected")) {
+        Notifications.toast({
+          message: "Some of your files failed to upload",
+          type: "error",
+        });
+      }
+
+      return response.map((r) => r.status === "fulfilled");
     }
+
+    return responses;
   }
 
   async downloadFile(key: string) {
     const bucket = "sblack";
     try {
-      const s3 = new S3Client({
-        region: "us-central-2",
-        endpoint: "https://s3.beta.hydroshare.org",
-        forcePathStyle: true,
-        credentials: {
-          accessKeyId: this.accessKey,
-          secretAccessKey: this.secretKey,
-        },
-      });
-
-      const result = await s3.send(
+      const result = await this.s3.send(
         new GetObjectCommand({ Bucket: bucket, Key: key }),
       );
       const blob = await result.Body?.transformToByteArray();
@@ -976,30 +663,23 @@ class App extends Vue {
     }
   }
 
-  async deleteItem(item: FileItem) {
+  async deleteFileOrFolder(item: IFile | IFolder): Promise<boolean> {
+    const path = this.fileExplorer.getPathString(item);
+    const isFolder = Object.prototype.hasOwnProperty.call(item, "children");
     const bucket = "sblack";
+    const basePrefix = `${this.resourceId}/data/contents/`;
     try {
-      const s3 = new S3Client({
-        region: "us-central-2",
-        endpoint: "https://s3.beta.hydroshare.org",
-        forcePathStyle: true,
-        credentials: {
-          accessKeyId: this.accessKey,
-          secretAccessKey: this.secretKey,
-        },
-      });
-
-      if (item.isFolder) {
+      if (isFolder) {
         let continuationToken: string | undefined;
         const objectsToDelete: { Key: string }[] = [];
 
         do {
           const listCommand = new ListObjectsV2Command({
             Bucket: bucket,
-            Prefix: item.key,
+            Prefix: path,
             ContinuationToken: continuationToken,
           });
-          const listResponse = await s3.send(listCommand);
+          const listResponse = await this.s3.send(listCommand);
 
           if (listResponse.Contents) {
             listResponse.Contents.forEach((obj) => {
@@ -1013,9 +693,9 @@ class App extends Vue {
           continuationToken = listResponse.NextContinuationToken;
         } while (continuationToken);
 
-        if (!objectsToDelete.some((obj) => obj.Key === item.key)) {
-          objectsToDelete.push({ Key: item.key });
-          console.log(`Added top-level folder marker: ${item.key}`);
+        if (!objectsToDelete.some((obj) => obj.Key === path)) {
+          objectsToDelete.push({ Key: path });
+          console.log(`Added top-level folder marker: ${path}`);
         }
 
         const batchSize = 1000;
@@ -1024,7 +704,7 @@ class App extends Vue {
         } else {
           for (let i = 0; i < objectsToDelete.length; i += batchSize) {
             const batch = objectsToDelete.slice(i, i + batchSize);
-            await s3.send(
+            await this.s3.send(
               new DeleteObjectsCommand({
                 Bucket: bucket,
                 Delete: { Objects: batch },
@@ -1039,9 +719,9 @@ class App extends Vue {
 
         const verifyCommand = new ListObjectsV2Command({
           Bucket: bucket,
-          Prefix: item.key,
+          Prefix: `${basePrefix}${path}`,
         });
-        const verifyResponse = await s3.send(verifyCommand);
+        const verifyResponse = await this.s3.send(verifyCommand);
         if (verifyResponse.Contents && verifyResponse.Contents.length > 0) {
           console.warn(
             `Objects still exist after deletion for ${item.key}:`,
@@ -1053,13 +733,15 @@ class App extends Vue {
 
         const listParentCommand = new ListObjectsV2Command({
           Bucket: bucket,
-          Prefix: `${this.resourceId}/data/contents/${this.currentPath}`,
+          Prefix: `${this.resourceId}/data/contents/`,
           Delimiter: "/",
         });
-        const parentResponse = await s3.send(listParentCommand);
+        const parentResponse = await this.s3.send(listParentCommand);
         if (
           parentResponse.CommonPrefixes &&
-          parentResponse.CommonPrefixes.some((p) => p.Prefix === item.key)
+          parentResponse.CommonPrefixes.some(
+            (p) => p.Prefix === `${basePrefix}${path}`,
+          )
         ) {
           console.warn(
             `Folder ${item.key} still appears in CommonPrefixes after deletion`,
@@ -1068,53 +750,32 @@ class App extends Vue {
           console.log(`Verified: ${item.key} no longer in CommonPrefixes`);
         }
       } else {
-        await s3.send(
+        await this.s3.send(
           new DeleteObjectsCommand({
             Bucket: bucket,
-            Delete: { Objects: [{ Key: item.key }] },
+            Delete: { Objects: [{ Key: `${basePrefix}${path}` }] }, // d7b526e24f7e449098b428ae9363f514/data/contents/vite.config.ts
           }),
         );
-        console.log(`Deleted file: ${item.key}`);
+        console.log(`Deleted file: ${basePrefix}${path}`);
+        return true;
       }
 
       Notifications.toast({
         title: "Success",
-        message: `${item.isFolder ? "Folder" : "File"} deleted successfully!`,
+        message: `${isFolder ? "Folder" : "File"} deleted successfully!`,
         type: "success",
       });
-
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      await this.loadFileList(
-        bucket,
-        `${this.resourceId}/data/contents/${this.currentPath}`,
-      );
-    } catch (error) {
-      console.error(
-        `Error deleting ${item.isFolder ? "folder" : "file"}:`,
-        error,
-      );
+    } catch (error: any) {
+      console.error(`Error deleting ${isFolder ? "folder" : "file"}:`, error);
       Notifications.toast({
         title: "Error",
-        message: `Failed to delete ${item.isFolder ? "folder" : "file"}: ${error.message}`,
+        message: `Failed to delete ${isFolder ? "folder" : "file"}: ${error.message}`,
         type: "error",
       });
+      return false;
     }
-  }
 
-  navigateFolder(key: string) {
-    const basePrefix = `${this.resourceId}/data/contents/`;
-    this.currentPath = key.replace(basePrefix, "");
-    this.loadFileList("sblack", key);
-  }
-
-  navigateUp() {
-    const parts = this.currentPath.split("/").filter(Boolean);
-    parts.pop();
-    this.currentPath = parts.join("/") + (parts.length ? "/" : "");
-    this.loadFileList(
-      "sblack",
-      `${this.resourceId}/data/contents/${this.currentPath}`,
-    );
+    return false;
   }
 }
 
