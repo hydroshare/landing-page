@@ -306,8 +306,9 @@ class App extends Vue {
     });
 
     // Get resourceId from route params if not passed as prop
-    if (!this.resourceId && this.$route && this.$route.params && this.$route.params.resourceId) {
+    if (this.$route && this.$route.params && this.$route.params.resourceId) {
       this.resourceId = this.$route.params.resourceId;
+      this.prefix = `${this.resourceId}/data/contents/`;
     }
 
     // https://cuahsi.atlassian.net/browse/CAM-769
