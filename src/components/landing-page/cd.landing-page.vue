@@ -250,6 +250,10 @@ class App extends Vue {
       this.resourceId = 'd7b526e24f7e449098b428ae9363f514';
     }
 
+    // https://cuahsi.atlassian.net/browse/CAM-769
+    // TODO: for now we store access and secret keys in localStorage
+    // Replace when we update to Pinia
+
     if (!this.accessKey || !this.secretKey) {
       this.accessKey = prompt('Enter your S3 Access Key:') || '';
       this.secretKey = prompt('Enter your S3 Secret Key:') || '';
@@ -265,7 +269,7 @@ class App extends Vue {
 
     const schema: SchemaDefinition = await import(
       /* @vite-ignore */
-      `@/schemas/hydroshare/schema.json`
+      `@/schemas/hydroshare/edit_schema.json`
     );
 
     const { default: uischema } = await import(
