@@ -4,6 +4,12 @@
       <div class="text-h5 text-center">HS Landing Page</div>
 
       <v-card class="my-5">
+        <v-progress-linear
+          v-if="fetchingMetadata"
+          indeterminate
+          color="primary"
+          class="mb-2"
+        />
         <v-card-title class="d-flex justify-space-between align-center">
           <v-text-field v-model="resourceId" label="Resource ID" variant="outlined" hide-details density="compact"
               @change="fetchPrefixFromResourceId"
@@ -27,6 +33,7 @@
             variant="outlined"
             hide-details
             density="compact"
+            @change="updateMetadata"
           />
           <v-text-field
             class="mb-2"
@@ -36,6 +43,7 @@
             :readonly="config.isReadOnly || config.isDisabled"
             hide-details
             density="compact"
+            @change="updateMetadata"
           />
           <v-text-field
             class="mb-2"
@@ -45,6 +53,7 @@
             :readonly="config.isReadOnly || config.isDisabled"
             hide-details
             density="compact"
+            @change="updateMetadata"
           />
         </v-card-text>
 </v-card>
@@ -232,6 +241,7 @@ class App extends Vue {
   selectedSchema: number = -1;
   schemaCollection: SchemaCollectionItem[] = [];
 
+  fetchingMetadata: boolean = false;
   s3Client!: S3Client;
   s3Host: string = 'https://s3.beta.hydroshare.org';
   hydroshareHost: string = 'https://beta.hydroshare.org';
@@ -349,7 +359,11 @@ class App extends Vue {
 
     this.selectedSchema = 0;
     this.updateData();
+    this.updateMetadata();
+  }
 
+  async updateMetadata() {
+    this.fetchingMetadata = true;
     try {
       const key = `${this.prefix}hs_user_meta.json`;
       console.log(`Fetching metadata from S3: ${this.bucket}/${key}`);
@@ -374,6 +388,8 @@ class App extends Vue {
         message: 'Failed to load metadata from S3.',
         type: 'error',
       });
+    } finally {
+      this.fetchingMetadata = false;
     }
   }
 
@@ -791,6 +807,7 @@ class App extends Vue {
       const s3Info = await response.json();
       this.bucket = s3Info.bucket;
       this.prefix = s3Info.prefix;
+      this.updateMetadata();
   }
 }
 
