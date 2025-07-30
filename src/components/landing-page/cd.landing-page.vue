@@ -193,7 +193,7 @@ class App extends Vue {
   fileList: FileItem[] = [];
   isLoadingFiles: boolean = false;
   currentPath: string = '';
-  deletedFolders: Set<string> = new Set();
+  
 
   fileHeaders = [
     { title: 'Name', key: 'name' },
@@ -225,16 +225,7 @@ class App extends Vue {
     isDisabled: false,
   };
 
-  created() {
-    const stored = sessionStorage.getItem('deletedFolders');
-    if (stored) {
-      this.deletedFolders = new Set(JSON.parse(stored));
-    }
-  }
 
-  private saveDeletedFolders() {
-    sessionStorage.setItem('deletedFolders', JSON.stringify([...this.deletedFolders]));
-  }
 
   formatSize(size: number): string {
     if (!size) return '-';
@@ -447,24 +438,6 @@ class App extends Vue {
 
       const files: FileItem[] = [];
 
-      // Process directories and files from API (assuming API returns directories and files)
-      if (s3Info.directories) {
-        s3Info.directories.forEach((dir: string) => {
-          const dirKey = `${prefix}${dir}/`;
-          if (!this.deletedFolders.has(dirKey)) {
-            files.push({
-              key: dirKey,
-              name: dir,
-              size: 0,
-              lastModified: new Date(),
-              isFolder: true,
-            });
-          } else {
-            console.log(`Filtered out deleted folder from UI: ${dirKey}`);
-          }
-        });
-      }
-
       if (s3Info.files) {
         s3Info.files.forEach((file: { name: string, size: number, lastModified: string }, index: number) => {
           files.push({
@@ -501,11 +474,6 @@ class App extends Vue {
           for (const prefixItem of s3Response.CommonPrefixes) {
             const folderKey = prefixItem.Prefix;
             if (!folderKey) continue;
-
-            if (this.deletedFolders.has(folderKey)) {
-              console.log(`Filtered out deleted folder from UI: ${folderKey}`);
-              continue;
-            }
 
             try {
               const checkCommand = new ListObjectsV2Command({
@@ -769,9 +737,7 @@ class App extends Vue {
           }
         }
 
-        this.deletedFolders.add(item.key);
-        this.saveDeletedFolders();
-        console.log(`Marked folder as deleted in session: ${item.key}`);
+        
 
         const verifyCommand = new ListObjectsV2Command({
           Bucket: bucket,
