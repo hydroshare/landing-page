@@ -269,7 +269,7 @@ class App extends Vue {
 
     const schema: SchemaDefinition = await import(
       /* @vite-ignore */
-      `@/schemas/hydroshare/edit_schema.json`
+      `@/schemas/hydroshare/schema.json`
     );
 
     const { default: uischema } = await import(
