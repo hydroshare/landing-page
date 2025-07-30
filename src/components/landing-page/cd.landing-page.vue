@@ -187,13 +187,11 @@ class App extends Vue {
   selectedSchema: number = -1;
   schemaCollection: SchemaCollectionItem[] = [];
 
-  accessKey = localStorage.getItem('s3AccessKey') || '';
-  secretKey = localStorage.getItem('s3SecretKey') || '';
-
+  s3Client!: S3Client;
+  bucket: string = 'sblack';
+  currentPath: string = '';
   fileList: FileItem[] = [];
   isLoadingFiles: boolean = false;
-  currentPath: string = '';
-  
 
   fileHeaders = [
     { title: 'Name', key: 'name' },
@@ -225,8 +223,6 @@ class App extends Vue {
     isDisabled: false,
   };
 
-
-
   formatSize(size: number): string {
     if (!size) return '-';
     if (size < 1024) return `${size} B`;
@@ -239,12 +235,23 @@ class App extends Vue {
   }
 
   async created() {
+    // Initialize single S3Client
+    this.s3Client = new S3Client({
+      region: 'us-central-2',
+      endpoint: 'https://s3.beta.hydroshare.org',
+      forcePathStyle: true,
+      credentials: {
+        accessKeyId: localStorage.getItem('s3AccessKey') || '',
+        secretAccessKey: localStorage.getItem('s3SecretKey') || '',
+      },
+    });
+
     // Get resourceId from route params if not passed as prop
     if (!this.resourceId && this.$route && this.$route.params && this.$route.params.resourceId) {
       this.resourceId = this.$route.params.resourceId;
     }
 
-    // notify if the resourceId is not set
+    // Notify if the resourceId is not set
     if (!this.resourceId) {
       alert("No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.");
       this.resourceId = 'd7b526e24f7e449098b428ae9363f514';
@@ -253,14 +260,21 @@ class App extends Vue {
     // https://cuahsi.atlassian.net/browse/CAM-769
     // TODO: for now we store access and secret keys in localStorage
     // Replace when we update to Pinia
-
-    if (!this.accessKey || !this.secretKey) {
-      this.accessKey = prompt('Enter your S3 Access Key:') || '';
-      this.secretKey = prompt('Enter your S3 Secret Key:') || '';
-
-      if (this.accessKey && this.secretKey) {
-        localStorage.setItem('s3AccessKey', this.accessKey);
-        localStorage.setItem('s3SecretKey', this.secretKey);
+    if (!localStorage.getItem('s3AccessKey') || !localStorage.getItem('s3SecretKey')) {
+      const accessKey = prompt('Enter your S3 Access Key:') || '';
+      const secretKey = prompt('Enter your S3 Secret Key:') || '';
+      if (accessKey && secretKey) {
+        localStorage.setItem('s3AccessKey', accessKey);
+        localStorage.setItem('s3SecretKey', secretKey);
+        this.s3Client = new S3Client({
+          region: 'us-central-2',
+          endpoint: 'https://s3.beta.hydroshare.org',
+          forcePathStyle: true,
+          credentials: {
+            accessKeyId: accessKey,
+            secretAccessKey: secretKey,
+          },
+        });
       } else {
         alert('Access key and secret key are required to proceed.');
         return;
@@ -269,7 +283,7 @@ class App extends Vue {
 
     const schema: SchemaDefinition = await import(
       /* @vite-ignore */
-      `@/schemas/hydroshare/schema.json`
+      `@/schemas/hydroshare/edit_schema.json`
     );
 
     const { default: uischema } = await import(
@@ -294,45 +308,21 @@ class App extends Vue {
     this.updateData();
 
     try {
-      const s3 = new S3Client({
-        region: 'us-central-2',
-        endpoint: 'https://s3.beta.hydroshare.org',
-        forcePathStyle: true,
-        credentials: {
-          accessKeyId: this.accessKey,
-          secretAccessKey: this.secretKey,
-        },
-      });
-
-      // Use resourceId from prop or fallback to example
-      const resourceId = this.resourceId;
-      const response = await fetch(`https://beta.hydroshare.org/hsapi/resource/s3/${resourceId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      const s3Info = await response.json();
-
-      const bucket = s3Info.bucket;
-      const prefix = s3Info.prefix;
-
-      const key = `${prefix}hs_user_meta.json`;
-
-      console.log(`Fetching metadata from S3: ${bucket}/${key}`);
-      const result = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+      const key = `${this.resourceId}/data/contents/hs_user_meta.json`;
+      console.log(`Fetching metadata from S3: ${this.bucket}/${key}`);
+      const result = await this.s3Client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
       const bodyContents = await result.Body?.transformToString();
 
       try {
         const parsed = JSON.parse(bodyContents || '');
         this.data = parsed;
-        console.log(`Form data loaded from ${bucket}/${key}`);
+        console.log(`Form data loaded from ${this.bucket}/${key}`);
       } catch (error) {
         console.warn('JSON parse failed, loading defaults:', error);
         this.data = { ...this.defaults };
       }
 
-      await this.loadFileList(bucket, `${resourceId}/data/contents/`);
+      await this.loadFileList(this.bucket, `${this.resourceId}/data/contents/`);
     } catch (error) {
       console.error('S3 fetch failed:', error);
       this.data = { ...this.defaults };
@@ -387,29 +377,15 @@ class App extends Vue {
   async submit() {
     console.log('Submitting data:', this.data, 'isValid:', this.isValid);
     try {
-      const s3 = new S3Client({
-        region: 'us-central-2',
-        endpoint: 'https://s3.beta.hydroshare.org',
-        forcePathStyle: true,
-        credentials: {
-          accessKeyId: this.accessKey,
-          secretAccessKey: this.secretKey,
-        },
-      });
-
-      // Use resourceId from prop or fallback to example
-      const resourceId = this.resourceId;
-      const bucket = 'sblack';
-      const key = `${resourceId}/data/contents/hs_user_meta.json`;
-
+      const key = `${this.resourceId}/data/contents/hs_user_meta.json`;
       const content = JSON.stringify({ name: this.data.name, description: this.data.description }, null, 2);
       const command = new PutObjectCommand({
-        Bucket: bucket,
+        Bucket: this.bucket,
         Key: key,
         Body: content,
         ContentType: 'application/json',
       });
-      await s3.send(command);
+      await this.s3Client.send(command);
 
       Notifications.toast({
         title: 'Success',
@@ -420,7 +396,7 @@ class App extends Vue {
       console.error('Error uploading to S3:', error);
       Notifications.toast({
         title: 'Error',
-        message: `Failed to upload metadata to S3. Details: ${error.message}`,
+        message: `Failed to upload metadata to S3. Details: ${(error as Error).message}`,
         type: 'error',
       });
     }
@@ -457,22 +433,12 @@ class App extends Vue {
       // Fallback to direct S3 listing if API response is incomplete
       if (!s3Info.directories && !s3Info.files) {
         console.warn('API response incomplete, falling back to S3 ListObjectsV2');
-        const s3 = new S3Client({
-          region: 'us-central-2',
-          endpoint: 'https://s3.beta.hydroshare.org',
-          forcePathStyle: true,
-          credentials: {
-            accessKeyId: this.accessKey,
-            secretAccessKey: this.secretKey,
-          },
-        });
-
         const command = new ListObjectsV2Command({
           Bucket: bucket,
           Prefix: prefix,
           Delimiter: '/',
         });
-        const s3Response = await s3.send(command);
+        const s3Response = await this.s3Client.send(command);
 
         if (s3Response.CommonPrefixes) {
           for (const prefixItem of s3Response.CommonPrefixes) {
@@ -484,7 +450,7 @@ class App extends Vue {
                 Bucket: bucket,
                 Prefix: folderKey,
               });
-              const checkResult = await s3.send(checkCommand);
+              const checkResult = await this.s3Client.send(checkCommand);
 
               const hasFiles =
                 (checkResult.Contents && checkResult.Contents.length > 0) ||
@@ -508,7 +474,6 @@ class App extends Vue {
             }
           }
         }
-
 
         if (s3Response.Contents) {
           s3Response.Contents.forEach((item) => {
@@ -536,7 +501,7 @@ class App extends Vue {
       console.error('Error listing files:', error);
       Notifications.toast({
         title: 'Error',
-        message: `Failed to load file list: ${error.message}`,
+        message: `Failed to load file list: ${(error as Error).message}`,
         type: 'error',
       });
     } finally {
@@ -546,20 +511,9 @@ class App extends Vue {
 
   async handleFileUpload(event: Event) {
     const input = event.target as HTMLInputElement;
-    const bucket = 'sblack';
     const basePrefix = `${this.resourceId}/data/contents/${this.currentPath}`;
 
     try {
-      const s3 = new S3Client({
-        region: 'us-central-2',
-        endpoint: 'https://s3.beta.hydroshare.org',
-        forcePathStyle: true,
-        credentials: {
-          accessKeyId: this.accessKey,
-          secretAccessKey: this.secretKey,
-        },
-      });
-
       const folderPaths = new Set<string>();
 
       if (input === this.folderInput) {
@@ -594,8 +548,8 @@ class App extends Vue {
 
       for (const folderPath of folderPaths) {
         try {
-          await s3.send(new PutObjectCommand({
-            Bucket: bucket,
+          await this.s3Client.send(new PutObjectCommand({
+            Bucket: this.bucket,
             Key: folderPath,
             Body: '',
             ContentType: 'application/x-directory',
@@ -603,7 +557,7 @@ class App extends Vue {
           console.log(`Created empty folder ${folderPath}`);
         } catch (error) {
           console.error(`Failed to create folder marker ${folderPath}:`, error);
-          throw new Error(`Failed to create folder ${folderPath}: ${error.message}`);
+          throw new Error(`Failed to create folder ${folderPath}: ${(error as Error).message}`);
         }
       }
 
@@ -613,16 +567,16 @@ class App extends Vue {
           const key = `${basePrefix}${relativePath}`;
           const arrayBuffer = await file.arrayBuffer();
           try {
-            await s3.send(new PutObjectCommand({
-              Bucket: bucket,
+            await this.s3Client.send(new PutObjectCommand({
+              Bucket: this.bucket,
               Key: key,
               Body: arrayBuffer,
               ContentType: file.type || 'application/octet-stream',
             }));
-            console.log(`Uploaded ${file.name} to ${bucket}/${key}`);
+            console.log(`Uploaded ${file.name} to ${this.bucket}/${key}`);
           } catch (error) {
             console.error(`Failed to upload file ${file.name}:`, error);
-            throw new Error(`Failed to upload file ${file.name}: ${error.message}`);
+            throw new Error(`Failed to upload file ${file.name}: ${(error as Error).message}`);
           }
         }
       }
@@ -632,12 +586,12 @@ class App extends Vue {
         message: 'Files and folders uploaded successfully!',
         type: 'success',
       });
-      await this.loadFileList(bucket, `${this.resourceId}/data/contents/${this.currentPath}`);
+      await this.loadFileList(this.bucket, `${this.resourceId}/data/contents/${this.currentPath}`);
     } catch (error) {
       console.error('Error uploading files or folders:', error);
       Notifications.toast({
         title: 'Error',
-        message: `Failed to upload files or folders: ${error.message}`,
+        message: `Failed to upload files or folders: ${(error as Error).message}`,
         type: 'error',
       });
     } finally {
@@ -646,19 +600,8 @@ class App extends Vue {
   }
 
   async downloadFile(key: string) {
-    const bucket = 'sblack';
     try {
-      const s3 = new S3Client({
-        region: 'us-central-2',
-        endpoint: 'https://s3.beta.hydroshare.org',
-        forcePathStyle: true,
-        credentials: {
-          accessKeyId: this.accessKey,
-          secretAccessKey: this.secretKey,
-        },
-      });
-
-      const result = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+      const result = await this.s3Client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
       const blob = await result.Body?.transformToByteArray();
       if (blob) {
         const url = window.URL.createObjectURL(new Blob([blob]));
@@ -679,36 +622,25 @@ class App extends Vue {
       console.error('Error downloading file:', error);
       Notifications.toast({
         title: 'Error',
-        message: `Failed to download file: ${error.message}`,
+        message: `Failed to download file: ${(error as Error).message}`,
         type: 'error',
       });
     }
   }
 
   async deleteItem(item: FileItem) {
-    const bucket = 'sblack';
     try {
-      const s3 = new S3Client({
-        region: 'us-central-2',
-        endpoint: 'https://s3.beta.hydroshare.org',
-        forcePathStyle: true,
-        credentials: {
-          accessKeyId: this.accessKey,
-          secretAccessKey: this.secretKey,
-        },
-      });
-
       if (item.isFolder) {
         let continuationToken: string | undefined;
         const objectsToDelete: { Key: string }[] = [];
 
         do {
           const listCommand = new ListObjectsV2Command({
-            Bucket: bucket,
+            Bucket: this.bucket,
             Prefix: item.key,
             ContinuationToken: continuationToken,
           });
-          const listResponse = await s3.send(listCommand);
+          const listResponse = await this.s3Client.send(listCommand);
 
           if (listResponse.Contents) {
             listResponse.Contents.forEach((obj) => {
@@ -733,21 +665,19 @@ class App extends Vue {
         } else {
           for (let i = 0; i < objectsToDelete.length; i += batchSize) {
             const batch = objectsToDelete.slice(i, i + batchSize);
-            await s3.send(new DeleteObjectsCommand({
-              Bucket: bucket,
+            await this.s3Client.send(new DeleteObjectsCommand({
+              Bucket: this.bucket,
               Delete: { Objects: batch },
             }));
             console.log(`Deleted batch of ${batch.length} objects:`, batch.map((obj) => obj.Key));
           }
         }
 
-        
-
         const verifyCommand = new ListObjectsV2Command({
-          Bucket: bucket,
+          Bucket: this.bucket,
           Prefix: item.key,
         });
-        const verifyResponse = await s3.send(verifyCommand);
+        const verifyResponse = await this.s3Client.send(verifyCommand);
         if (verifyResponse.Contents && verifyResponse.Contents.length > 0) {
           console.warn(`Objects still exist after deletion for ${item.key}:`, verifyResponse.Contents.map((obj) => obj.Key));
         } else {
@@ -755,19 +685,19 @@ class App extends Vue {
         }
 
         const listParentCommand = new ListObjectsV2Command({
-          Bucket: bucket,
+          Bucket: this.bucket,
           Prefix: `${this.resourceId}/data/contents/${this.currentPath}`,
           Delimiter: '/',
         });
-        const parentResponse = await s3.send(listParentCommand);
+        const parentResponse = await this.s3Client.send(listParentCommand);
         if (parentResponse.CommonPrefixes && parentResponse.CommonPrefixes.some(p => p.Prefix === item.key)) {
           console.warn(`Folder ${item.key} still appears in CommonPrefixes after deletion`);
         } else {
           console.log(`Verified: ${item.key} no longer in CommonPrefixes`);
         }
       } else {
-        await s3.send(new DeleteObjectsCommand({
-          Bucket: bucket,
+        await this.s3Client.send(new DeleteObjectsCommand({
+          Bucket: this.bucket,
           Delete: { Objects: [{ Key: item.key }] },
         }));
         console.log(`Deleted file: ${item.key}`);
@@ -780,12 +710,12 @@ class App extends Vue {
       });
 
       await new Promise(resolve => setTimeout(resolve, 3000));
-      await this.loadFileList(bucket, `${this.resourceId}/data/contents/${this.currentPath}`);
+      await this.loadFileList(this.bucket, `${this.resourceId}/data/contents/${this.currentPath}`);
     } catch (error) {
       console.error(`Error deleting ${item.isFolder ? 'folder' : 'file'}:`, error);
       Notifications.toast({
         title: 'Error',
-        message: `Failed to delete ${item.isFolder ? 'folder' : 'file'}: ${error.message}`,
+        message: `Failed to delete ${item.isFolder ? 'folder' : 'file'}: ${(error as Error).message}`,
         type: 'error',
       });
     }
@@ -794,14 +724,14 @@ class App extends Vue {
   navigateFolder(key: string) {
     const basePrefix = `${this.resourceId}/data/contents/`;
     this.currentPath = key.replace(basePrefix, '');
-    this.loadFileList('sblack', key);
+    this.loadFileList(this.bucket, key);
   }
 
   navigateUp() {
     const parts = this.currentPath.split('/').filter(Boolean);
     parts.pop();
     this.currentPath = parts.join('/') + (parts.length ? '/' : '');
-    this.loadFileList('sblack', `${this.resourceId}/data/contents/${this.currentPath}`);
+    this.loadFileList(this.bucket, `${this.resourceId}/data/contents/${this.currentPath}`);
   }
 }
 
