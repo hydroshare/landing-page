@@ -245,9 +245,9 @@ class App extends Vue {
   s3Client!: S3Client;
   s3Host: string = 'https://s3.beta.hydroshare.org';
   hydroshareHost: string = 'https://beta.hydroshare.org';
-  bucket: string = 'sblack';
+  bucket: string = '';
   resourceId: string = 'd7b526e24f7e449098b428ae9363f514';
-  prefix: string = 'd7b526e24f7e449098b428ae9363f514/data/contents/';
+  prefix: string = '';
   currentPath: string = '';
   fileList: FileItem[] = [];
   isLoadingFiles: boolean = false;
@@ -308,8 +308,8 @@ class App extends Vue {
     // Get resourceId from route params if not passed as prop
     if (this.$route && this.$route.params && this.$route.params.resourceId) {
       this.resourceId = this.$route.params.resourceId;
-      this.prefix = `${this.resourceId}/data/contents/`;
     }
+    await this.fetchPrefixFromResourceId();
 
     // https://cuahsi.atlassian.net/browse/CAM-769
     // TODO: for now we store access and secret keys in localStorage
