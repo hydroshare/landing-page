@@ -188,7 +188,9 @@ class App extends Vue {
   schemaCollection: SchemaCollectionItem[] = [];
 
   s3Client!: S3Client;
-  bucket: string = 'sblack';
+  s3Host: string = 'https://s3.beta.hydroshare.org';
+  hydroshareHost: string = 'https://beta.hydroshare.org';
+  bucket: string = '';
   currentPath: string = '';
   fileList: FileItem[] = [];
   isLoadingFiles: boolean = false;
@@ -238,7 +240,7 @@ class App extends Vue {
     // Initialize single S3Client
     this.s3Client = new S3Client({
       region: 'us-central-2',
-      endpoint: 'https://s3.beta.hydroshare.org',
+      endpoint: this.s3Host,
       forcePathStyle: true,
       credentials: {
         accessKeyId: localStorage.getItem('s3AccessKey') || '',
@@ -268,7 +270,7 @@ class App extends Vue {
         localStorage.setItem('s3SecretKey', secretKey);
         this.s3Client = new S3Client({
           region: 'us-central-2',
-          endpoint: 'https://s3.beta.hydroshare.org',
+          endpoint: this.s3Host,
           forcePathStyle: true,
           credentials: {
             accessKeyId: accessKey,
@@ -308,7 +310,16 @@ class App extends Vue {
     this.updateData();
 
     try {
-      const key = `${this.resourceId}/data/contents/hs_user_meta.json`;
+        const response = await fetch(`${this.hydroshareHost}/hsapi/resource/s3/${this.resourceId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const s3Info = await response.json();
+      this.bucket = s3Info.bucket;
+      this.prefix = s3Info.prefix;
+      const key = `${this.prefix}hs_user_meta.json`;
       console.log(`Fetching metadata from S3: ${this.bucket}/${key}`);
       const result = await this.s3Client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
       const bodyContents = await result.Body?.transformToString();
@@ -322,7 +333,7 @@ class App extends Vue {
         this.data = { ...this.defaults };
       }
 
-      await this.loadFileList(this.bucket, `${this.resourceId}/data/contents/`);
+      await this.loadFileList(this.bucket, this.prefix);
     } catch (error) {
       console.error('S3 fetch failed:', error);
       this.data = { ...this.defaults };
@@ -377,7 +388,7 @@ class App extends Vue {
   async submit() {
     console.log('Submitting data:', this.data, 'isValid:', this.isValid);
     try {
-      const key = `${this.resourceId}/data/contents/hs_user_meta.json`;
+      const key = `${this.prefix}hs_user_meta.json`;
       const content = JSON.stringify({ name: this.data.name, description: this.data.description }, null, 2);
       const command = new PutObjectCommand({
         Bucket: this.bucket,
@@ -407,7 +418,7 @@ class App extends Vue {
     this.fileList = [];
     try {
       // Fetch from backend API
-      const apiResponse = await fetch(`https://beta.hydroshare.org/hsapi/resource/s3/${this.resourceId}?prefix=${encodeURIComponent(prefix)}`, {
+      const apiResponse = await fetch(`${this.hydroshareHost}/hsapi/resource/s3/${this.resourceId}?prefix=${encodeURIComponent(prefix)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -511,7 +522,7 @@ class App extends Vue {
 
   async handleFileUpload(event: Event) {
     const input = event.target as HTMLInputElement;
-    const basePrefix = `${this.resourceId}/data/contents/${this.currentPath}`;
+    const basePrefix = `${this.prefix}${this.currentPath}`;
 
     try {
       const folderPaths = new Set<string>();
@@ -586,7 +597,7 @@ class App extends Vue {
         message: 'Files and folders uploaded successfully!',
         type: 'success',
       });
-      await this.loadFileList(this.bucket, `${this.resourceId}/data/contents/${this.currentPath}`);
+      await this.loadFileList(this.bucket, `${this.prefix}/${this.currentPath}`);
     } catch (error) {
       console.error('Error uploading files or folders:', error);
       Notifications.toast({
@@ -686,7 +697,7 @@ class App extends Vue {
 
         const listParentCommand = new ListObjectsV2Command({
           Bucket: this.bucket,
-          Prefix: `${this.resourceId}/data/contents/${this.currentPath}`,
+          Prefix: `${this.prefix}${this.currentPath}`,
           Delimiter: '/',
         });
         const parentResponse = await this.s3Client.send(listParentCommand);
@@ -710,7 +721,7 @@ class App extends Vue {
       });
 
       await new Promise(resolve => setTimeout(resolve, 3000));
-      await this.loadFileList(this.bucket, `${this.resourceId}/data/contents/${this.currentPath}`);
+      await this.loadFileList(this.bucket, `${this.prefix}${this.currentPath}`);
     } catch (error) {
       console.error(`Error deleting ${item.isFolder ? 'folder' : 'file'}:`, error);
       Notifications.toast({
@@ -722,7 +733,7 @@ class App extends Vue {
   }
 
   navigateFolder(key: string) {
-    const basePrefix = `${this.resourceId}/data/contents/`;
+    const basePrefix = this.prefix;
     this.currentPath = key.replace(basePrefix, '');
     this.loadFileList(this.bucket, key);
   }
@@ -731,7 +742,7 @@ class App extends Vue {
     const parts = this.currentPath.split('/').filter(Boolean);
     parts.pop();
     this.currentPath = parts.join('/') + (parts.length ? '/' : '');
-    this.loadFileList(this.bucket, `${this.resourceId}/data/contents/${this.currentPath}`);
+    this.loadFileList(this.bucket, `${this.prefix}${this.currentPath}`);
   }
 }
 
