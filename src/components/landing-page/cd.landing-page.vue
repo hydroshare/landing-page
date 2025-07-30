@@ -4,6 +4,51 @@
       <div class="text-h5 text-center">HS Landing Page</div>
 
       <v-card class="my-5">
+        <v-card-title class="d-flex justify-space-between align-center">
+          <v-text-field v-model="resourceId" label="Resource ID" variant="outlined" hide-details density="compact"
+              @change="fetchPrefixFromResourceId"
+            />
+        </v-card-title>
+        <v-divider />
+        <v-card-text>
+          <v-text-field
+            class="mb-2"
+            label="Hydroshare Host"
+            v-model="hydroshareHost"
+            variant="outlined"
+            hide-details
+            density="compact"
+            @change="fetchPrefixFromResourceId"
+          />
+          <v-text-field
+            class="mb-2"
+            label="S3 Host"
+            v-model="s3Host"
+            variant="outlined"
+            hide-details
+            density="compact"
+          />
+          <v-text-field
+            class="mb-2"
+            label="Bucket"
+            v-model="bucket"
+            variant="outlined"
+            :readonly="config.isReadOnly || config.isDisabled"
+            hide-details
+            density="compact"
+          />
+          <v-text-field
+            class="mb-2"
+            label="Prefix"
+            v-model="prefix"
+            variant="outlined"
+            :readonly="config.isReadOnly || config.isDisabled"
+            hide-details
+            density="compact"
+          />
+        </v-card-text>
+</v-card>
+      <v-card class="my-5">
         <v-card-title class="d-flex justify-space-between align-center flex-column flex-md-row">
           <span>CzForm</span>
           <v-select v-if="selectedSchema >= 0" class="my-2" label="Schema" :items="schemaCollection"
@@ -190,7 +235,9 @@ class App extends Vue {
   s3Client!: S3Client;
   s3Host: string = 'https://s3.beta.hydroshare.org';
   hydroshareHost: string = 'https://beta.hydroshare.org';
-  bucket: string = '';
+  bucket: string = 'sblack';
+  resourceId: string = 'd7b526e24f7e449098b428ae9363f514';
+  prefix: string = 'd7b526e24f7e449098b428ae9363f514/data/contents/';
   currentPath: string = '';
   fileList: FileItem[] = [];
   isLoadingFiles: boolean = false;
@@ -253,12 +300,6 @@ class App extends Vue {
       this.resourceId = this.$route.params.resourceId;
     }
 
-    // Notify if the resourceId is not set
-    if (!this.resourceId) {
-      alert("No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.");
-      this.resourceId = 'd7b526e24f7e449098b428ae9363f514';
-    }
-
     // https://cuahsi.atlassian.net/browse/CAM-769
     // TODO: for now we store access and secret keys in localStorage
     // Replace when we update to Pinia
@@ -310,15 +351,6 @@ class App extends Vue {
     this.updateData();
 
     try {
-        const response = await fetch(`${this.hydroshareHost}/hsapi/resource/s3/${this.resourceId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      const s3Info = await response.json();
-      this.bucket = s3Info.bucket;
-      this.prefix = s3Info.prefix;
       const key = `${this.prefix}hs_user_meta.json`;
       console.log(`Fetching metadata from S3: ${this.bucket}/${key}`);
       const result = await this.s3Client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
@@ -743,6 +775,22 @@ class App extends Vue {
     parts.pop();
     this.currentPath = parts.join('/') + (parts.length ? '/' : '');
     this.loadFileList(this.bucket, `${this.prefix}${this.currentPath}`);
+  }
+
+  async fetchPrefixFromResourceId() {
+    if (!this.resourceId) {
+      console.warn('No resourceId provided, using default prefix');
+      return this.prefix;
+    }
+      const response = await fetch(`${this.hydroshareHost}/hsapi/resource/s3/${this.resourceId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const s3Info = await response.json();
+      this.bucket = s3Info.bucket;
+      this.prefix = s3Info.prefix;
   }
 }
 
