@@ -1,5 +1,13 @@
 <template>
   <v-container>
+    <div class="d-flex justify-end">
+      <v-btn
+        v-if="config.isViewMode"
+        prepend-icon="mdi-pen"
+        @click="config.isViewMode = false"
+        >Edit</v-btn
+      >
+    </div>
     <v-card class="my-5" flat>
       <v-card-text>
         <cz-file-explorer
@@ -39,9 +47,16 @@
         />
       </v-card-text>
 
-      <v-card-actions>
+      <v-card-actions v-if="!config.isViewMode">
         <v-spacer></v-spacer>
-        <v-menu open-on-hover bottom left offset-y transition="fade">
+        <v-menu
+          :disabled="!errors.length"
+          open-on-hover
+          bottom
+          left
+          offset-y
+          transition="fade"
+        >
           <template #activator="{ props }">
             <div
               v-bind="props"
@@ -208,7 +223,7 @@ class App extends Vue {
         "hide-details": false,
       },
     },
-    isViewMode: false,
+    isViewMode: true,
     isReadOnly: false,
     isDisabled: false,
   };
@@ -422,6 +437,7 @@ class App extends Vue {
         message: "Metadata uploaded to S3 successfully!",
         type: "success",
       });
+      this.config.isViewMode = true;
     } catch (error) {
       console.error("Error uploading to S3:", error);
       Notifications.toast({
