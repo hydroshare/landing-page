@@ -1,107 +1,110 @@
 <template>
   <v-container>
-    <div v-if="config.isViewMode" class="d-flex justify-end">
-      <v-btn prepend-icon="mdi-pen" @click="config.isViewMode = false"
-        >Edit</v-btn
+    <template v-if="config.isViewMode">
+      <div
+        v-if="!isLoadingFiles && !fetchingMetadata"
+        class="d-flex justify-end mb-5"
       >
-    </div>
-
-    <v-card class="my-5" flat>
-      <v-card-text>
-        <cz-file-explorer
-          v-if="!isLoadingFiles"
-          ref="fileExplorer"
-          id="cz-folder-structure"
-          v-model:valid-items="toUpload"
-          :root-directory="rootDirectory"
-          :has-folders="fileExplorerConfig.hasFolders"
-          :is-read-only="config.isViewMode"
-          :has-file-metadata="() => false"
-          :folder-name-regex="folderNameRegex"
-          :upload="!config.isViewMode ? uploadFiles : undefined"
-          :delete-file-or-folder="
-            !config.isViewMode ? deleteFileOrFolder : undefined
-          "
+        <v-btn
+          color="primary"
+          prepend-icon="mdi-pen"
+          variant="outlined"
+          @click="config.isViewMode = false"
+          >Edit</v-btn
         >
-          <template #prepend>
-            <span />
-          </template>
-        </cz-file-explorer>
-        <center v-else>
-          <div class="text-body-2 mb-4">Loading files...</div>
-          <v-progress-circular indeterminate></v-progress-circular>
-        </center>
-      </v-card-text>
-      <v-card-text>
-        <cz-form
-          :schema="schema"
-          :uischema="uischema"
-          v-model="data"
-          :errors.sync="errors"
-          @update:errors="onUpdateErrors"
-          v-model:is-valid="isValid"
-          :config="config"
-          ref="form"
-        />
-      </v-card-text>
+      </div>
+      <v-skeleton-loader
+        v-else
+        type="button"
+        class="justify-end"
+      ></v-skeleton-loader>
+    </template>
 
-      <v-card-actions v-if="!config.isViewMode">
-        <v-spacer></v-spacer>
-        <!-- TODO: reload without saving -->
-        <!-- <v-btn @click="config.isViewMode = true"> Cancel </v-btn> -->
-        <v-menu
-          :disabled="!errors.length"
-          open-on-hover
-          bottom
-          left
-          offset-y
-          transition="fade"
-        >
-          <template #activator="{ props }">
-            <div
-              v-bind="props"
-              class="d-flex form-controls flex-column flex-sm-row"
+    <cz-file-explorer
+      v-if="!isLoadingFiles"
+      ref="fileExplorer"
+      id="cz-folder-structure"
+      v-model:valid-items="toUpload"
+      :root-directory="rootDirectory"
+      :has-folders="fileExplorerConfig.hasFolders"
+      :is-read-only="config.isViewMode"
+      :has-file-metadata="() => false"
+      :folder-name-regex="folderNameRegex"
+      :upload="!config.isViewMode ? uploadFiles : undefined"
+      :delete-file-or-folder="
+        !config.isViewMode ? deleteFileOrFolder : undefined
+      "
+    >
+      <template #prepend>
+        <span />
+      </template>
+    </cz-file-explorer>
+    <v-skeleton-loader v-else type="card"></v-skeleton-loader>
+
+    <v-skeleton-loader v-if="fetchingMetadata" type="card"></v-skeleton-loader>
+    <cz-form
+      v-else
+      :schema="schema"
+      :uischema="uischema"
+      v-model="data"
+      :errors.sync="errors"
+      @update:errors="onUpdateErrors"
+      v-model:is-valid="isValid"
+      :config="config"
+      ref="form"
+    />
+
+    <div class="d-flex" v-if="!config.isViewMode">
+      <v-spacer></v-spacer>
+      <!-- TODO: reload without saving -->
+      <!-- <v-btn @click="config.isViewMode = true"> Cancel </v-btn> -->
+      <v-menu
+        :disabled="!errors.length"
+        open-on-hover
+        bottom
+        left
+        offset-y
+        transition="fade"
+      >
+        <template #activator="{ props }">
+          <div
+            v-bind="props"
+            class="d-flex form-controls flex-column flex-sm-row"
+          >
+            <v-badge
+              :model-value="!isValid"
+              bordered
+              color="error"
+              icon="mdi-exclamation-thick"
+              overlap
             >
-              <v-badge
-                :model-value="!isValid"
-                bordered
-                color="error"
-                icon="mdi-exclamation-thick"
-                overlap
+              <v-btn
+                color="primary"
+                variant="elevated"
+                @click="submit"
+                :disabled="config.isViewMode || !isValid || isSubmitting"
               >
-                <v-btn
-                  color="primary"
-                  depressed
-                  @click="submit"
-                  :disabled="
-                    config.isReadOnly ||
-                    config.isViewMode ||
-                    config.isDisabled ||
-                    !isValid
-                  "
-                >
-                  Submit
-                </v-btn>
-              </v-badge>
-            </div>
-          </template>
-          <v-card>
-            <v-card-text>
-              <ul class="text-subtitle-1 ml-4">
-                <li v-for="(error, index) of errors" :key="index">
-                  <b>{{ error.title }}</b> {{ error.message }}.
-                </li>
-              </ul>
-            </v-card-text>
-          </v-card>
-        </v-menu>
-      </v-card-actions>
-    </v-card>
+                {{ isSubmitting ? "Saving Changes..." : "Save Changes" }}
+              </v-btn>
+            </v-badge>
+          </div>
+        </template>
+        <v-card>
+          <v-card-text>
+            <ul class="text-subtitle-1 ml-4">
+              <li v-for="(error, index) of errors" :key="index">
+                <b>{{ error.title }}</b> {{ error.message }}.
+              </li>
+            </ul>
+          </v-card-text>
+        </v-card>
+      </v-menu>
+    </div>
   </v-container>
 </template>
 
 <script lang="ts">
-import { Component, Vue, toNative, Ref, Watch } from "vue-facing-decorator";
+import { Component, Vue, toNative, Ref } from "vue-facing-decorator";
 import {
   CzForm,
   CzFileExplorer,
@@ -119,7 +122,6 @@ import {
 } from "@aws-sdk/client-s3";
 import { stringify } from "@/utils";
 
-// Define interfaces for better type safety
 interface FormError {
   title: string;
   message: string;
@@ -151,20 +153,11 @@ interface SchemaCollectionItem {
   defaults: Record<string, any>;
 }
 
-interface FileItem {
-  key: string;
-  name: string;
-  size: number;
-  lastModified: Date;
-  isFolder: boolean;
-}
-
 @Component({
   components: { CzForm, CzFileExplorer },
   name: "App",
 })
 class App extends Vue {
-  // Add prop for resourceId
   resourceId!: string;
 
   @Ref("form") form!: InstanceType<typeof CzForm>;
@@ -183,27 +176,18 @@ class App extends Vue {
   accessKey = localStorage.getItem("s3AccessKey") || "";
   secretKey = localStorage.getItem("s3SecretKey") || "";
 
-  fileList: FileItem[] = [];
   isLoadingFiles: boolean = true;
+  isSubmitting: boolean = false;
   currentPath: string = "";
   folderNameRegex = /^[-()\w\s]*$/;
+  fetchingMetadata = false;
 
-  s3 = new S3Client({
-    region: "us-central-2",
-    endpoint: "https://s3.beta.hydroshare.org",
-    forcePathStyle: true,
-    credentials: {
-      accessKeyId: this.accessKey,
-      secretAccessKey: this.secretKey,
-    },
-  });
+  s3Client!: S3Client;
 
-  fileHeaders = [
-    { title: "Name", key: "name" },
-    { title: "Size", key: "size" },
-    { title: "Last Modified", key: "lastModified" },
-    { title: "Actions", key: "actions", sortable: false },
-  ];
+  s3Info = {
+    bucket: "",
+    prefix: "",
+  };
 
   config = {
     restrict: true,
@@ -249,25 +233,20 @@ class App extends Vue {
     return date ? date.toLocaleString() : "-";
   }
 
-  async created() {
-    // Initialize single S3Client
+  startS3Client() {
     this.s3Client = new S3Client({
       region: "us-central-2",
-      endpoint: this.s3Host,
+      endpoint: "https://s3.beta.hydroshare.org",
       forcePathStyle: true,
       credentials: {
-        accessKeyId: localStorage.getItem("s3AccessKey") || "",
-        secretAccessKey: localStorage.getItem("s3SecretKey") || "",
+        accessKeyId: this.accessKey,
+        secretAccessKey: this.secretKey,
       },
     });
+  }
 
-    // Get resourceId from route params if not passed as prop
-    if (
-      !this.resourceId &&
-      this.$route &&
-      this.$route.params &&
-      this.$route.params.resourceId
-    ) {
+  async created() {
+    if (!this.resourceId && this.$route?.params?.resourceId) {
       this.resourceId = this.$route.params.resourceId as string;
     }
 
@@ -296,13 +275,14 @@ class App extends Vue {
       }
     }
 
+    this.startS3Client();
+
+    /* @ts-ignore */
     const schema: SchemaDefinition = await import(
-      /* @vite-ignore */
       `@/schemas/hydroshare/schema.json`
     );
 
     const { default: uischema } = await import(
-      /* @vite-ignore */
       `@/schemas/hydroshare/uischema.json`
     );
 
@@ -320,7 +300,6 @@ class App extends Vue {
     });
 
     this.selectedSchema = 0;
-    this.updateData();
     this.updateMetadata();
   }
 
@@ -338,23 +317,20 @@ class App extends Vue {
           },
         },
       );
-      const s3Info = await response.json();
+      this.s3Info = await response.json();
 
-      const bucket = s3Info.bucket;
-      const prefix = s3Info.prefix;
+      const key = `${this.s3Info.prefix}hs_user_meta.json`;
 
-      const key = `${prefix}hs_user_meta.json`;
-
-      console.log(`Fetching metadata from S3: ${bucket}/${key}`);
-      const result = await this.s3.send(
-        new GetObjectCommand({ Bucket: bucket, Key: key }),
+      console.log(`Fetching metadata from S3: ${this.s3Info.bucket}/${key}`);
+      const result = await this.s3Client.send(
+        new GetObjectCommand({ Bucket: this.s3Info.bucket, Key: key }),
       );
       const bodyContents = await result.Body?.transformToString();
 
       try {
         const parsed = JSON.parse(bodyContents || "");
         this.data = parsed;
-        console.log(`Form data loaded from ${this.bucket}/${key}`);
+        console.log(`Form data loaded from ${this.s3Info.bucket}/${key}`);
       } catch (error) {
         console.warn("JSON parse failed, loading defaults:", error);
         this.data = { ...this.defaults };
@@ -362,11 +338,9 @@ class App extends Vue {
 
       try {
         const initialStructure = await await this.readRootFolder(
-          bucket,
           `${resourceId}/data/contents/`,
         );
         // @ts-expect-error The key property is generated when the component is initialized
-        // TODO: this component should have a load function instead of populating the `children` object directly
         this.rootDirectory.children = initialStructure;
         this.isLoadingFiles = false;
       } catch (e) {
@@ -402,31 +376,13 @@ class App extends Vue {
     return this.schemaCollection[this.selectedSchema]?.defaults || {};
   }
 
-  updateData() {
-    this.data = { ...this.data, ...this.defaults };
-  }
-
   onUpdateErrors(errors: FormError[]) {
     this.errors = errors;
   }
 
-  sanitizeData(data: Record<string, any>): Record<string, any> {
-    const sanitized = { ...data };
-    if (sanitized.name) {
-      sanitized.name = sanitized.name.replace(/\t/g, " ").trim();
-    }
-    if (sanitized.description) {
-      sanitized.description = sanitized.description.replace(/\t/g, " ").trim();
-    }
-    return sanitized;
-  }
-
   async submit() {
-    console.log("Submitting data:", this.data, "isValid:", this.isValid);
     try {
-      // Use resourceId from prop or fallback to example
       const resourceId = this.resourceId;
-      const bucket = "sblack";
       const key = `${resourceId}/data/contents/hs_user_meta.json`;
 
       const content = JSON.stringify(
@@ -435,12 +391,13 @@ class App extends Vue {
         2,
       );
       const command = new PutObjectCommand({
-        Bucket: this.bucket,
+        Bucket: this.s3Info.bucket,
         Key: key,
         Body: content,
         ContentType: "application/json",
       });
-      await this.s3.send(command);
+      this.isSubmitting = true;
+      await this.s3Client.send(command);
 
       Notifications.toast({
         title: "Success",
@@ -448,34 +405,32 @@ class App extends Vue {
         type: "success",
       });
       this.config.isViewMode = true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading to S3:", error);
       Notifications.toast({
         title: "Error",
         message: `Failed to upload metadata to S3. Details: ${error.message}`,
         type: "error",
       });
+    } finally {
+      this.isSubmitting = false;
     }
   }
 
-  async readRootFolder(
-    bucket: string,
-    path: string,
-  ): Promise<Partial<IFile | IFolder>[]> {
-    return this._readFolderRecursive(bucket, path);
+  async readRootFolder(path: string): Promise<Partial<IFile | IFolder>[]> {
+    return this._readFolderRecursive(path);
   }
 
   private async _readFolderRecursive(
-    bucket: string,
     path: string,
   ): Promise<Partial<IFile | IFolder>[]> {
     try {
       const command = new ListObjectsV2Command({
-        Bucket: bucket,
+        Bucket: this.s3Info.bucket,
         Prefix: path,
         Delimiter: "/",
       });
-      const s3Response = await this.s3.send(command);
+      const s3Response = await this.s3Client.send(command);
 
       let files: Partial<IFile>[] = [];
       let folders: Partial<IFolder>[] = [];
@@ -510,7 +465,7 @@ class App extends Vue {
       if (folders.length) {
         const readSubfolderPromises: Promise<Partial<IFile | IFolder>[]>[] =
           folders.map((f) => {
-            return this._readFolderRecursive(bucket, `${path}${f.name}/`);
+            return this._readFolderRecursive(`${path}${f.name}/`);
           });
         const responses = await Promise.all(readSubfolderPromises);
 
@@ -527,6 +482,7 @@ class App extends Vue {
 
     return [];
   }
+
   async uploadFiles(files: IFile[]): Promise<boolean[]> {
     if (files.length) {
       // Annotate file paths before uploading
@@ -550,7 +506,6 @@ class App extends Vue {
       Object.prototype.hasOwnProperty.call(i, "children"),
     ) as IFolder[];
 
-    const bucket = "sblack";
     const basePrefix = `${this.resourceId}/data/contents/${this.currentPath}`;
 
     // TODO: compute folder paths
@@ -587,9 +542,9 @@ class App extends Vue {
         const basePrefix = `${that.resourceId}/data/contents/`;
 
         // TODO: how to create an empty folder
-        return that.s3.send(
+        return that.s3Client.send(
           new PutObjectCommand({
-            Bucket: bucket,
+            Bucket: that.s3Info.bucket,
             Key: `${basePrefix}${path}`,
             Body: "",
             ContentType: "application/x-directory",
@@ -613,9 +568,9 @@ class App extends Vue {
         try {
           const key = `${basePrefix}${path}`;
           const arrayBuffer = await file.file?.arrayBuffer();
-          await that.s3.send(
+          await that.s3Client.send(
             new PutObjectCommand({
-              Bucket: bucket,
+              Bucket: that.s3Info.bucket,
               Key: key,
               Body: arrayBuffer,
               ContentType: file.file?.type || "application/octet-stream",
@@ -631,7 +586,6 @@ class App extends Vue {
         await Promise.allSettled(fileUploadPromises);
 
       filesToUpload.forEach((f, index) => {
-        // @ts-expect-error TODO: typing
         if (response[index].status === "fulfilled") {
           f.isUploaded = true;
         } else {
@@ -658,10 +612,9 @@ class App extends Vue {
   }
 
   async downloadFile(key: string) {
-    const bucket = "sblack";
     try {
-      const result = await this.s3.send(
-        new GetObjectCommand({ Bucket: bucket, Key: key }),
+      const result = await this.s3Client.send(
+        new GetObjectCommand({ Bucket: this.s3Info.bucket, Key: key }),
       );
       const blob = await result.Body?.transformToByteArray();
       if (blob) {
@@ -679,7 +632,7 @@ class App extends Vue {
           type: "success",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error downloading file:", error);
       Notifications.toast({
         title: "Error",
@@ -692,7 +645,6 @@ class App extends Vue {
   async deleteFileOrFolder(item: IFile | IFolder): Promise<boolean> {
     const path = this.fileExplorer.getPathString(item);
     const isFolder = Object.prototype.hasOwnProperty.call(item, "children");
-    const bucket = "sblack";
     const basePrefix = `${this.resourceId}/data/contents/`;
     try {
       if (isFolder) {
@@ -701,11 +653,11 @@ class App extends Vue {
 
         do {
           const listCommand = new ListObjectsV2Command({
-            Bucket: bucket,
+            Bucket: this.s3Info.bucket,
             Prefix: path,
             ContinuationToken: continuationToken,
           });
-          const listResponse = await this.s3.send(listCommand);
+          const listResponse = await this.s3Client.send(listCommand);
 
           if (listResponse.Contents) {
             listResponse.Contents.forEach((obj) => {
@@ -730,9 +682,9 @@ class App extends Vue {
         } else {
           for (let i = 0; i < objectsToDelete.length; i += batchSize) {
             const batch = objectsToDelete.slice(i, i + batchSize);
-            await this.s3.send(
+            await this.s3Client.send(
               new DeleteObjectsCommand({
-                Bucket: bucket,
+                Bucket: this.s3Info.bucket,
                 Delete: { Objects: batch },
               }),
             );
@@ -744,10 +696,10 @@ class App extends Vue {
         }
 
         const verifyCommand = new ListObjectsV2Command({
-          Bucket: bucket,
+          Bucket: this.s3Info.bucket,
           Prefix: `${basePrefix}${path}`,
         });
-        const verifyResponse = await this.s3.send(verifyCommand);
+        const verifyResponse = await this.s3Client.send(verifyCommand);
         if (verifyResponse.Contents && verifyResponse.Contents.length > 0) {
           console.warn(
             `Objects still exist after deletion for ${item.key}:`,
@@ -758,11 +710,11 @@ class App extends Vue {
         }
 
         const listParentCommand = new ListObjectsV2Command({
-          Bucket: bucket,
+          Bucket: this.s3Info.bucket,
           Prefix: `${this.resourceId}/data/contents/`,
           Delimiter: "/",
         });
-        const parentResponse = await this.s3.send(listParentCommand);
+        const parentResponse = await this.s3Client.send(listParentCommand);
         if (
           parentResponse.CommonPrefixes &&
           parentResponse.CommonPrefixes.some(
@@ -776,14 +728,13 @@ class App extends Vue {
           console.log(`Verified: ${item.key} no longer in CommonPrefixes`);
         }
       } else {
-        await this.s3.send(
+        await this.s3Client.send(
           new DeleteObjectsCommand({
-            Bucket: bucket,
+            Bucket: this.s3Info.bucket,
             Delete: { Objects: [{ Key: `${basePrefix}${path}` }] }, // d7b526e24f7e449098b428ae9363f514/data/contents/vite.config.ts
           }),
         );
         console.log(`Deleted file: ${basePrefix}${path}`);
-        return true;
       }
 
       Notifications.toast({
@@ -791,6 +742,7 @@ class App extends Vue {
         message: `${isFolder ? "Folder" : "File"} deleted successfully!`,
         type: "success",
       });
+      return true;
     } catch (error: any) {
       console.error(`Error deleting ${isFolder ? "folder" : "file"}:`, error);
       Notifications.toast({
@@ -800,26 +752,9 @@ class App extends Vue {
       });
       return false;
     }
-
-    return false;
   }
 }
-
-App.__decorators__ = [
-  (options: any) => {
-    options.props = options.props || {};
-    options.props.resourceId = {
-      type: String,
-      required: false,
-    };
-  },
-];
-
 export default toNative(App);
 </script>
 
-<style lang="scss" scoped>
-pre {
-  white-space: pre-wrap;
-}
-</style>
+<style lang="scss" scoped></style>
