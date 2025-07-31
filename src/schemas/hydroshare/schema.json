@@ -3,16 +3,17 @@
   "description": "A class used to represent the metadata for a resource",
   "type": "object",
   "properties": {
-    "title": {
-      "title": "Title",
-      "description": "A string containing the name given to a resource",
-      "maxLength": 300,
-      "type": "string"
+    "name": {
+      "type": "string",
+      "default": null,
+      "title": "Name or title",
+      "description": "A text string with a descriptive name or title for the resource."
     },
-    "abstract": {
-      "title": "Abstract",
-      "description": "A string containing a summary of a resource",
-      "type": "string"
+    "description": {
+      "type": "string",
+      "default": null,
+      "title": "Description or abstract",
+      "description": "A text string containing a description/abstract for the resource."
     },
     "subjects": {
       "title": "Subject keywords",
@@ -381,11 +382,8 @@
     }
   },
   "required": [
-    "title",
-    "abstract",
-    "subjects",
-    "awards",
-    "rights"
+    "name",
+    "description"
   ],
   "definitions": {
     "Creator": {

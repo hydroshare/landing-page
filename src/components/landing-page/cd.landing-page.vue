@@ -1,13 +1,11 @@
 <template>
   <v-container>
-    <div class="d-flex justify-end">
-      <v-btn
-        v-if="config.isViewMode"
-        prepend-icon="mdi-pen"
-        @click="config.isViewMode = false"
+    <div v-if="config.isViewMode" class="d-flex justify-end">
+      <v-btn prepend-icon="mdi-pen" @click="config.isViewMode = false"
         >Edit</v-btn
       >
     </div>
+
     <v-card class="my-5" flat>
       <v-card-text>
         <cz-file-explorer
@@ -41,7 +39,7 @@
           v-model="data"
           :errors.sync="errors"
           @update:errors="onUpdateErrors"
-          :isValid.sync="isValid"
+          v-model:is-valid="isValid"
           :config="config"
           ref="form"
         />
@@ -49,6 +47,8 @@
 
       <v-card-actions v-if="!config.isViewMode">
         <v-spacer></v-spacer>
+        <!-- TODO: reload without saving -->
+        <!-- <v-btn @click="config.isViewMode = true"> Cancel </v-btn> -->
         <v-menu
           :disabled="!errors.length"
           open-on-hover
@@ -250,6 +250,17 @@ class App extends Vue {
   }
 
   async created() {
+    // Initialize single S3Client
+    this.s3Client = new S3Client({
+      region: "us-central-2",
+      endpoint: this.s3Host,
+      forcePathStyle: true,
+      credentials: {
+        accessKeyId: localStorage.getItem("s3AccessKey") || "",
+        secretAccessKey: localStorage.getItem("s3SecretKey") || "",
+      },
+    });
+
     // Get resourceId from route params if not passed as prop
     if (
       !this.resourceId &&
@@ -287,7 +298,7 @@ class App extends Vue {
 
     const schema: SchemaDefinition = await import(
       /* @vite-ignore */
-      `@/schemas/hydroshare/edit_schema.json`
+      `@/schemas/hydroshare/schema.json`
     );
 
     const { default: uischema } = await import(
@@ -310,7 +321,11 @@ class App extends Vue {
 
     this.selectedSchema = 0;
     this.updateData();
+    this.updateMetadata();
+  }
 
+  async updateMetadata() {
+    this.fetchingMetadata = true;
     try {
       // Use resourceId from prop or fallback to example
       const resourceId = this.resourceId;
@@ -339,7 +354,7 @@ class App extends Vue {
       try {
         const parsed = JSON.parse(bodyContents || "");
         this.data = parsed;
-        console.log(`Form data loaded from ${bucket}/${key}`);
+        console.log(`Form data loaded from ${this.bucket}/${key}`);
       } catch (error) {
         console.warn("JSON parse failed, loading defaults:", error);
         this.data = { ...this.defaults };
@@ -370,6 +385,8 @@ class App extends Vue {
         message: "Failed to load metadata from S3.",
         type: "error",
       });
+    } finally {
+      this.fetchingMetadata = false;
     }
   }
 
@@ -387,13 +404,6 @@ class App extends Vue {
 
   updateData() {
     this.data = { ...this.data, ...this.defaults };
-  }
-
-  @Watch("errors")
-  onErrorsChange(newErrors: FormError[]) {
-    if (newErrors.length === 0) {
-      this.isValid = true;
-    }
   }
 
   onUpdateErrors(errors: FormError[]) {
@@ -425,7 +435,7 @@ class App extends Vue {
         2,
       );
       const command = new PutObjectCommand({
-        Bucket: bucket,
+        Bucket: this.bucket,
         Key: key,
         Body: content,
         ContentType: "application/json",
