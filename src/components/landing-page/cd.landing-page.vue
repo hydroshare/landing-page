@@ -337,7 +337,7 @@ class App extends Vue {
       }
 
       try {
-        const initialStructure = await await this.readRootFolder(
+        const initialStructure = await this.readRootFolder(
           `${resourceId}/data/contents/`,
         );
         // @ts-expect-error The key property is generated when the component is initialized
