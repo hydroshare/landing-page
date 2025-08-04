@@ -30,10 +30,12 @@
       :is-read-only="config.isViewMode"
       :has-file-metadata="() => false"
       :folder-name-regex="folderNameRegex"
+      :canDownloadItem="() => true"
       :upload="!config.isViewMode ? uploadFiles : undefined"
       :delete-file-or-folder="
         !config.isViewMode ? deleteFileOrFolder : undefined
       "
+      @download="onFileDownload($event)"
     >
       <template #prepend>
         <span />
@@ -611,27 +613,31 @@ class App extends Vue {
     return responses;
   }
 
-  async downloadFile(key: string) {
+  async onFileDownload(items: (IFile | IFolder)[]) {
     try {
-      const result = await this.s3Client.send(
-        new GetObjectCommand({ Bucket: this.s3Info.bucket, Key: key }),
-      );
-      const blob = await result.Body?.transformToByteArray();
-      if (blob) {
-        const url = window.URL.createObjectURL(new Blob([blob]));
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = key.split("/").pop() || "download";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        Notifications.toast({
-          title: "Success",
-          message: "File downloaded successfully!",
-          type: "success",
-        });
+      for (let item of items) {
+        const basePrefix = `${this.resourceId}/data/contents/`;
+        const key = `${basePrefix}${item.path}`;
+        const result = await this.s3Client.send(
+          new GetObjectCommand({ Bucket: this.s3Info.bucket, Key: key }),
+        );
+        const blob = await result.Body?.transformToByteArray();
+        if (blob) {
+          const url = window.URL.createObjectURL(new Blob([blob]));
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = key.split("/").pop() || "download";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        }
       }
+      Notifications.toast({
+        title: "Success",
+        message: "File downloaded successfully!",
+        type: "success",
+      });
     } catch (error: any) {
       console.error("Error downloading file:", error);
       Notifications.toast({
