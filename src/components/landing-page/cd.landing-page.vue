@@ -21,22 +21,23 @@
     </template>
 
     <cz-file-explorer
-      v-if="!isLoadingFiles"
-      ref="fileExplorer"
-      id="cz-folder-structure"
+      v-if="!isLoadingFiles" 
+      ref="fileExplorer" 
+      id="cz-folder-structure" 
       v-model:valid-items="toUpload"
-      :root-directory="rootDirectory"
-      :has-folders="fileExplorerConfig.hasFolders"
+      :root-directory="rootDirectory" 
+      :has-folders="fileExplorerConfig.hasFolders" 
       :is-read-only="config.isViewMode"
-      :has-file-metadata="() => false"
-      :folder-name-regex="folderNameRegex"
+      :has-file-metadata="() => false" 
+      :folder-name-regex="folderNameRegex" 
       :canDownloadItem="() => true"
       :upload="!config.isViewMode ? uploadFiles : undefined"
       :delete-file-or-folder="
-        !config.isViewMode ? deleteFileOrFolder : undefined
-      "
+      !config.isViewMode ? deleteFileOrFolder : undefined
+      " 
       @download="onFileDownload($event)"
-    >
+      :rename-file-or-folder="!config.isViewMode ? renameFileOrFolder : undefined"
+      >
       <template #prepend>
         <span />
       </template>
@@ -119,6 +120,7 @@ import {
   PutObjectCommand,
   DeleteObjectsCommand,
   ListObjectsV2Command,
+  CopyObjectCommand,
   CommonPrefix,
   _Object,
 } from "@aws-sdk/client-s3";
@@ -759,6 +761,114 @@ class App extends Vue {
       return false;
     }
   }
+
+async renameFileOrFolder(item: FileItem, newName: string): Promise<void> {
+  const isFolder = item.isFolder;
+  const oldPath = this.fileExplorer.getPathString(item);
+  const parentPrefix = oldPath.split('/').slice(0, -1).join('/');
+  const newPath = parentPrefix ? `${parentPrefix}/${newName}` : newName;
+  const oldKey = `${this.s3Info.prefix}${oldPath}${isFolder ? '/' : ''}`;
+  const newKey = `${this.s3Info.prefix}${newPath}${isFolder ? '/' : ''}`;
+
+  try {
+    if (isFolder) {
+      let continuationToken: string | undefined;
+      const objectsToCopy: { source: string; destination: string }[] = [];
+
+      do {
+        const listCommand = new ListObjectsV2Command({
+          Bucket: this.s3Info.bucket,
+          Prefix: oldKey,
+          ContinuationToken: continuationToken,
+        });
+        const listResponse = await this.s3Client.send(listCommand);
+
+        if (listResponse.Contents) {
+          for (const obj of listResponse.Contents) {
+            if (!obj.Key) continue;
+            const destinationKey = obj.Key.replace(oldKey, newKey);
+            objectsToCopy.push({
+              source: obj.Key,
+              destination: destinationKey,
+            });
+          }
+        }
+        continuationToken = listResponse.NextContinuationToken;
+      } while (continuationToken);
+
+      for (const { source, destination } of objectsToCopy) {
+        await this.s3Client.send(new CopyObjectCommand({
+          Bucket: this.s3Info.bucket,
+          CopySource: `${this.s3Info.bucket}/${source}`,
+          Key: destination,
+        }));
+      }
+    } else {
+      const getResult = await this.s3Client.send(new GetObjectCommand({
+        Bucket: this.s3Info.bucket,
+        Key: oldKey,
+      }));
+      const body = await getResult.Body?.transformToByteArray();
+      if (!body) throw new Error("Empty file body during rename");
+
+      await this.s3Client.send(new PutObjectCommand({
+        Bucket: this.s3Info.bucket,
+        Key: newKey,
+        Body: body,
+        ContentType: getResult.ContentType,
+      }));
+    }
+
+    // Try deleting folder marker explicitly, but ignore if not found
+    if (isFolder && oldKey !== newKey) {
+      try {
+        await this.s3Client.send(new DeleteObjectCommand({
+          Bucket: this.s3Info.bucket,
+          Key: oldKey,
+        }));
+      } catch (err: any) {
+        if (err.name !== 'NoSuchKey') throw err;
+      }
+    }
+
+    // Always delete source files
+    let continuationToken;
+    do {
+      const listCommand = new ListObjectsV2Command({
+        Bucket: this.s3Info.bucket,
+        Prefix: oldKey,
+        ContinuationToken: continuationToken,
+      });
+      const listResponse = await this.s3Client.send(listCommand);
+      const objectsToDelete = (listResponse.Contents || []).map(obj => ({ Key: obj.Key! }));
+      if (objectsToDelete.length) {
+        await this.s3Client.send(new DeleteObjectsCommand({
+          Bucket: this.s3Info.bucket,
+          Delete: { Objects: objectsToDelete },
+        }));
+      }
+      continuationToken = listResponse.NextContinuationToken;
+    } while (continuationToken);
+
+    Notifications.toast({
+      title: 'Success',
+      message: `${isFolder ? 'Folder' : 'File'} renamed successfully!`,
+      type: 'success',
+    });
+
+    const path = `${this.resourceId}/data/contents/`;
+    this.rootDirectory.children = await this.readRootFolder(path);
+  } catch (error) {
+    console.error('Rename failed:', error);
+    Notifications.toast({
+      title: 'Error',
+      message: `Failed to rename ${isFolder ? 'folder' : 'file'}: ${error.message}`,
+      type: 'error',
+    });
+  }
+}
+
+
 }
 export default toNative(App);
 </script>
