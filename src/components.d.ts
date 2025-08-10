@@ -18,6 +18,8 @@ declare module 'vue' {
     'Cd.spatialCoverageMap': typeof import('./components/search-results/cd.spatial-coverage-map.vue')['default']
     copy: typeof import('./components/search/cd.search copy.vue')['default']
     'Cz.login': typeof import('./components/account/cz.login.vue')['default']
+    EditDataset: typeof import('./components/landing-page/edit-dataset.vue')['default']
+    LandingPage: typeof import('./components/landing-page/landing-page.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }

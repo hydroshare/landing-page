@@ -1,6 +1,7 @@
 import { RouteRecordRaw } from "vue-router";
 import CdSearchResults from "@/components/search-results/cd.search-results.vue";
-import CdLandingPage from "@/components/landing-page/cd.landing-page.vue";
+import LandingPage from "@/components/landing-page/landing-page.vue";
+import EditDataset from "@/components/landing-page/edit-dataset.vue";
 import CdFooter from "@/components/base/cd.footer.vue";
 import AuthRedirect from "@/components/account/auth-redirect.vue";
 
@@ -20,13 +21,24 @@ export const routes: RouteRecordRaw[] = [
   {
     name: "landing",
     path: "/resource/:resourceId?",
-    props: true,
     components: {
-      content: CdLandingPage,
+      content: LandingPage,
       footer: CdFooter,
     },
     meta: {
       title: "Landing Page",
+    },
+  },
+  {
+    name: "edit-dataset",
+    path: "/resource/:resourceId/edit",
+    props: true,
+    components: {
+      content: EditDataset,
+      footer: CdFooter,
+    },
+    meta: {
+      title: "Edit dataset",
     },
   },
   {
