@@ -22,5 +22,6 @@ declare module 'vue' {
     LandingPage: typeof import('./components/landing-page/landing-page.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    S3Form: typeof import('./components/landing-page/s3-form.vue')['default']
   }
 }

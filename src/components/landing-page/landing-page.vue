@@ -1,66 +1,106 @@
 <template>
   <v-container>
-    <div class="d-flex justify-space-between">
-      <div class="text-h5">Dataset</div>
-      <v-btn
-        v-if="!isLoadingFiles && !fetchingMetadata"
-        size="small"
-        color="primary"
-        prepend-icon="mdi-pen"
-        variant="outlined"
-        @click="$router.push({ name: 'edit-dataset' })"
-        >Edit</v-btn
-      >
+    <div class="d-flex gap-1">
+      <div class="text-h5">Resource</div>
+      <v-spacer></v-spacer>
+      <template v-if="!isLoadingFiles && !isFetchingMetadata">
+        <v-menu width="500" :close-on-content-click="false">
+          <template v-slot:activator="{ props }">
+            <v-btn
+              size="small"
+              v-bind="props"
+              color="primary"
+              prepend-icon="mdi-cog"
+              variant="plain"
+              >Settings</v-btn
+            >
+          </template>
+          <v-card>
+            <v-card-title
+              class="bg-grey-lighten-3 text-body-1 text-medium-emphasis"
+              >Settings</v-card-title
+            >
+            <v-divider></v-divider>
+            <v-card-text flat>
+              <s3-form
+                :prefix="s3Info.prefix"
+                :bucket="s3Info.bucket"
+                :s3-host="s3Host"
+                :hydroshare-host="hydroshareHost"
+                @apply-changes="onS3FormUpdate"
+                @restore-defaults="onRestoreDefaults"
+              ></s3-form>
+            </v-card-text>
+          </v-card>
+        </v-menu>
+
+        <v-btn
+          size="small"
+          color="primary"
+          prepend-icon="mdi-pen"
+          variant="outlined"
+          @click="$router.push({ name: 'edit-dataset' })"
+          >Edit</v-btn
+        >
+      </template>
     </div>
     <v-divider class="mb-6"></v-divider>
 
-    <cz-file-explorer
-      class="ma-4"
-      v-if="!isLoadingFiles"
-      ref="fileExplorer"
-      id="cz-folder-structure"
-      :root-directory="rootDirectory"
-      :has-folders="fileExplorerConfig.hasFolders"
-      :is-read-only="true"
-      :has-file-metadata="() => false"
-      :canDownloadItem="() => true"
-      @download="onFileDownload($event, resourceId, s3Client, s3Info.bucket)"
-    >
-      <template #prepend>
-        <span />
-      </template>
-    </cz-file-explorer>
-    <v-skeleton-loader v-else type="card"></v-skeleton-loader>
+    <template v-if="wasLoaded">
+      <cz-file-explorer
+        class="ma-4"
+        v-if="!isLoadingFiles"
+        ref="fileExplorer"
+        id="cz-folder-structure"
+        :root-directory="rootDirectory"
+        :has-folders="fileExplorerConfig.hasFolders"
+        :is-read-only="true"
+        :has-file-metadata="() => false"
+        :canDownloadItem="() => true"
+        @download="onFileDownload($event, resourceId, s3Client, s3Info.bucket)"
+      >
+        <template #prepend>
+          <span />
+        </template>
+      </cz-file-explorer>
+      <v-skeleton-loader class="mb-12" v-else type="card"></v-skeleton-loader>
 
-    <v-skeleton-loader v-if="fetchingMetadata" type="card"></v-skeleton-loader>
-    <cz-form
+      <v-skeleton-loader
+        v-if="isFetchingMetadata"
+        type="card"
+      ></v-skeleton-loader>
+      <cz-form
+        v-else
+        :schema="schema"
+        :uischema="uischema"
+        v-model="data"
+        :config="config"
+        ref="form"
+      />
+    </template>
+    <v-empty-state
       v-else
-      :schema="schema"
-      :uischema="uischema"
-      v-model="data"
-      :config="config"
-      ref="form"
-    />
+      icon="mdi-cloud-cancel"
+      text="Try adjusting your settings."
+      title="We couldn't load this resource."
+    ></v-empty-state>
   </v-container>
 </template>
 
 <script lang="ts">
 import { Component, Vue, toNative, Ref } from "vue-facing-decorator";
-import {
-  CzForm,
-  CzFileExplorer,
-  Notifications,
-} from "@cznethub/cznet-vue-core";
-import type { IFile, IFolder } from "@cznethub/cznet-vue-core/dist/types";
-import { S3Client, GetObjectCommand, _Object } from "@aws-sdk/client-s3";
+import { CzForm, CzFileExplorer } from "@cznethub/cznet-vue-core";
+import type { IFolder } from "@cznethub/cznet-vue-core/dist/types";
+import { S3Client, _Object } from "@aws-sdk/client-s3";
 import { stringify } from "@/utils";
-import { onFileDownload, readRootFolder } from "./shared";
+import { fetchResource, onFileDownload } from "./shared";
+import S3Form from "./s3-form.vue";
 
 @Component({
-  components: { CzForm, CzFileExplorer },
+  components: { CzForm, CzFileExplorer, S3Form },
   name: "App",
 })
-class App extends Vue {
+class LandingPage extends Vue {
   resourceId!: string;
 
   @Ref("form") form!: InstanceType<typeof CzForm>;
@@ -78,9 +118,12 @@ class App extends Vue {
 
   isLoadingFiles: boolean = true;
   currentPath: string = "";
-  fetchingMetadata = true;
+  isFetchingMetadata = true;
+  wasLoaded = true;
 
   s3Client!: S3Client;
+  s3Host: string = "https://s3.beta.hydroshare.org";
+  hydroshareHost: string = "https://beta.hydroshare.org";
 
   s3Info = {
     bucket: "",
@@ -122,7 +165,7 @@ class App extends Vue {
   startS3Client() {
     this.s3Client = new S3Client({
       region: "us-central-2",
-      endpoint: "https://s3.beta.hydroshare.org",
+      endpoint: this.s3Host,
       forcePathStyle: true,
       credentials: {
         accessKeyId: this.accessKey,
@@ -161,6 +204,10 @@ class App extends Vue {
       }
     }
 
+    if (!this.s3Info.bucket || !this.s3Info.prefix) {
+      await this.fetchS3Info();
+    }
+
     this.startS3Client();
 
     /* @ts-ignore */
@@ -171,70 +218,68 @@ class App extends Vue {
     /* @ts-ignore */
     this.uischema = await import(`@/schemas/hydroshare/view-uischema.json`);
 
-    this.updateMetadata();
+    this.loadResource();
   }
 
-  async updateMetadata() {
-    this.fetchingMetadata = true;
-    try {
-      // Use resourceId from prop or fallback to example
-      const resourceId = this.resourceId;
-      const response = await fetch(
-        `https://beta.hydroshare.org/hsapi/resource/s3/${resourceId}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-      );
-      this.s3Info = await response.json();
-      const key = `md/${resourceId}/dataset_metadata.json`;
+  async loadResource() {
+    this.isFetchingMetadata = true;
+    this.isLoadingFiles = true;
+    this.wasLoaded = true;
 
-      console.log(`Fetching metadata from S3: ${this.s3Info.bucket}/${key}`);
-      const result = await this.s3Client.send(
-        new GetObjectCommand({ Bucket: this.s3Info.bucket, Key: key }),
-      );
-      const bodyContents = await result.Body?.transformToString();
+    const resource = await fetchResource(
+      this.resourceId,
+      this.s3Client,
+      this.s3Info.bucket,
+      `${this.s3Info.prefix}dataset_metadata.json`,
+    );
 
-      try {
-        const parsed = JSON.parse(bodyContents || "");
-        this.data = parsed;
-        console.log(`Form data loaded from ${this.s3Info.bucket}/${key}`);
-      } catch (error) {
-        console.warn("JSON parse failed, loading defaults:", error);
-      }
-
-      try {
-        const initialStructure = await readRootFolder(
-          `${resourceId}/data/contents/`,
-          this.s3Client,
-          this.s3Info.bucket,
-        );
-        // @ts-expect-error The key property is generated when the component is initialized
-        this.rootDirectory.children = initialStructure;
-        this.isLoadingFiles = false;
-      } catch (e) {
-        Notifications.toast({
-          message: "Failed to load existing files.",
-          type: "error",
-          location: "top center",
-        });
-        this.isLoadingFiles = false;
-      }
-    } catch (error) {
-      console.error("S3 fetch failed:", error);
-      Notifications.toast({
-        title: "Error",
-        message: "Failed to load metadata from S3.",
-        type: "error",
-      });
-    } finally {
-      this.fetchingMetadata = false;
+    if (resource) {
+      this.data = resource.data;
+      // @ts-expect-error The key property is generated when the component is initialized
+      this.rootDirectory.children = resource.initialStructure;
+    } else {
+      this.wasLoaded = false;
     }
+    this.isFetchingMetadata = false;
+    this.isLoadingFiles = false;
+  }
+
+  async onS3FormUpdate(params: any) {
+    this.isFetchingMetadata = true;
+    this.isLoadingFiles = true;
+    this.s3Info.bucket = params.bucket;
+    this.s3Info.prefix = params.prefix;
+    this.hydroshareHost = params.hydroshareHost;
+    this.s3Host = params.s3Host;
+    this.startS3Client();
+    this.loadResource();
+  }
+
+  async onRestoreDefaults() {
+    this.isFetchingMetadata = true;
+    this.isLoadingFiles = true;
+    this.s3Host = "https://s3.beta.hydroshare.org";
+    this.hydroshareHost = "https://beta.hydroshare.org";
+    await this.fetchS3Info();
+    this.startS3Client();
+    this.loadResource();
+  }
+
+  async fetchS3Info() {
+    const response = await fetch(
+      `${this.hydroshareHost}/hsapi/resource/s3/${this.resourceId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
+    this.s3Info = await response.json();
+    this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
   }
 }
-export default toNative(App);
+export default toNative(LandingPage);
 </script>
 
 <style lang="scss" scoped></style>

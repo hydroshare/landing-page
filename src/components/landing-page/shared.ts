@@ -102,3 +102,51 @@ export const _readFolderRecursive = async (
 
   return [];
 }
+
+export const fetchResource = async (resourceId: string, s3Client: S3Client, bucket: string, key: string) => {
+  let data, initialStructure
+
+  try {
+    console.log(`Fetching metadata from S3: ${bucket}/${key}`);
+    const result = await s3Client.send(
+      new GetObjectCommand({ Bucket: bucket, Key: key }),
+    );
+    const bodyContents = await result.Body?.transformToString();
+
+    try {
+      data = JSON.parse(bodyContents || "");
+      // this.data = parsed;
+      console.log(`Form data loaded from ${bucket}/${key}`);
+    } catch (error) {
+      console.warn("JSON parse failed, loading defaults:", error);
+      return false
+      // data = { ...this.defaults };
+    }
+
+    try {
+      initialStructure = await readRootFolder(
+        `${resourceId}/data/contents/`,
+        s3Client,
+        bucket,
+      );
+      // @ts-expect-error The key property is generated when the component is initialized
+    } catch (e) {
+      Notifications.toast({
+        message: "Failed to load existing files.",
+        type: "error",
+        location: "top center",
+      });
+      return false
+    }
+    return { data, initialStructure }
+  } catch (error) {
+    console.error("S3 fetch failed:", error);
+    // this.data = { ...this.defaults };
+    Notifications.toast({
+      title: "Error",
+      message: "Failed to load metadata from S3.",
+      type: "error",
+    });
+    return false
+  }
+}
