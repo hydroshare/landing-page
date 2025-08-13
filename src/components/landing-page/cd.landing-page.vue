@@ -1,43 +1,20 @@
 <template>
   <v-container>
     <template v-if="config.isViewMode">
-      <div
-        v-if="!isLoadingFiles && !fetchingMetadata"
-        class="d-flex justify-end mb-5"
-      >
-        <v-btn
-          color="primary"
-          prepend-icon="mdi-pen"
-          variant="outlined"
-          @click="config.isViewMode = false"
-          >Edit</v-btn
-        >
+      <div v-if="!isLoadingFiles && !fetchingMetadata" class="d-flex justify-end mb-5">
+        <v-btn color="primary" prepend-icon="mdi-pen" variant="outlined" @click="config.isViewMode = false">
+          Edit
+        </v-btn>
       </div>
-      <v-skeleton-loader
-        v-else
-        type="button"
-        class="justify-end"
-      ></v-skeleton-loader>
+      <v-skeleton-loader v-else type="button" class="justify-end"></v-skeleton-loader>
     </template>
 
-    <cz-file-explorer
-      v-if="!isLoadingFiles" 
-      ref="fileExplorer" 
-      id="cz-folder-structure" 
-      v-model:valid-items="toUpload"
-      :root-directory="rootDirectory" 
-      :has-folders="fileExplorerConfig.hasFolders" 
-      :is-read-only="config.isViewMode"
-      :has-file-metadata="() => false" 
-      :folder-name-regex="folderNameRegex" 
-      :canDownloadItem="() => true"
+    <cz-file-explorer v-if="!isLoadingFiles" ref="fileExplorer" id="cz-folder-structure" v-model:valid-items="toUpload"
+      :root-directory="rootDirectory" :has-folders="fileExplorerConfig.hasFolders" :is-read-only="config.isViewMode"
+      :has-file-metadata="() => false" :folder-name-regex="folderNameRegex" :canDownloadItem="() => true"
       :upload="!config.isViewMode ? uploadFiles : undefined"
-      :delete-file-or-folder="
-      !config.isViewMode ? deleteFileOrFolder : undefined
-      " 
-      @download="onFileDownload($event)"
-      :rename-file-or-folder="!config.isViewMode ? renameFileOrFolder : undefined"
-      >
+      :delete-file-or-folder="!config.isViewMode ? deleteFileOrFolder : undefined"
+      :rename-file-or-folder="!config.isViewMode ? renameFileOrFolder : undefined" @download="onFileDownload($event)">
       <template #prepend>
         <span />
       </template>
@@ -45,48 +22,17 @@
     <v-skeleton-loader v-else type="card"></v-skeleton-loader>
 
     <v-skeleton-loader v-if="fetchingMetadata" type="card"></v-skeleton-loader>
-    <cz-form
-      v-else
-      :schema="schema"
-      :uischema="uischema"
-      v-model="data"
-      :errors.sync="errors"
-      @update:errors="onUpdateErrors"
-      v-model:is-valid="isValid"
-      :config="config"
-      ref="form"
-    />
+    <cz-form v-else :schema="schema" :uischema="uischema" v-model="data" :errors.sync="errors"
+      @update:errors="onUpdateErrors" v-model:is-valid="isValid" :config="config" ref="form" />
 
     <div class="d-flex" v-if="!config.isViewMode">
       <v-spacer></v-spacer>
-      <!-- TODO: reload without saving -->
-      <!-- <v-btn @click="config.isViewMode = true"> Cancel </v-btn> -->
-      <v-menu
-        :disabled="!errors.length"
-        open-on-hover
-        bottom
-        left
-        offset-y
-        transition="fade"
-      >
+      <v-menu :disabled="!errors.length" open-on-hover bottom left offset-y transition="fade">
         <template #activator="{ props }">
-          <div
-            v-bind="props"
-            class="d-flex form-controls flex-column flex-sm-row"
-          >
-            <v-badge
-              :model-value="!isValid"
-              bordered
-              color="error"
-              icon="mdi-exclamation-thick"
-              overlap
-            >
-              <v-btn
-                color="primary"
-                variant="elevated"
-                @click="submit"
-                :disabled="config.isViewMode || !isValid || isSubmitting"
-              >
+          <div v-bind="props" class="d-flex form-controls flex-column flex-sm-row">
+            <v-badge :model-value="!isValid" bordered color="error" icon="mdi-exclamation-thick" overlap>
+              <v-btn color="primary" variant="elevated" @click="submit"
+                :disabled="config.isViewMode || !isValid || isSubmitting">
                 {{ isSubmitting ? "Saving Changes..." : "Save Changes" }}
               </v-btn>
             </v-badge>
@@ -108,11 +54,7 @@
 
 <script lang="ts">
 import { Component, Vue, toNative, Ref } from "vue-facing-decorator";
-import {
-  CzForm,
-  CzFileExplorer,
-  Notifications,
-} from "@cznethub/cznet-vue-core";
+import { CzForm, CzFileExplorer, Notifications } from "@cznethub/cznet-vue-core";
 import type { IFile, IFolder } from "@cznethub/cznet-vue-core/dist/types";
 import {
   S3Client,
@@ -123,6 +65,8 @@ import {
   CopyObjectCommand,
   CommonPrefix,
   _Object,
+  HeadObjectCommand,
+  DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { stringify } from "@/utils";
 
@@ -216,7 +160,7 @@ class App extends Vue {
     isDisabled: false,
   };
 
-  toUpload = [];
+  toUpload: any[] = [];
   rootDirectory: Partial<IFolder> = {
     name: "root",
     children: [],
@@ -254,18 +198,14 @@ class App extends Vue {
       this.resourceId = this.$route.params.resourceId as string;
     }
 
-    // notify if the resourceId is not set
     if (!this.resourceId) {
       alert(
-        "No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.",
+        "No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514."
       );
       this.resourceId = "d7b526e24f7e449098b428ae9363f514";
     }
 
-    // https://cuahsi.atlassian.net/browse/CAM-769
-    // TODO: for now we store access and secret keys in localStorage
-    // Replace when we update to Pinia
-
+    // temporary local storage for S3 keys (will move to Pinia later)
     if (!this.accessKey || !this.secretKey) {
       this.accessKey = prompt("Enter your S3 Access Key:") || "";
       this.secretKey = prompt("Enter your S3 Secret Key:") || "";
@@ -281,13 +221,14 @@ class App extends Vue {
 
     this.startS3Client();
 
+    // Load schema + uischema
     /* @ts-ignore */
     const schema: SchemaDefinition = await import(
-      `@/schemas/hydroshare/schema.json`
+      /* @vite-ignore */ "@/schemas/hydroshare/schema.json"
     );
 
     const { default: uischema } = await import(
-      `@/schemas/hydroshare/uischema.json`
+      /* @vite-ignore */ "@/schemas/hydroshare/uischema.json"
     );
 
     const defaults = {
@@ -310,7 +251,6 @@ class App extends Vue {
   async updateMetadata() {
     this.fetchingMetadata = true;
     try {
-      // Use resourceId from prop or fallback to example
       const resourceId = this.resourceId;
       const response = await fetch(
         `https://beta.hydroshare.org/hsapi/resource/s3/${resourceId}`,
@@ -319,7 +259,7 @@ class App extends Vue {
           headers: {
             "Content-Type": "application/json",
           },
-        },
+        }
       );
       this.s3Info = await response.json();
 
@@ -327,7 +267,7 @@ class App extends Vue {
 
       console.log(`Fetching metadata from S3: ${this.s3Info.bucket}/${key}`);
       const result = await this.s3Client.send(
-        new GetObjectCommand({ Bucket: this.s3Info.bucket, Key: key }),
+        new GetObjectCommand({ Bucket: this.s3Info.bucket, Key: key })
       );
       const bodyContents = await result.Body?.transformToString();
 
@@ -342,12 +282,12 @@ class App extends Vue {
 
       try {
         const initialStructure = await this.readRootFolder(
-          `${resourceId}/data/contents/`,
+          `${resourceId}/data/contents/`
         );
         // @ts-expect-error The key property is generated when the component is initialized
         this.rootDirectory.children = initialStructure;
         this.isLoadingFiles = false;
-      } catch (e) {
+      } catch (_e) {
         Notifications.toast({
           message: "Failed to load existing files.",
           type: "error",
@@ -392,7 +332,7 @@ class App extends Vue {
       const content = JSON.stringify(
         { name: this.data.name, description: this.data.description },
         null,
-        2,
+        2
       );
       const command = new PutObjectCommand({
         Bucket: this.s3Info.bucket,
@@ -421,70 +361,84 @@ class App extends Vue {
     }
   }
 
-  async readRootFolder(path: string): Promise<Partial<IFile | IFolder>[]> {
-    return this._readFolderRecursive(path);
+  async readRootFolder(
+    path: string,
+    retries = 5
+  ): Promise<Partial<IFile | IFolder>[]> {
+    let attempt = 0;
+    while (attempt < retries) {
+      try {
+        const result = await this._readFolderRecursive(path);
+        if (result.length === 0 && attempt < retries - 1) {
+          console.warn(`Empty folder listing for ${path}, retrying (${attempt + 1}/${retries})`);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          attempt++;
+          continue;
+        }
+        return result;
+      } catch (error) {
+        console.warn(`Error reading folder ${path}, retrying (${attempt + 1}/${retries}):`, error);
+        if (attempt === retries - 1) {
+          throw error;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        attempt++;
+      }
+    }
+    return [];
   }
 
-  private async _readFolderRecursive(
-    path: string,
-  ): Promise<Partial<IFile | IFolder>[]> {
+  private async _readFolderRecursive(path: string): Promise<Partial<IFile | IFolder>[]> {
+    const HIDE_EMPTY_FOLDERS = true;
     try {
-      const command = new ListObjectsV2Command({
+      const listCmd = new ListObjectsV2Command({
         Bucket: this.s3Info.bucket,
         Prefix: path,
         Delimiter: "/",
       });
-      const s3Response = await this.s3Client.send(command);
+      const s3Response = await this.s3Client.send(listCmd);
 
-      let files: Partial<IFile>[] = [];
+      const files: Partial<IFile>[] = (s3Response.Contents || [])
+        .filter(obj => {
+          const name = (obj.Key || "").replace(path, "");
+          return name !== "" && !name.endsWith("/");
+        })
+        .map(obj => ({
+          name: (obj.Key || "").replace(path, ""),
+          isUploaded: true,
+          file: null,
+          uploadedSize: obj.Size,
+        }));
+
       let folders: Partial<IFolder>[] = [];
+      if (s3Response.CommonPrefixes && s3Response.CommonPrefixes.length) {
+        const folderPromises = s3Response.CommonPrefixes.map(async (p: CommonPrefix) => {
+          const folderKey = p.Prefix || "";
+          const name = folderKey.replace(path, "").replace(/\/$/, "");
 
-      // FILES
-      if (s3Response.Contents) {
-        files = s3Response.Contents.map((f: _Object, _index: number) => {
-          return {
-            name: f.Key?.replace(path, ""),
-            isUploaded: true,
-            file: null,
-            uploadedSize: f.Size,
-          };
+          if (HIDE_EMPTY_FOLDERS) {
+            const probe = await this.s3Client.send(new ListObjectsV2Command({
+              Bucket: this.s3Info.bucket,
+              Prefix: folderKey,
+              MaxKeys: 2,
+            }));
+            const hasNonMarker = !!(probe.Contents && probe.Contents.some(o => o.Key && o.Key !== folderKey));
+            if (!hasNonMarker) return null; // skip truly empty
+          }
+
+          const children = await this._readFolderRecursive(`${path}${name}/`);
+          return { name, children, isUploaded: true } as Partial<IFolder>;
         });
-      }
 
-      // FOLDERS
-      if (s3Response.CommonPrefixes) {
-        folders = s3Response.CommonPrefixes.map(
-          (p: CommonPrefix, _index: number) => {
-            const folderKey = p.Prefix;
-            const name = folderKey?.replace(path, "").replace(/\/$/, "");
-            return {
-              name: name,
-              children: [],
-              isUploaded: true,
-            };
-          },
-        );
-      }
-
-      if (folders.length) {
-        const readSubfolderPromises: Promise<Partial<IFile | IFolder>[]>[] =
-          folders.map((f) => {
-            return this._readFolderRecursive(`${path}${f.name}/`);
-          });
-        const responses = await Promise.all(readSubfolderPromises);
-
-        folders.forEach((f, i) => {
-          // @ts-expect-error Doesn't matter because we just need the initial structure to load the component. The keys will be generated then.
-          f.children = responses[i] || [];
-        });
+        const resolved = await Promise.all(folderPromises);
+        folders = resolved.filter(Boolean) as Partial<IFolder>[];
       }
 
       return [...folders, ...files];
-    } catch (e: any) {
+    } catch (e) {
       console.log(e);
+      return [];
     }
-
-    return [];
   }
 
   async uploadFiles(files: IFile[]): Promise<boolean[]> {
@@ -499,75 +453,59 @@ class App extends Vue {
     return [];
   }
 
-  private async _uploadFiles(
-    itemsToUpload: (IFile | IFolder)[],
-  ): Promise<boolean[]> {
-    itemsToUpload.map((i) => (i.isDisabled = true));
+  private async _uploadFiles(itemsToUpload: (IFile | IFolder)[]): Promise<boolean[]> {
+    itemsToUpload.forEach((i) => (i.isDisabled = true));
     const filesToUpload = itemsToUpload.filter((i) =>
-      Object.prototype.hasOwnProperty.call(i, "file"),
+      Object.prototype.hasOwnProperty.call(i, "file")
     ) as IFile[];
     const foldersToUpload = itemsToUpload.filter((i) =>
-      Object.prototype.hasOwnProperty.call(i, "children"),
+      Object.prototype.hasOwnProperty.call(i, "children")
     ) as IFolder[];
 
     const basePrefix = `${this.resourceId}/data/contents/${this.currentPath}`;
 
-    // TODO: compute folder paths
-    let folderPaths = foldersToUpload
-      .map((f) => f.path)
-      .filter((f) => !!f) as string[];
+    // compute folder paths
+    let folderPaths = foldersToUpload.map((f) => f.path).filter((f) => !!f) as string[];
 
-    // Get unique paths
+    // unique + sort deeper first
     folderPaths = [...new Set(folderPaths)].sort(
-      (a, b) => b.split("/").length - a.split("/").length,
+      (a, b) => b.split("/").length - a.split("/").length
     );
 
-    // HydroShare can only create multiple folders at a time if the parent folder already exists
-    // So we traverse the tree by depth and create folders in each depth at a time
     const that = this;
-    let responses;
-    itemsToUpload.map((i) => (i.isDisabled = false));
+    let responses: boolean[] = [];
+    itemsToUpload.forEach((i) => (i.isDisabled = false));
 
     if (folderPaths.length) {
-      // Create folders
       responses = await _createFoldersByDepth(folderPaths, 1);
     } else {
-      // No folders to create. Just upload files directly.
       responses = await _uploadFiles();
     }
 
-    async function _createFoldersByDepth(
-      paths: string[],
-      depth: number,
-    ): Promise<boolean[]> {
+    async function _createFoldersByDepth(paths: string[], depth: number): Promise<boolean[]> {
       const depthPaths = paths.filter((p) => p.split("/").length === depth);
 
       const folderCreatePromises = depthPaths.map((path: string) => {
-        const basePrefix = `${that.resourceId}/data/contents/`;
+        const rootPrefix = `${that.resourceId}/data/contents/`;
 
-        // TODO: how to create an empty folder
         return that.s3Client.send(
           new PutObjectCommand({
             Bucket: that.s3Info.bucket,
-            Key: `${basePrefix}${path}`,
+            Key: `${rootPrefix}${path}`,
             Body: "",
             ContentType: "application/x-directory",
-          }),
+          })
         );
       });
 
       await Promise.allSettled(folderCreatePromises);
       const remaining = paths.filter((p) => p.split("/").length > depth);
 
-      return remaining.length
-        ? _createFoldersByDepth(remaining, depth + 1)
-        : _uploadFiles(); // Finished creating folders. Files can be added.
+      return remaining.length ? _createFoldersByDepth(remaining, depth + 1) : _uploadFiles();
     }
 
     async function _uploadFiles(): Promise<boolean[]> {
       const fileUploadPromises = filesToUpload.map(async (file: IFile) => {
-        const form = new window.FormData();
-        if (file.file) form.append("file", file.file, file.name);
         const path = that.fileExplorer.getPathString(file);
         try {
           const key = `${basePrefix}${path}`;
@@ -578,30 +516,22 @@ class App extends Vue {
               Key: key,
               Body: arrayBuffer,
               ContentType: file.file?.type || "application/octet-stream",
-            }),
+            })
           );
           return true;
-        } catch (e) {
+        } catch (_e) {
           return false;
         }
       });
 
-      const response: PromiseSettledResult<any>[] =
-        await Promise.allSettled(fileUploadPromises);
+      const response = await Promise.allSettled(fileUploadPromises);
 
       filesToUpload.forEach((f, index) => {
         if (response[index].status === "fulfilled") {
           f.isUploaded = true;
-        } else {
-          // Uplaod failed for this file
-          response[index].status = "rejected";
-          // f.parent.children = f.parent.children.filter(
-          //   file => file.name !== f.name,
-          // )
         }
       });
 
-      // TODO: figure out how to identify that fail was due to a name that already exists
       if (response.some((r) => r.status === "rejected")) {
         Notifications.toast({
           message: "Some of your files failed to upload",
@@ -617,11 +547,11 @@ class App extends Vue {
 
   async onFileDownload(items: (IFile | IFolder)[]) {
     try {
-      for (let item of items) {
+      for (const item of items) {
         const basePrefix = `${this.resourceId}/data/contents/`;
         const key = `${basePrefix}${item.path}`;
         const result = await this.s3Client.send(
-          new GetObjectCommand({ Bucket: this.s3Info.bucket, Key: key }),
+          new GetObjectCommand({ Bucket: this.s3Info.bucket, Key: key })
         );
         const blob = await result.Body?.transformToByteArray();
         if (blob) {
@@ -651,8 +581,11 @@ class App extends Vue {
   }
 
   async deleteFileOrFolder(item: IFile | IFolder): Promise<boolean> {
-    const path = this.fileExplorer.getPathString(item);
+    let path = this.fileExplorer.getPathString(item);
     const isFolder = Object.prototype.hasOwnProperty.call(item, "children");
+    if (isFolder && !path.endsWith("/")) {
+      path += "/";
+    }
     const basePrefix = `${this.resourceId}/data/contents/`;
     try {
       if (isFolder) {
@@ -662,7 +595,7 @@ class App extends Vue {
         do {
           const listCommand = new ListObjectsV2Command({
             Bucket: this.s3Info.bucket,
-            Prefix: path,
+            Prefix: `${basePrefix}${path}`,
             ContinuationToken: continuationToken,
           });
           const listResponse = await this.s3Client.send(listCommand);
@@ -679,14 +612,16 @@ class App extends Vue {
           continuationToken = listResponse.NextContinuationToken;
         } while (continuationToken);
 
-        if (!objectsToDelete.some((obj) => obj.Key === path)) {
-          objectsToDelete.push({ Key: path });
-          console.log(`Added top-level folder marker: ${path}`);
+        // Add the folder marker key if not already included
+        const folderMarkerKey = `${basePrefix}${path}`;
+        if (!objectsToDelete.some((obj) => obj.Key === folderMarkerKey)) {
+          objectsToDelete.push({ Key: folderMarkerKey });
+          console.log(`Added top-level folder marker: ${folderMarkerKey}`);
         }
 
         const batchSize = 1000;
         if (objectsToDelete.length === 0) {
-          console.log(`No objects found to delete for folder: ${item.key}`);
+          console.log(`No objects found to delete for folder: ${path}`);
         } else {
           for (let i = 0; i < objectsToDelete.length; i += batchSize) {
             const batch = objectsToDelete.slice(i, i + batchSize);
@@ -694,15 +629,16 @@ class App extends Vue {
               new DeleteObjectsCommand({
                 Bucket: this.s3Info.bucket,
                 Delete: { Objects: batch },
-              }),
+              })
             );
             console.log(
               `Deleted batch of ${batch.length} objects:`,
-              batch.map((obj) => obj.Key),
+              batch.map((obj) => obj.Key)
             );
           }
         }
 
+        // Verify deletion
         const verifyCommand = new ListObjectsV2Command({
           Bucket: this.s3Info.bucket,
           Prefix: `${basePrefix}${path}`,
@@ -710,13 +646,14 @@ class App extends Vue {
         const verifyResponse = await this.s3Client.send(verifyCommand);
         if (verifyResponse.Contents && verifyResponse.Contents.length > 0) {
           console.warn(
-            `Objects still exist after deletion for ${item.key}:`,
-            verifyResponse.Contents.map((obj) => obj.Key),
+            `Objects still exist after deletion for ${path}:`,
+            verifyResponse.Contents.map((obj) => obj.Key)
           );
         } else {
-          console.log(`Verified: No objects remain under ${item.key}`);
+          console.log(`Verified: No objects remain under ${path}`);
         }
 
+        // Check parent listing for CommonPrefixes
         const listParentCommand = new ListObjectsV2Command({
           Bucket: this.s3Info.bucket,
           Prefix: `${this.resourceId}/data/contents/`,
@@ -726,21 +663,19 @@ class App extends Vue {
         if (
           parentResponse.CommonPrefixes &&
           parentResponse.CommonPrefixes.some(
-            (p) => p.Prefix === `${basePrefix}${path}`,
+            (p) => p.Prefix === `${basePrefix}${path}`
           )
         ) {
-          console.warn(
-            `Folder ${item.key} still appears in CommonPrefixes after deletion`,
-          );
+          console.warn(`Folder ${path} still appears in CommonPrefixes after deletion`);
         } else {
-          console.log(`Verified: ${item.key} no longer in CommonPrefixes`);
+          console.log(`Verified: ${path} no longer in CommonPrefixes`);
         }
       } else {
         await this.s3Client.send(
           new DeleteObjectsCommand({
             Bucket: this.s3Info.bucket,
-            Delete: { Objects: [{ Key: `${basePrefix}${path}` }] }, // d7b526e24f7e449098b428ae9363f514/data/contents/vite.config.ts
-          }),
+            Delete: { Objects: [{ Key: `${basePrefix}${path}` }] },
+          })
         );
         console.log(`Deleted file: ${basePrefix}${path}`);
       }
@@ -762,111 +697,201 @@ class App extends Vue {
     }
   }
 
-async renameFileOrFolder(item: FileItem, newName: string): Promise<void> {
-  const isFolder = item.isFolder;
-  const oldPath = this.fileExplorer.getPathString(item);
-  const parentPrefix = oldPath.split('/').slice(0, -1).join('/');
-  const newPath = parentPrefix ? `${parentPrefix}/${newName}` : newName;
-  const oldKey = `${this.s3Info.prefix}${oldPath}${isFolder ? '/' : ''}`;
-  const newKey = `${this.s3Info.prefix}${newPath}${isFolder ? '/' : ''}`;
+  async renameFileOrFolder(item: IFile | IFolder, newNameOrPath: string): Promise<void> {
+    const isFolder = Object.prototype.hasOwnProperty.call(item, "children");
 
-  try {
-    if (isFolder) {
-      let continuationToken: string | undefined;
-      const objectsToCopy: { source: string; destination: string }[] = [];
+    // --- in-scope utils ---
+    const normalizeRel = (p: string) => {
+      let s = (p || "").trim();
+      s = s.replace(/^\/+/, "").replace(/\/{2,}/g, "/").replace(/^\.\/+/, "").replace(/\/+$/g, "");
+      const parts: string[] = [];
+      s.split("/").forEach(seg => { if (!seg || seg === ".") return; if (seg === "..") parts.pop(); else parts.push(seg); });
+      return parts.join("/");
+    };
+    const asFolder = (p: string) => (p.endsWith("/") ? p : p + "/");
+    const splitParentBase = (rel: string, folder: boolean) => {
+      const clean = normalizeRel(folder ? rel.replace(/\/+$/, "") : rel);
+      const parts = clean.split("/").filter(Boolean);
+      const base = parts.pop() || "";
+      const parent = parts.join("/");
+      return { parent, base };
+    };
+    const sameRel = (a: string, b: string) =>
+      normalizeRel(a.replace(/\/+$/, "")) === normalizeRel(b.replace(/\/+$/, ""));
+    const encodeCopySourceKey = (key: string) => encodeURIComponent(key).replace(/%2F/g, "/");
 
-      do {
-        const listCommand = new ListObjectsV2Command({
-          Bucket: this.s3Info.bucket,
-          Prefix: oldKey,
-          ContinuationToken: continuationToken,
-        });
-        const listResponse = await this.s3Client.send(listCommand);
+    // --- resolve old/new relative paths ---
+    let oldRel = this.fileExplorer.getPathString(item);
+    if (isFolder && !oldRel.endsWith("/")) oldRel += "/";
+    const { parent: oldParent, base: oldBase } = splitParentBase(oldRel, isFolder);
 
-        if (listResponse.Contents) {
-          for (const obj of listResponse.Contents) {
-            if (!obj.Key) continue;
-            const destinationKey = obj.Key.replace(oldKey, newKey);
-            objectsToCopy.push({
-              source: obj.Key,
-              destination: destinationKey,
-            });
-          }
-        }
-        continuationToken = listResponse.NextContinuationToken;
-      } while (continuationToken);
+    const raw = (newNameOrPath || "").trim();
+    const isRootExplicit = raw === "/" || raw === "";
+    const hasSlash = raw.includes("/");
 
-      for (const { source, destination } of objectsToCopy) {
-        await this.s3Client.send(new CopyObjectCommand({
-          Bucket: this.s3Info.bucket,
-          CopySource: `${this.s3Info.bucket}/${source}`,
-          Key: destination,
-        }));
+    let newRel: string;
+
+    if (isRootExplicit) {
+      // explicit move to root
+      newRel = isFolder ? asFolder(oldBase) : oldBase;
+    } else if (!hasSlash) {
+      // **Key change**:
+      // If no slash AND same basename AND item has a parent -> interpret as MOVE TO ROOT
+      if (oldParent && raw === oldBase) {
+        newRel = isFolder ? asFolder(oldBase) : oldBase; // move to root, keep name
+      } else {
+        // true rename: keep same parent
+        newRel = oldParent ? `${oldParent}/${raw}` : raw;
+        if (isFolder) newRel = asFolder(newRel);
       }
     } else {
-      const getResult = await this.s3Client.send(new GetObjectCommand({
-        Bucket: this.s3Info.bucket,
-        Key: oldKey,
-      }));
-      const body = await getResult.Body?.transformToByteArray();
-      if (!body) throw new Error("Empty file body during rename");
-
-      await this.s3Client.send(new PutObjectCommand({
-        Bucket: this.s3Info.bucket,
-        Key: newKey,
-        Body: body,
-        ContentType: getResult.ContentType,
-      }));
-    }
-
-    // Try deleting folder marker explicitly, but ignore if not found
-    if (isFolder && oldKey !== newKey) {
-      try {
-        await this.s3Client.send(new DeleteObjectCommand({
-          Bucket: this.s3Info.bucket,
-          Key: oldKey,
-        }));
-      } catch (err: any) {
-        if (err.name !== 'NoSuchKey') throw err;
+      // path includes "/": could be "drop ON folder" or full path
+      let candidate = normalizeRel(raw);
+      // If it ends with "/" or a folder marker exists, move INTO it and keep basename
+      let treatAsFolder = raw.endsWith("/");
+      if (!treatAsFolder) {
+        try {
+          await this.s3Client.send(new HeadObjectCommand({
+            Bucket: this.s3Info.bucket,
+            Key: `${this.s3Info.prefix}${asFolder(candidate)}`,
+          }));
+          treatAsFolder = true;
+        } catch { /* not a marker */ }
       }
+      newRel = treatAsFolder
+        ? (isFolder ? asFolder(`${candidate}/${oldBase}`) : `${candidate}/${oldBase}`)
+        : (isFolder ? asFolder(candidate) : candidate);
     }
 
-    // Always delete source files
-    let continuationToken;
-    do {
-      const listCommand = new ListObjectsV2Command({
-        Bucket: this.s3Info.bucket,
-        Prefix: oldKey,
-        ContinuationToken: continuationToken,
-      });
-      const listResponse = await this.s3Client.send(listCommand);
-      const objectsToDelete = (listResponse.Contents || []).map(obj => ({ Key: obj.Key! }));
-      if (objectsToDelete.length) {
+    const oldKey = `${this.s3Info.prefix}${oldRel}`;
+    const newKey = `${this.s3Info.prefix}${newRel}`;
+
+    // self / no-op guard
+    if (sameRel(oldRel, newRel)) {
+      Notifications.toast({ title: "No change", message: "Item is already there.", type: "info" });
+      return;
+    }
+
+    // --- do the move/rename safely ---
+    try {
+      // ensure destination parent for files
+      if (!isFolder) {
+        const { parent: destParent } = splitParentBase(newRel, false);
+        if (destParent) {
+          const destFolderKey = `${this.s3Info.prefix}${asFolder(destParent)}`;
+          try {
+            await this.s3Client.send(new HeadObjectCommand({ Bucket: this.s3Info.bucket, Key: destFolderKey }));
+          } catch (err: any) {
+            if (err?.name === "NotFound" || err?.$metadata?.httpStatusCode === 404) {
+              await this.s3Client.send(new PutObjectCommand({
+                Bucket: this.s3Info.bucket, Key: destFolderKey, Body: "", ContentType: "application/x-directory",
+              }));
+            } else { throw err; }
+          }
+        }
+      }
+
+      // copy (skip copy-to-self; encode CopySource)
+      if (isFolder) {
+        let token: string | undefined;
+        const jobs: Promise<any>[] = [];
+        do {
+          const list = await this.s3Client.send(new ListObjectsV2Command({
+            Bucket: this.s3Info.bucket, Prefix: oldKey, ContinuationToken: token,
+          }));
+          (list.Contents || []).forEach(obj => {
+            if (!obj.Key) return;
+            const rel = obj.Key.replace(oldKey, "");
+            const dest = `${newKey}${rel}`;
+            if (dest === obj.Key) return; // prevent illegal self-copy
+            jobs.push(this.s3Client.send(new CopyObjectCommand({
+              Bucket: this.s3Info.bucket,
+              CopySource: `${this.s3Info.bucket}/${encodeCopySourceKey(obj.Key)}`,
+              Key: dest,
+            })));
+          });
+          token = list.NextContinuationToken;
+        } while (token);
+        await Promise.allSettled(jobs);
+      } else {
+        if (oldKey !== newKey) {
+          await this.s3Client.send(new CopyObjectCommand({
+            Bucket: this.s3Info.bucket,
+            CopySource: `${this.s3Info.bucket}/${encodeCopySourceKey(oldKey)}`,
+            Key: newKey,
+          }));
+        }
+      }
+
+      // verify destination
+      if (isFolder) {
+        const verify = await this.s3Client.send(new ListObjectsV2Command({
+          Bucket: this.s3Info.bucket, Prefix: newKey, MaxKeys: 1,
+        }));
+        if (!verify.Contents || verify.Contents.length === 0) throw new Error(`Verification failed: nothing at ${newKey}`);
+      } else {
+        await this.s3Client.send(new HeadObjectCommand({ Bucket: this.s3Info.bucket, Key: newKey }));
+      }
+
+      // delete originals (and clean ancestor markers)
+      const cleanupEmptyAncestors = async (startParentRel: string) => {
+        let cur = startParentRel;
+        while (cur) {
+          const markerKey = `${this.s3Info.prefix}${asFolder(cur)}`;
+          const probe = await this.s3Client.send(new ListObjectsV2Command({
+            Bucket: this.s3Info.bucket, Prefix: markerKey, MaxKeys: 2
+          }));
+          const hasNonMarker = !!(probe.Contents && probe.Contents.some(o => o.Key && o.Key !== markerKey));
+          if (!hasNonMarker) {
+            try { await this.s3Client.send(new DeleteObjectCommand({ Bucket: this.s3Info.bucket, Key: markerKey })); }
+            catch { }
+            cur = cur.split("/").slice(0, -1).join("/");
+          } else break;
+        }
+      };
+
+      if (isFolder) {
+        let token: string | undefined;
+        do {
+          const list = await this.s3Client.send(new ListObjectsV2Command({
+            Bucket: this.s3Info.bucket, Prefix: oldKey, ContinuationToken: token,
+          }));
+          const objs = (list.Contents || []).map(o => ({ Key: o.Key! }))
+            .filter(o => !o.Key!.startsWith(newKey));
+          if (objs.length) {
+            await this.s3Client.send(new DeleteObjectsCommand({
+              Bucket: this.s3Info.bucket, Delete: { Objects: objs },
+            }));
+          }
+          token = list.NextContinuationToken;
+        } while (token);
+        try { await this.s3Client.send(new DeleteObjectCommand({ Bucket: this.s3Info.bucket, Key: oldKey })); } catch { }
+        if (oldParent) await cleanupEmptyAncestors(oldParent);
+      } else {
         await this.s3Client.send(new DeleteObjectsCommand({
-          Bucket: this.s3Info.bucket,
-          Delete: { Objects: objectsToDelete },
+          Bucket: this.s3Info.bucket, Delete: { Objects: [{ Key: oldKey }] },
         }));
+        if (oldParent) await cleanupEmptyAncestors(oldParent);
       }
-      continuationToken = listResponse.NextContinuationToken;
-    } while (continuationToken);
 
-    Notifications.toast({
-      title: 'Success',
-      message: `${isFolder ? 'Folder' : 'File'} renamed successfully!`,
-      type: 'success',
-    });
+      // refresh
+      const root = `${this.resourceId}/data/contents/`;
+      this.rootDirectory.children = await this.readRootFolder(root);
 
-    const path = `${this.resourceId}/data/contents/`;
-    this.rootDirectory.children = await this.readRootFolder(path);
-  } catch (error) {
-    console.error('Rename failed:', error);
-    Notifications.toast({
-      title: 'Error',
-      message: `Failed to rename ${isFolder ? 'folder' : 'file'}: ${error.message}`,
-      type: 'error',
-    });
+      Notifications.toast({
+        title: "Success",
+        message: `${hasSlash || isRootExplicit ? "Moved" : "Renamed"} ${isFolder ? "folder" : "file"} successfully!`,
+        type: "success",
+      });
+    } catch (error: any) {
+      console.error("Rename/move failed:", error);
+      Notifications.toast({
+        title: "Error",
+        message: `Failed to ${hasSlash || isRootExplicit ? "move" : "rename"} ${isFolder ? "folder" : "file"}: ${error?.message || error}`,
+        type: "error",
+      });
+    }
   }
-}
 
 
 }
