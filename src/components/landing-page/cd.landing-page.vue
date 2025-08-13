@@ -388,58 +388,59 @@ class App extends Vue {
     return [];
   }
 
-  private async _readFolderRecursive(path: string): Promise<Partial<IFile | IFolder>[]> {
-    const HIDE_EMPTY_FOLDERS = true;
-    try {
-      const listCmd = new ListObjectsV2Command({
-        Bucket: this.s3Info.bucket,
-        Prefix: path,
-        Delimiter: "/",
+private async _readFolderRecursive(path: string): Promise<Partial<IFile | IFolder>[]> {
+  const HIDE_EMPTY_FOLDERS = true;
+  try {
+    const listCmd = new ListObjectsV2Command({
+      Bucket: this.s3Info.bucket,
+      Prefix: path,
+      Delimiter: "/",
+    });
+    const s3Response = await this.s3Client.send(listCmd);
+
+    // Filter out folder markers (objects ending with "/") from files
+    const files: Partial<IFile>[] = (s3Response.Contents || [])
+      .filter(obj => {
+        const name = (obj.Key || "").replace(path, "");
+        return name !== "" && !name.endsWith("/"); // Exclude folder markers
+      })
+      .map(obj => ({
+        name: (obj.Key || "").replace(path, ""),
+        isUploaded: true,
+        file: null,
+        uploadedSize: obj.Size,
+      }));
+
+    let folders: Partial<IFolder>[] = [];
+    if (s3Response.CommonPrefixes && s3Response.CommonPrefixes.length) {
+      const folderPromises = s3Response.CommonPrefixes.map(async (p: CommonPrefix) => {
+        const folderKey = p.Prefix || "";
+        const name = folderKey.replace(path, "").replace(/\/$/, "");
+
+        if (HIDE_EMPTY_FOLDERS) {
+          const probe = await this.s3Client.send(new ListObjectsV2Command({
+            Bucket: this.s3Info.bucket,
+            Prefix: folderKey,
+            MaxKeys: 2,
+          }));
+          const hasNonMarker = !!(probe.Contents && probe.Contents.some(o => o.Key && o.Key !== folderKey));
+          if (!hasNonMarker) return null; // Skip truly empty folders
+        }
+
+        const children = await this._readFolderRecursive(`${path}${name}/`);
+        return { name, children, isUploaded: true } as Partial<IFolder>;
       });
-      const s3Response = await this.s3Client.send(listCmd);
 
-      const files: Partial<IFile>[] = (s3Response.Contents || [])
-        .filter(obj => {
-          const name = (obj.Key || "").replace(path, "");
-          return name !== "" && !name.endsWith("/");
-        })
-        .map(obj => ({
-          name: (obj.Key || "").replace(path, ""),
-          isUploaded: true,
-          file: null,
-          uploadedSize: obj.Size,
-        }));
-
-      let folders: Partial<IFolder>[] = [];
-      if (s3Response.CommonPrefixes && s3Response.CommonPrefixes.length) {
-        const folderPromises = s3Response.CommonPrefixes.map(async (p: CommonPrefix) => {
-          const folderKey = p.Prefix || "";
-          const name = folderKey.replace(path, "").replace(/\/$/, "");
-
-          if (HIDE_EMPTY_FOLDERS) {
-            const probe = await this.s3Client.send(new ListObjectsV2Command({
-              Bucket: this.s3Info.bucket,
-              Prefix: folderKey,
-              MaxKeys: 2,
-            }));
-            const hasNonMarker = !!(probe.Contents && probe.Contents.some(o => o.Key && o.Key !== folderKey));
-            if (!hasNonMarker) return null; // skip truly empty
-          }
-
-          const children = await this._readFolderRecursive(`${path}${name}/`);
-          return { name, children, isUploaded: true } as Partial<IFolder>;
-        });
-
-        const resolved = await Promise.all(folderPromises);
-        folders = resolved.filter(Boolean) as Partial<IFolder>[];
-      }
-
-      return [...folders, ...files];
-    } catch (e) {
-      console.log(e);
-      return [];
+      const resolved = await Promise.all(folderPromises);
+      folders = resolved.filter(Boolean) as Partial<IFolder>[];
     }
+
+    return [...folders, ...files];
+  } catch (e) {
+    console.log(e);
+    return [];
   }
+}
 
   async uploadFiles(files: IFile[]): Promise<boolean[]> {
     if (files.length) {
@@ -482,28 +483,28 @@ class App extends Vue {
       responses = await _uploadFiles();
     }
 
-    async function _createFoldersByDepth(paths: string[], depth: number): Promise<boolean[]> {
-      const depthPaths = paths.filter((p) => p.split("/").length === depth);
+async function _createFoldersByDepth(paths: string[], depth: number): Promise<boolean[]> {
+  const depthPaths = paths.filter((p) => p.split("/").length === depth);
 
-      const folderCreatePromises = depthPaths.map((path: string) => {
-        const rootPrefix = `${that.resourceId}/data/contents/`;
+  const folderCreatePromises = depthPaths.map((path: string) => {
+    const rootPrefix = `${that.resourceId}/data/contents/`;
+    const folderKey = `${rootPrefix}${path}/`; // Ensure trailing slash for folder marker
 
-        return that.s3Client.send(
-          new PutObjectCommand({
-            Bucket: that.s3Info.bucket,
-            Key: `${rootPrefix}${path}`,
-            Body: "",
-            ContentType: "application/x-directory",
-          })
-        );
-      });
+    return that.s3Client.send(
+      new PutObjectCommand({
+        Bucket: that.s3Info.bucket,
+        Key: folderKey,
+        Body: "",
+        ContentType: "application/x-directory",
+      })
+    );
+  });
 
-      await Promise.allSettled(folderCreatePromises);
-      const remaining = paths.filter((p) => p.split("/").length > depth);
+  await Promise.allSettled(folderCreatePromises);
+  const remaining = paths.filter((p) => p.split("/").length > depth);
 
-      return remaining.length ? _createFoldersByDepth(remaining, depth + 1) : _uploadFiles();
-    }
-
+  return remaining.length ? _createFoldersByDepth(remaining, depth + 1) : _uploadFiles();
+}
     async function _uploadFiles(): Promise<boolean[]> {
       const fileUploadPromises = filesToUpload.map(async (file: IFile) => {
         const path = that.fileExplorer.getPathString(file);
