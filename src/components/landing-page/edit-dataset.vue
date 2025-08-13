@@ -1,54 +1,138 @@
 <template>
   <v-container>
-    <template v-if="config.isViewMode">
-      <div v-if="!isLoadingFiles && !fetchingMetadata" class="d-flex justify-end mb-5">
-        <v-btn color="primary" prepend-icon="mdi-pen" variant="outlined" @click="config.isViewMode = false">
-          Edit
-        </v-btn>
-      </div>
-      <v-skeleton-loader v-else type="button" class="justify-end"></v-skeleton-loader>
-    </template>
-
-    <cz-file-explorer v-if="!isLoadingFiles" ref="fileExplorer" id="cz-folder-structure" v-model:valid-items="toUpload"
-      :root-directory="rootDirectory" :has-folders="fileExplorerConfig.hasFolders" :is-read-only="config.isViewMode"
-      :has-file-metadata="() => false" :folder-name-regex="folderNameRegex" :canDownloadItem="() => true"
-      :upload="!config.isViewMode ? uploadFiles : undefined"
-      :delete-file-or-folder="!config.isViewMode ? deleteFileOrFolder : undefined"
-      :rename-file-or-folder="!config.isViewMode ? renameFileOrFolder : undefined" @download="onFileDownload($event)">
-      <template #prepend>
-        <span />
-      </template>
-    </cz-file-explorer>
-    <v-skeleton-loader v-else type="card"></v-skeleton-loader>
-
-    <v-skeleton-loader v-if="fetchingMetadata" type="card"></v-skeleton-loader>
-    <cz-form v-else :schema="schema" :uischema="uischema" v-model="data" :errors.sync="errors"
-      @update:errors="onUpdateErrors" v-model:is-valid="isValid" :config="config" ref="form" />
-
-    <div class="d-flex" v-if="!config.isViewMode">
+    <div class="d-flex gap-1">
+      <div class="text-h5">Edit Resource</div>
       <v-spacer></v-spacer>
-      <v-menu :disabled="!errors.length" open-on-hover bottom left offset-y transition="fade">
-        <template #activator="{ props }">
-          <div v-bind="props" class="d-flex form-controls flex-column flex-sm-row">
-            <v-badge :model-value="!isValid" bordered color="error" icon="mdi-exclamation-thick" overlap>
-              <v-btn color="primary" variant="elevated" @click="submit"
-                :disabled="config.isViewMode || !isValid || isSubmitting">
-                {{ isSubmitting ? "Saving Changes..." : "Save Changes" }}
-              </v-btn>
-            </v-badge>
-          </div>
-        </template>
-        <v-card>
-          <v-card-text>
-            <ul class="text-subtitle-1 ml-4">
-              <li v-for="(error, index) of errors" :key="index">
-                <b>{{ error.title }}</b> {{ error.message }}.
-              </li>
-            </ul>
-          </v-card-text>
-        </v-card>
-      </v-menu>
+      <template v-if="!isLoadingFiles && !isFetchingMetadata">
+        <v-menu width="500" :close-on-content-click="false">
+          <template v-slot:activator="{ props }">
+            <v-btn
+              size="small"
+              v-bind="props"
+              color="primary"
+              prepend-icon="mdi-cog"
+              variant="plain"
+              >Settings</v-btn
+            >
+          </template>
+          <v-card>
+            <v-card-title
+              class="bg-grey-lighten-3 text-body-1 text-medium-emphasis"
+              >Settings</v-card-title
+            >
+            <v-divider></v-divider>
+            <v-card-text flat>
+              <s3-form
+                :prefix="s3Info.prefix"
+                :bucket="s3Info.bucket"
+                :s3-host="s3Host"
+                :hydroshare-host="hydroshareHost"
+                @apply-changes="onS3FormUpdate"
+                @restore-defaults="onRestoreDefaults"
+              ></s3-form>
+            </v-card-text>
+          </v-card>
+        </v-menu>
+      </template>
     </div>
+    <v-divider class="mb-6"></v-divider>
+
+    <template v-if="wasLoaded">
+      <cz-file-explorer
+        v-if="!isLoadingFiles"
+        ref="fileExplorer"
+        id="cz-folder-structure"
+        v-model:valid-items="toUpload"
+        :root-directory="rootDirectory"
+        :has-folders="fileExplorerConfig.hasFolders"
+        :is-read-only="false"
+        :has-file-metadata="() => false"
+        :folder-name-regex="folderNameRegex"
+        :canDownloadItem="() => true"
+        :upload="uploadFiles"
+        :delete-file-or-folder="deleteFileOrFolder"
+        @download="onFileDownload($event, resourceId, s3Client, s3Info.bucket)"
+      >
+        <template #prepend>
+          <span />
+        </template>
+      </cz-file-explorer>
+      <v-skeleton-loader class="mb-12" v-else type="card"></v-skeleton-loader>
+
+      <v-skeleton-loader
+        v-if="isFetchingMetadata"
+        type="card"
+      ></v-skeleton-loader>
+      <cz-form
+        v-else
+        :schema="schema"
+        :uischema="uischema"
+        v-model="data"
+        :errors.sync="errors"
+        @update:errors="onUpdateErrors"
+        v-model:is-valid="isValid"
+        :config="config"
+        ref="form"
+      />
+
+      <div v-if="!isFetchingMetadata" class="d-flex gap-1">
+        <v-spacer></v-spacer>
+        <v-btn
+          variant="text"
+          @click="$router.push({ name: 'landing', params: { resourceId } })"
+        >
+          Cancel
+        </v-btn>
+        <v-menu
+          :disabled="!errors.length"
+          open-on-hover
+          bottom
+          left
+          offset-y
+          transition="fade"
+        >
+          <template #activator="{ props }">
+            <div
+              v-bind="props"
+              class="d-flex form-controls flex-column flex-sm-row"
+            >
+              <v-badge
+                :model-value="!isValid"
+                bordered
+                color="error"
+                icon="mdi-exclamation-thick"
+                overlap
+              >
+                <v-btn
+                  color="primary"
+                  variant="elevated"
+                  @click="submit"
+                  :disabled="!isValid || isSubmitting"
+                >
+                  {{ isSubmitting ? "Saving Changes..." : "Save Changes" }}
+                </v-btn>
+              </v-badge>
+            </div>
+          </template>
+          <v-card>
+            <v-card-text>
+              <ul class="text-subtitle-1 ml-4">
+                <li v-for="(error, index) of errors" :key="index">
+                  <b>{{ error.title }}</b> {{ error.message }}.
+                </li>
+              </ul>
+            </v-card-text>
+          </v-card>
+        </v-menu>
+      </div>
+      <v-skeleton-loader v-else type="actions"></v-skeleton-loader>
+    </template>
+    <v-empty-state
+      v-else
+      icon="mdi-cloud-cancel"
+      text="Try adjusting your settings."
+      title="We couldn't load this resource."
+    ></v-empty-state>
   </v-container>
 </template>
 
@@ -58,47 +142,19 @@ import { CzForm, CzFileExplorer, Notifications } from "@cznethub/cznet-vue-core"
 import type { IFile, IFolder } from "@cznethub/cznet-vue-core/dist/types";
 import {
   S3Client,
-  GetObjectCommand,
   PutObjectCommand,
   DeleteObjectsCommand,
   ListObjectsV2Command,
-  CopyObjectCommand,
-  CommonPrefix,
   _Object,
   HeadObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { stringify } from "@/utils";
+import { fetchResource, onFileDownload } from "./shared";
 
 interface FormError {
   title: string;
   message: string;
-}
-
-interface SchemaDefinition {
-  title: string;
-  type: string;
-  additionalProperties?: boolean;
-  properties: {
-    [key: string]: {
-      anyOf?: Array<{ type: string }>;
-      default?: any;
-      title?: string;
-      description?: string;
-      minLength?: number;
-      maxLength?: number;
-      pattern?: string;
-    };
-  };
-  required?: string[];
-}
-
-interface SchemaCollectionItem {
-  index: number;
-  name: string;
-  schema: SchemaDefinition;
-  uischema: any | null;
-  defaults: Record<string, any>;
 }
 
 @Component({
@@ -113,13 +169,15 @@ class App extends Vue {
   @Ref("folderInput") folderInput!: HTMLInputElement;
   @Ref("fileExplorer") fileExplorer!: InstanceType<typeof CzFileExplorer>;
 
+  schema!: any;
+  uischema!: any;
+  defaults!: any;
+  onFileDownload = onFileDownload;
+
   isValid: boolean = false;
   errors: FormError[] = [];
   data: Record<string, any> = {};
   stringify = stringify;
-
-  selectedSchema: number = -1;
-  schemaCollection: SchemaCollectionItem[] = [];
 
   accessKey = localStorage.getItem("s3AccessKey") || "";
   secretKey = localStorage.getItem("s3SecretKey") || "";
@@ -128,10 +186,12 @@ class App extends Vue {
   isSubmitting: boolean = false;
   currentPath: string = "";
   folderNameRegex = /^[-()\w\s]*$/;
-  fetchingMetadata = false;
+  isFetchingMetadata = true;
+  wasLoaded = true;
 
   s3Client!: S3Client;
-
+  s3Host: string = "https://s3.beta.hydroshare.org";
+  hydroshareHost: string = "https://beta.hydroshare.org";
   s3Info = {
     bucket: "",
     prefix: "",
@@ -155,7 +215,7 @@ class App extends Vue {
         "hide-details": false,
       },
     },
-    isViewMode: true,
+    isViewMode: false,
     isReadOnly: false,
     isDisabled: false,
   };
@@ -170,21 +230,10 @@ class App extends Vue {
     hasFolders: true,
   };
 
-  formatSize(size: number): string {
-    if (!size) return "-";
-    if (size < 1024) return `${size} B`;
-    if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} KB`;
-    return `${(size / (1024 * 1024)).toFixed(2)} MB`;
-  }
-
-  formatDate(date: Date): string {
-    return date ? date.toLocaleString() : "-";
-  }
-
   startS3Client() {
     this.s3Client = new S3Client({
       region: "us-central-2",
-      endpoint: "https://s3.beta.hydroshare.org",
+      endpoint: `${this.s3Host}`,
       forcePathStyle: true,
       credentials: {
         accessKeyId: this.accessKey,
@@ -219,109 +268,86 @@ class App extends Vue {
       }
     }
 
+    if (!this.s3Info.bucket || !this.s3Info.prefix) {
+      await this.fetchS3Info();
+    }
+
     this.startS3Client();
 
     // Load schema + uischema
     /* @ts-ignore */
-    const schema: SchemaDefinition = await import(
-      /* @vite-ignore */ "@/schemas/hydroshare/schema.json"
+    this.schema = await import(
+      `@/schemas/hydroshare/scientific_dataset_json_schema.json`
     );
 
-    const { default: uischema } = await import(
-      /* @vite-ignore */ "@/schemas/hydroshare/uischema.json"
-    );
+    /* @ts-ignore */
+    this.uischema = await import(`@/schemas/hydroshare/edit-uischema.json`);
 
-    const defaults = {
-      name: null,
-      description: null,
-    };
+    /* @ts-ignore */
+    this.defaults = await import(`@/schemas/hydroshare/defaults.json`);
 
-    this.schemaCollection.push({
-      index: 0,
-      name: "EditableScientificDataset",
-      schema,
-      uischema,
-      defaults,
-    });
-
-    this.selectedSchema = 0;
-    this.updateMetadata();
+    this.loadResource();
   }
 
-  async updateMetadata() {
-    this.fetchingMetadata = true;
-    try {
-      const resourceId = this.resourceId;
-      const response = await fetch(
-        `https://beta.hydroshare.org/hsapi/resource/s3/${resourceId}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      this.s3Info = await response.json();
+  async loadResource() {
+    this.isFetchingMetadata = true;
+    this.isLoadingFiles = true;
+    this.wasLoaded = true;
 
-      const key = `${this.s3Info.prefix}hs_user_meta.json`;
+    const resource = await fetchResource(
+      this.resourceId,
+      this.s3Client,
+      this.s3Info.bucket,
+      `${this.s3Info.prefix}hs_user_meta.json`,
+    );
 
-      console.log(`Fetching metadata from S3: ${this.s3Info.bucket}/${key}`);
-      const result = await this.s3Client.send(
-        new GetObjectCommand({ Bucket: this.s3Info.bucket, Key: key })
-      );
-      const bodyContents = await result.Body?.transformToString();
-
-      try {
-        const parsed = JSON.parse(bodyContents || "");
-        this.data = parsed;
-        console.log(`Form data loaded from ${this.s3Info.bucket}/${key}`);
-      } catch (error) {
-        console.warn("JSON parse failed, loading defaults:", error);
-        this.data = { ...this.defaults };
-      }
-
-      try {
-        const initialStructure = await this.readRootFolder(
-          `${resourceId}/data/contents/`
-        );
-        // @ts-expect-error The key property is generated when the component is initialized
-        this.rootDirectory.children = initialStructure;
-        this.isLoadingFiles = false;
-      } catch (_e) {
-        Notifications.toast({
-          message: "Failed to load existing files.",
-          type: "error",
-          location: "top center",
-        });
-        this.isLoadingFiles = false;
-      }
-    } catch (error) {
-      console.error("S3 fetch failed:", error);
-      this.data = { ...this.defaults };
-      Notifications.toast({
-        title: "Error",
-        message: "Failed to load metadata from S3.",
-        type: "error",
-      });
-    } finally {
-      this.fetchingMetadata = false;
+    if (resource) {
+      this.data = resource.data;
+      // @ts-expect-error The key property is generated when the component is initialized
+      this.rootDirectory.children = resource.initialStructure;
+    } else {
+      this.wasLoaded = false;
     }
-  }
-
-  get schema(): SchemaDefinition | undefined {
-    return this.schemaCollection[this.selectedSchema]?.schema;
-  }
-
-  get uischema(): any | null {
-    return this.schemaCollection[this.selectedSchema]?.uischema;
-  }
-
-  get defaults(): Record<string, any> {
-    return this.schemaCollection[this.selectedSchema]?.defaults || {};
+    this.isFetchingMetadata = false;
+    this.isLoadingFiles = false;
   }
 
   onUpdateErrors(errors: FormError[]) {
     this.errors = errors;
+  }
+
+  async onS3FormUpdate(params: any) {
+    this.isFetchingMetadata = true;
+    this.isLoadingFiles = true;
+    this.s3Info.bucket = params.bucket;
+    this.s3Info.prefix = params.prefix;
+    this.hydroshareHost = params.hydroshareHost;
+    this.s3Host = params.s3Host;
+    this.startS3Client();
+    this.loadResource();
+  }
+
+  async onRestoreDefaults() {
+    this.isFetchingMetadata = true;
+    this.isLoadingFiles = true;
+    this.s3Host = "https://s3.beta.hydroshare.org";
+    this.hydroshareHost = "https://beta.hydroshare.org";
+    await this.fetchS3Info();
+    this.startS3Client();
+    this.loadResource();
+  }
+
+  async fetchS3Info() {
+    const response = await fetch(
+      `${this.hydroshareHost}/hsapi/resource/s3/${this.resourceId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
+    this.s3Info = await response.json();
   }
 
   async submit() {
@@ -348,7 +374,12 @@ class App extends Vue {
         message: "Metadata uploaded to S3 successfully!",
         type: "success",
       });
-      this.config.isViewMode = true;
+
+      // @ts-ignore
+      this.$router.push({
+        name: "landing",
+        params: { resourceId: this.resourceId },
+      });
     } catch (error: any) {
       console.error("Error uploading to S3:", error);
       Notifications.toast({
@@ -360,87 +391,6 @@ class App extends Vue {
       this.isSubmitting = false;
     }
   }
-
-  async readRootFolder(
-    path: string,
-    retries = 5
-  ): Promise<Partial<IFile | IFolder>[]> {
-    let attempt = 0;
-    while (attempt < retries) {
-      try {
-        const result = await this._readFolderRecursive(path);
-        if (result.length === 0 && attempt < retries - 1) {
-          console.warn(`Empty folder listing for ${path}, retrying (${attempt + 1}/${retries})`);
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-          attempt++;
-          continue;
-        }
-        return result;
-      } catch (error) {
-        console.warn(`Error reading folder ${path}, retrying (${attempt + 1}/${retries}):`, error);
-        if (attempt === retries - 1) {
-          throw error;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        attempt++;
-      }
-    }
-    return [];
-  }
-
-private async _readFolderRecursive(path: string): Promise<Partial<IFile | IFolder>[]> {
-  const HIDE_EMPTY_FOLDERS = true;
-  try {
-    const listCmd = new ListObjectsV2Command({
-      Bucket: this.s3Info.bucket,
-      Prefix: path,
-      Delimiter: "/",
-    });
-    const s3Response = await this.s3Client.send(listCmd);
-
-    // Filter out folder markers (objects ending with "/") from files
-    const files: Partial<IFile>[] = (s3Response.Contents || [])
-      .filter(obj => {
-        const name = (obj.Key || "").replace(path, "");
-        return name !== "" && !name.endsWith("/"); // Exclude folder markers
-      })
-      .map(obj => ({
-        name: (obj.Key || "").replace(path, ""),
-        isUploaded: true,
-        file: null,
-        uploadedSize: obj.Size,
-      }));
-
-    let folders: Partial<IFolder>[] = [];
-    if (s3Response.CommonPrefixes && s3Response.CommonPrefixes.length) {
-      const folderPromises = s3Response.CommonPrefixes.map(async (p: CommonPrefix) => {
-        const folderKey = p.Prefix || "";
-        const name = folderKey.replace(path, "").replace(/\/$/, "");
-
-        if (HIDE_EMPTY_FOLDERS) {
-          const probe = await this.s3Client.send(new ListObjectsV2Command({
-            Bucket: this.s3Info.bucket,
-            Prefix: folderKey,
-            MaxKeys: 2,
-          }));
-          const hasNonMarker = !!(probe.Contents && probe.Contents.some(o => o.Key && o.Key !== folderKey));
-          if (!hasNonMarker) return null; // Skip truly empty folders
-        }
-
-        const children = await this._readFolderRecursive(`${path}${name}/`);
-        return { name, children, isUploaded: true } as Partial<IFolder>;
-      });
-
-      const resolved = await Promise.all(folderPromises);
-      folders = resolved.filter(Boolean) as Partial<IFolder>[];
-    }
-
-    return [...folders, ...files];
-  } catch (e) {
-    console.log(e);
-    return [];
-  }
-}
 
   async uploadFiles(files: IFile[]): Promise<boolean[]> {
     if (files.length) {
@@ -544,41 +494,6 @@ async function _createFoldersByDepth(paths: string[], depth: number): Promise<bo
     }
 
     return responses;
-  }
-
-  async onFileDownload(items: (IFile | IFolder)[]) {
-    try {
-      for (const item of items) {
-        const basePrefix = `${this.resourceId}/data/contents/`;
-        const key = `${basePrefix}${item.path}`;
-        const result = await this.s3Client.send(
-          new GetObjectCommand({ Bucket: this.s3Info.bucket, Key: key })
-        );
-        const blob = await result.Body?.transformToByteArray();
-        if (blob) {
-          const url = window.URL.createObjectURL(new Blob([blob]));
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = key.split("/").pop() || "download";
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-        }
-      }
-      Notifications.toast({
-        title: "Success",
-        message: "File downloaded successfully!",
-        type: "success",
-      });
-    } catch (error: any) {
-      console.error("Error downloading file:", error);
-      Notifications.toast({
-        title: "Error",
-        message: `Failed to download file: ${error.message}`,
-        type: "error",
-      });
-    }
   }
 
   async deleteFileOrFolder(item: IFile | IFolder): Promise<boolean> {
