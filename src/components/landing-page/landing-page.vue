@@ -27,6 +27,8 @@
                 :bucket="s3Info.bucket"
                 :s3-host="s3Host"
                 :hydroshare-host="hydroshareHost"
+                :accessKey="accessKey"
+                :secret-key="secretKey"
                 @apply-changes="onS3FormUpdate"
                 @restore-defaults="onRestoreDefaults"
               ></s3-form>
@@ -251,6 +253,12 @@ class LandingPage extends Vue {
     this.s3Info.prefix = params.prefix;
     this.hydroshareHost = params.hydroshareHost;
     this.s3Host = params.s3Host;
+
+    this.secretKey = params.secretKey;
+    this.accessKey = params.accessKey;
+    localStorage.setItem("s3AccessKey", this.accessKey);
+    localStorage.setItem("s3SecretKey", this.secretKey);
+
     this.startS3Client();
     this.loadResource();
   }
@@ -265,6 +273,9 @@ class LandingPage extends Vue {
     this.loadResource();
   }
 
+  /**
+   * @deprecated We are trying to avoid this coupling.
+   */
   async fetchS3Info() {
     const response = await fetch(
       `${this.hydroshareHost}/hsapi/resource/s3/${this.resourceId}`,

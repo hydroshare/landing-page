@@ -23,6 +23,10 @@
     },
     {
       "type": "Control",
+      "scope": "#/properties/url"
+    },
+    {
+      "type": "Control",
       "scope": "#/properties/hasPart",
       "options": {
         "elementLabelProp": [
