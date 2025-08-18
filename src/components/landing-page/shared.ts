@@ -58,14 +58,16 @@ export const _readFolderRecursive = async (
     // TODO: Parse out ignored files using new MIME type
     // FILES
     if (s3Response.Contents) {
-      files = s3Response.Contents.map((f: _Object, _index: number) => {
-        return {
-          name: f.Key?.replace(path, ""),
-          isUploaded: true,
-          file: null,
-          uploadedSize: f.Size,
-        };
-      });
+      files = s3Response.Contents
+        .filter(f => f.Key !== path)  // Filter out current directory file marker
+        .map((f: _Object, _index: number) => {
+          return {
+            name: f.Key?.replace(path, ""),
+            isUploaded: true,
+            file: null,
+            uploadedSize: f.Size,
+          };
+        });
     }
 
     // FOLDERS

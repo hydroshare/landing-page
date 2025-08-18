@@ -27,6 +27,8 @@
                 :bucket="s3Info.bucket"
                 :s3-host="s3Host"
                 :hydroshare-host="hydroshareHost"
+                :accessKey="accessKey"
+                :secret-key="secretKey"
                 @apply-changes="onS3FormUpdate"
                 @restore-defaults="onRestoreDefaults"
               ></s3-form>
@@ -51,6 +53,7 @@
         :canDownloadItem="() => true"
         :upload="uploadFiles"
         :delete-file-or-folder="deleteFileOrFolder"
+        :rename-file-or-folder="renameFileOrFolder"
         @download="onFileDownload($event, resourceId, s3Client, s3Info.bucket)"
       >
         <template #prepend>
@@ -138,7 +141,11 @@
 
 <script lang="ts">
 import { Component, Vue, toNative, Ref } from "vue-facing-decorator";
-import { CzForm, CzFileExplorer, Notifications } from "@cznethub/cznet-vue-core";
+import {
+  CzForm,
+  CzFileExplorer,
+  Notifications,
+} from "@cznethub/cznet-vue-core";
 import type { IFile, IFolder } from "@cznethub/cznet-vue-core/dist/types";
 import {
   S3Client,
@@ -148,9 +155,10 @@ import {
   _Object,
   HeadObjectCommand,
   DeleteObjectCommand,
+  CopyObjectCommand,
 } from "@aws-sdk/client-s3";
 import { stringify } from "@/utils";
-import { fetchResource, onFileDownload } from "./shared";
+import { fetchResource, onFileDownload, readRootFolder } from "./shared";
 
 interface FormError {
   title: string;
@@ -249,7 +257,7 @@ class App extends Vue {
 
     if (!this.resourceId) {
       alert(
-        "No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514."
+        "No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.",
       );
       this.resourceId = "d7b526e24f7e449098b428ae9363f514";
     }
@@ -364,7 +372,7 @@ class App extends Vue {
       const content = JSON.stringify(
         { name: this.data.name, description: this.data.description },
         null,
-        2
+        2,
       );
       const command = new PutObjectCommand({
         Bucket: this.s3Info.bucket,
@@ -410,23 +418,27 @@ class App extends Vue {
     return [];
   }
 
-  private async _uploadFiles(itemsToUpload: (IFile | IFolder)[]): Promise<boolean[]> {
+  private async _uploadFiles(
+    itemsToUpload: (IFile | IFolder)[],
+  ): Promise<boolean[]> {
     itemsToUpload.forEach((i) => (i.isDisabled = true));
     const filesToUpload = itemsToUpload.filter((i) =>
-      Object.prototype.hasOwnProperty.call(i, "file")
+      Object.prototype.hasOwnProperty.call(i, "file"),
     ) as IFile[];
     const foldersToUpload = itemsToUpload.filter((i) =>
-      Object.prototype.hasOwnProperty.call(i, "children")
+      Object.prototype.hasOwnProperty.call(i, "children"),
     ) as IFolder[];
 
     const basePrefix = `${this.resourceId}/data/contents/${this.currentPath}`;
 
     // compute folder paths
-    let folderPaths = foldersToUpload.map((f) => f.path).filter((f) => !!f) as string[];
+    let folderPaths = foldersToUpload
+      .map((f) => f.path)
+      .filter((f) => !!f) as string[];
 
     // unique + sort deeper first
     folderPaths = [...new Set(folderPaths)].sort(
-      (a, b) => b.split("/").length - a.split("/").length
+      (a, b) => b.split("/").length - a.split("/").length,
     );
 
     const that = this;
@@ -439,28 +451,33 @@ class App extends Vue {
       responses = await _uploadFiles();
     }
 
-async function _createFoldersByDepth(paths: string[], depth: number): Promise<boolean[]> {
-  const depthPaths = paths.filter((p) => p.split("/").length === depth);
+    async function _createFoldersByDepth(
+      paths: string[],
+      depth: number,
+    ): Promise<boolean[]> {
+      const depthPaths = paths.filter((p) => p.split("/").length === depth);
 
-  const folderCreatePromises = depthPaths.map((path: string) => {
-    const rootPrefix = `${that.resourceId}/data/contents/`;
-    const folderKey = `${rootPrefix}${path}/`; // Ensure trailing slash for folder marker
+      const folderCreatePromises = depthPaths.map((path: string) => {
+        const rootPrefix = `${that.resourceId}/data/contents/`;
+        const folderKey = `${rootPrefix}${path}/`; // Ensure trailing slash for folder marker
 
-    return that.s3Client.send(
-      new PutObjectCommand({
-        Bucket: that.s3Info.bucket,
-        Key: folderKey,
-        Body: "",
-        ContentType: "application/x-directory",
-      })
-    );
-  });
+        return that.s3Client.send(
+          new PutObjectCommand({
+            Bucket: that.s3Info.bucket,
+            Key: folderKey,
+            Body: "",
+            ContentType: "application/x-directory",
+          }),
+        );
+      });
 
-  await Promise.allSettled(folderCreatePromises);
-  const remaining = paths.filter((p) => p.split("/").length > depth);
+      await Promise.allSettled(folderCreatePromises);
+      const remaining = paths.filter((p) => p.split("/").length > depth);
 
-  return remaining.length ? _createFoldersByDepth(remaining, depth + 1) : _uploadFiles();
-}
+      return remaining.length
+        ? _createFoldersByDepth(remaining, depth + 1)
+        : _uploadFiles();
+    }
     async function _uploadFiles(): Promise<boolean[]> {
       const fileUploadPromises = filesToUpload.map(async (file: IFile) => {
         const path = that.fileExplorer.getPathString(file);
@@ -473,7 +490,7 @@ async function _createFoldersByDepth(paths: string[], depth: number): Promise<bo
               Key: key,
               Body: arrayBuffer,
               ContentType: file.file?.type || "application/octet-stream",
-            })
+            }),
           );
           return true;
         } catch (_e) {
@@ -551,11 +568,11 @@ async function _createFoldersByDepth(paths: string[], depth: number): Promise<bo
               new DeleteObjectsCommand({
                 Bucket: this.s3Info.bucket,
                 Delete: { Objects: batch },
-              })
+              }),
             );
             console.log(
               `Deleted batch of ${batch.length} objects:`,
-              batch.map((obj) => obj.Key)
+              batch.map((obj) => obj.Key),
             );
           }
         }
@@ -569,7 +586,7 @@ async function _createFoldersByDepth(paths: string[], depth: number): Promise<bo
         if (verifyResponse.Contents && verifyResponse.Contents.length > 0) {
           console.warn(
             `Objects still exist after deletion for ${path}:`,
-            verifyResponse.Contents.map((obj) => obj.Key)
+            verifyResponse.Contents.map((obj) => obj.Key),
           );
         } else {
           console.log(`Verified: No objects remain under ${path}`);
@@ -585,10 +602,12 @@ async function _createFoldersByDepth(paths: string[], depth: number): Promise<bo
         if (
           parentResponse.CommonPrefixes &&
           parentResponse.CommonPrefixes.some(
-            (p) => p.Prefix === `${basePrefix}${path}`
+            (p) => p.Prefix === `${basePrefix}${path}`,
           )
         ) {
-          console.warn(`Folder ${path} still appears in CommonPrefixes after deletion`);
+          console.warn(
+            `Folder ${path} still appears in CommonPrefixes after deletion`,
+          );
         } else {
           console.log(`Verified: ${path} no longer in CommonPrefixes`);
         }
@@ -597,7 +616,7 @@ async function _createFoldersByDepth(paths: string[], depth: number): Promise<bo
           new DeleteObjectsCommand({
             Bucket: this.s3Info.bucket,
             Delete: { Objects: [{ Key: `${basePrefix}${path}` }] },
-          })
+          }),
         );
         console.log(`Deleted file: ${basePrefix}${path}`);
       }
@@ -619,15 +638,26 @@ async function _createFoldersByDepth(paths: string[], depth: number): Promise<bo
     }
   }
 
-  async renameFileOrFolder(item: IFile | IFolder, newNameOrPath: string): Promise<void> {
+  async renameFileOrFolder(
+    item: IFile | IFolder,
+    newNameOrPath: string,
+  ): Promise<void> {
     const isFolder = Object.prototype.hasOwnProperty.call(item, "children");
 
     // --- in-scope utils ---
     const normalizeRel = (p: string) => {
       let s = (p || "").trim();
-      s = s.replace(/^\/+/, "").replace(/\/{2,}/g, "/").replace(/^\.\/+/, "").replace(/\/+$/g, "");
+      s = s
+        .replace(/^\/+/, "")
+        .replace(/\/{2,}/g, "/")
+        .replace(/^\.\/+/, "")
+        .replace(/\/+$/g, "");
       const parts: string[] = [];
-      s.split("/").forEach(seg => { if (!seg || seg === ".") return; if (seg === "..") parts.pop(); else parts.push(seg); });
+      s.split("/").forEach((seg) => {
+        if (!seg || seg === ".") return;
+        if (seg === "..") parts.pop();
+        else parts.push(seg);
+      });
       return parts.join("/");
     };
     const asFolder = (p: string) => (p.endsWith("/") ? p : p + "/");
@@ -639,13 +669,18 @@ async function _createFoldersByDepth(paths: string[], depth: number): Promise<bo
       return { parent, base };
     };
     const sameRel = (a: string, b: string) =>
-      normalizeRel(a.replace(/\/+$/, "")) === normalizeRel(b.replace(/\/+$/, ""));
-    const encodeCopySourceKey = (key: string) => encodeURIComponent(key).replace(/%2F/g, "/");
+      normalizeRel(a.replace(/\/+$/, "")) ===
+      normalizeRel(b.replace(/\/+$/, ""));
+    const encodeCopySourceKey = (key: string) =>
+      encodeURIComponent(key).replace(/%2F/g, "/");
 
     // --- resolve old/new relative paths ---
     let oldRel = this.fileExplorer.getPathString(item);
     if (isFolder && !oldRel.endsWith("/")) oldRel += "/";
-    const { parent: oldParent, base: oldBase } = splitParentBase(oldRel, isFolder);
+    const { parent: oldParent, base: oldBase } = splitParentBase(
+      oldRel,
+      isFolder,
+    );
 
     const raw = (newNameOrPath || "").trim();
     const isRootExplicit = raw === "/" || raw === "";
@@ -673,16 +708,24 @@ async function _createFoldersByDepth(paths: string[], depth: number): Promise<bo
       let treatAsFolder = raw.endsWith("/");
       if (!treatAsFolder) {
         try {
-          await this.s3Client.send(new HeadObjectCommand({
-            Bucket: this.s3Info.bucket,
-            Key: `${this.s3Info.prefix}${asFolder(candidate)}`,
-          }));
+          await this.s3Client.send(
+            new HeadObjectCommand({
+              Bucket: this.s3Info.bucket,
+              Key: `${this.s3Info.prefix}${asFolder(candidate)}`,
+            }),
+          );
           treatAsFolder = true;
-        } catch { /* not a marker */ }
+        } catch {
+          /* not a marker */
+        }
       }
       newRel = treatAsFolder
-        ? (isFolder ? asFolder(`${candidate}/${oldBase}`) : `${candidate}/${oldBase}`)
-        : (isFolder ? asFolder(candidate) : candidate);
+        ? isFolder
+          ? asFolder(`${candidate}/${oldBase}`)
+          : `${candidate}/${oldBase}`
+        : isFolder
+          ? asFolder(candidate)
+          : candidate;
     }
 
     const oldKey = `${this.s3Info.prefix}${oldRel}`;
@@ -690,7 +733,11 @@ async function _createFoldersByDepth(paths: string[], depth: number): Promise<bo
 
     // self / no-op guard
     if (sameRel(oldRel, newRel)) {
-      Notifications.toast({ title: "No change", message: "Item is already there.", type: "info" });
+      Notifications.toast({
+        title: "No change",
+        message: "Item is already there.",
+        type: "info",
+      });
       return;
     }
 
@@ -702,13 +749,28 @@ async function _createFoldersByDepth(paths: string[], depth: number): Promise<bo
         if (destParent) {
           const destFolderKey = `${this.s3Info.prefix}${asFolder(destParent)}`;
           try {
-            await this.s3Client.send(new HeadObjectCommand({ Bucket: this.s3Info.bucket, Key: destFolderKey }));
+            await this.s3Client.send(
+              new HeadObjectCommand({
+                Bucket: this.s3Info.bucket,
+                Key: destFolderKey,
+              }),
+            );
           } catch (err: any) {
-            if (err?.name === "NotFound" || err?.$metadata?.httpStatusCode === 404) {
-              await this.s3Client.send(new PutObjectCommand({
-                Bucket: this.s3Info.bucket, Key: destFolderKey, Body: "", ContentType: "application/x-directory",
-              }));
-            } else { throw err; }
+            if (
+              err?.name === "NotFound" ||
+              err?.$metadata?.httpStatusCode === 404
+            ) {
+              await this.s3Client.send(
+                new PutObjectCommand({
+                  Bucket: this.s3Info.bucket,
+                  Key: destFolderKey,
+                  Body: "",
+                  ContentType: "application/x-directory",
+                }),
+              );
+            } else {
+              throw err;
+            }
           }
         }
       }
@@ -718,41 +780,58 @@ async function _createFoldersByDepth(paths: string[], depth: number): Promise<bo
         let token: string | undefined;
         const jobs: Promise<any>[] = [];
         do {
-          const list = await this.s3Client.send(new ListObjectsV2Command({
-            Bucket: this.s3Info.bucket, Prefix: oldKey, ContinuationToken: token,
-          }));
-          (list.Contents || []).forEach(obj => {
+          const list = await this.s3Client.send(
+            new ListObjectsV2Command({
+              Bucket: this.s3Info.bucket,
+              Prefix: oldKey,
+              ContinuationToken: token,
+            }),
+          );
+          (list.Contents || []).forEach((obj) => {
             if (!obj.Key) return;
             const rel = obj.Key.replace(oldKey, "");
             const dest = `${newKey}${rel}`;
             if (dest === obj.Key) return; // prevent illegal self-copy
-            jobs.push(this.s3Client.send(new CopyObjectCommand({
-              Bucket: this.s3Info.bucket,
-              CopySource: `${this.s3Info.bucket}/${encodeCopySourceKey(obj.Key)}`,
-              Key: dest,
-            })));
+            jobs.push(
+              this.s3Client.send(
+                new CopyObjectCommand({
+                  Bucket: this.s3Info.bucket,
+                  CopySource: `${this.s3Info.bucket}/${encodeCopySourceKey(obj.Key)}`,
+                  Key: dest,
+                }),
+              ),
+            );
           });
           token = list.NextContinuationToken;
         } while (token);
         await Promise.allSettled(jobs);
       } else {
         if (oldKey !== newKey) {
-          await this.s3Client.send(new CopyObjectCommand({
-            Bucket: this.s3Info.bucket,
-            CopySource: `${this.s3Info.bucket}/${encodeCopySourceKey(oldKey)}`,
-            Key: newKey,
-          }));
+          await this.s3Client.send(
+            new CopyObjectCommand({
+              Bucket: this.s3Info.bucket,
+              CopySource: `${this.s3Info.bucket}/${encodeCopySourceKey(oldKey)}`,
+              Key: newKey,
+            }),
+          );
         }
       }
 
       // verify destination
       if (isFolder) {
-        const verify = await this.s3Client.send(new ListObjectsV2Command({
-          Bucket: this.s3Info.bucket, Prefix: newKey, MaxKeys: 1,
-        }));
-        if (!verify.Contents || verify.Contents.length === 0) throw new Error(`Verification failed: nothing at ${newKey}`);
+        const verify = await this.s3Client.send(
+          new ListObjectsV2Command({
+            Bucket: this.s3Info.bucket,
+            Prefix: newKey,
+            MaxKeys: 1,
+          }),
+        );
+        if (!verify.Contents || verify.Contents.length === 0)
+          throw new Error(`Verification failed: nothing at ${newKey}`);
       } else {
-        await this.s3Client.send(new HeadObjectCommand({ Bucket: this.s3Info.bucket, Key: newKey }));
+        await this.s3Client.send(
+          new HeadObjectCommand({ Bucket: this.s3Info.bucket, Key: newKey }),
+        );
       }
 
       // delete originals (and clean ancestor markers)
@@ -760,13 +839,26 @@ async function _createFoldersByDepth(paths: string[], depth: number): Promise<bo
         let cur = startParentRel;
         while (cur) {
           const markerKey = `${this.s3Info.prefix}${asFolder(cur)}`;
-          const probe = await this.s3Client.send(new ListObjectsV2Command({
-            Bucket: this.s3Info.bucket, Prefix: markerKey, MaxKeys: 2
-          }));
-          const hasNonMarker = !!(probe.Contents && probe.Contents.some(o => o.Key && o.Key !== markerKey));
+          const probe = await this.s3Client.send(
+            new ListObjectsV2Command({
+              Bucket: this.s3Info.bucket,
+              Prefix: markerKey,
+              MaxKeys: 2,
+            }),
+          );
+          const hasNonMarker = !!(
+            probe.Contents &&
+            probe.Contents.some((o) => o.Key && o.Key !== markerKey)
+          );
           if (!hasNonMarker) {
-            try { await this.s3Client.send(new DeleteObjectCommand({ Bucket: this.s3Info.bucket, Key: markerKey })); }
-            catch { }
+            try {
+              await this.s3Client.send(
+                new DeleteObjectCommand({
+                  Bucket: this.s3Info.bucket,
+                  Key: markerKey,
+                }),
+              );
+            } catch {}
             cur = cur.split("/").slice(0, -1).join("/");
           } else break;
         }
@@ -775,30 +867,53 @@ async function _createFoldersByDepth(paths: string[], depth: number): Promise<bo
       if (isFolder) {
         let token: string | undefined;
         do {
-          const list = await this.s3Client.send(new ListObjectsV2Command({
-            Bucket: this.s3Info.bucket, Prefix: oldKey, ContinuationToken: token,
-          }));
-          const objs = (list.Contents || []).map(o => ({ Key: o.Key! }))
-            .filter(o => !o.Key!.startsWith(newKey));
+          const list = await this.s3Client.send(
+            new ListObjectsV2Command({
+              Bucket: this.s3Info.bucket,
+              Prefix: oldKey,
+              ContinuationToken: token,
+            }),
+          );
+          const objs = (list.Contents || [])
+            .map((o) => ({ Key: o.Key! }))
+            .filter((o) => !o.Key!.startsWith(newKey));
           if (objs.length) {
-            await this.s3Client.send(new DeleteObjectsCommand({
-              Bucket: this.s3Info.bucket, Delete: { Objects: objs },
-            }));
+            await this.s3Client.send(
+              new DeleteObjectsCommand({
+                Bucket: this.s3Info.bucket,
+                Delete: { Objects: objs },
+              }),
+            );
           }
           token = list.NextContinuationToken;
         } while (token);
-        try { await this.s3Client.send(new DeleteObjectCommand({ Bucket: this.s3Info.bucket, Key: oldKey })); } catch { }
+        try {
+          await this.s3Client.send(
+            new DeleteObjectCommand({
+              Bucket: this.s3Info.bucket,
+              Key: oldKey,
+            }),
+          );
+        } catch {}
         if (oldParent) await cleanupEmptyAncestors(oldParent);
       } else {
-        await this.s3Client.send(new DeleteObjectsCommand({
-          Bucket: this.s3Info.bucket, Delete: { Objects: [{ Key: oldKey }] },
-        }));
+        await this.s3Client.send(
+          new DeleteObjectsCommand({
+            Bucket: this.s3Info.bucket,
+            Delete: { Objects: [{ Key: oldKey }] },
+          }),
+        );
         if (oldParent) await cleanupEmptyAncestors(oldParent);
       }
 
       // refresh
       const root = `${this.resourceId}/data/contents/`;
-      this.rootDirectory.children = await this.readRootFolder(root);
+      // @ts-expect-error The key property is generated when the component is initialized
+      this.rootDirectory.children = await readRootFolder(
+        root,
+        this.s3Client,
+        this.s3Info.bucket,
+      );
 
       Notifications.toast({
         title: "Success",
@@ -814,8 +929,6 @@ async function _createFoldersByDepth(paths: string[], depth: number): Promise<bo
       });
     }
   }
-
-
 }
 export default toNative(App);
 </script>
