@@ -86,14 +86,7 @@ import { Component, Prop, toNative, Vue } from "vue-facing-decorator";
 @Component({
   components: {},
   name: "App",
-  emits: [
-    "update:hydroshareHost",
-    "update:s3Host",
-    "update:bucket",
-    "update:prefix",
-    "restore-defaults",
-    "apply-changes",
-  ],
+  emits: ["restore-defaults", "apply-changes"],
 })
 class S3Form extends Vue {
   @Prop() hydroshareHost!: string;

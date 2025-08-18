@@ -55,6 +55,7 @@ export const _readFolderRecursive = async (
     let files: Partial<IFile>[] = [];
     let folders: Partial<IFolder>[] = [];
 
+    // TODO: Parse out ignored files using new MIME type
     // FILES
     if (s3Response.Contents) {
       files = s3Response.Contents.map((f: _Object, _index: number) => {
@@ -129,7 +130,6 @@ export const fetchResource = async (resourceId: string, s3Client: S3Client, buck
         s3Client,
         bucket,
       );
-      // @ts-expect-error The key property is generated when the component is initialized
     } catch (e) {
       Notifications.toast({
         message: "Failed to load existing files.",

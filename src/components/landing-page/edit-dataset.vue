@@ -328,6 +328,12 @@ class App extends Vue {
     this.s3Info.prefix = params.prefix;
     this.hydroshareHost = params.hydroshareHost;
     this.s3Host = params.s3Host;
+
+    this.secretKey = params.secretKey;
+    this.accessKey = params.accessKey;
+    localStorage.setItem("s3AccessKey", this.accessKey);
+    localStorage.setItem("s3SecretKey", this.secretKey);
+
     this.startS3Client();
     this.loadResource();
   }
