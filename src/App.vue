@@ -36,7 +36,7 @@
             id="navbar-login"
             variant="elevated"
             rounded
-            @click="openLogInDialog()"
+            @click="logIn()"
           >
             Log In
           </v-btn>
@@ -138,7 +138,7 @@
             v-if="!isLoggedIn"
             id="drawer-nav-login"
             @click="
-              openLogInDialog();
+              logIn();
               showMobileNavigation = false;
             "
           >
@@ -168,13 +168,6 @@
 
     <cz-notifications />
 
-    <v-dialog v-model="logInDialog.isActive" width="500">
-      <cz-login
-        @cancel="logInDialog.isActive = false"
-        @logged-in="logInDialog.onLoggedIn"
-      />
-    </v-dialog>
-
     <link
       href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900"
       rel="stylesheet"
@@ -190,9 +183,7 @@
 import { Component, Vue, toNative } from "vue-facing-decorator";
 import { APP_NAME } from "./constants";
 import { CzNotifications, Notifications } from "@cznethub/cznet-vue-core";
-import { Subscription } from "rxjs";
 import User from "@/models/user.model";
-import CzLogin from "@/components/account/cz.login.vue";
 import { addRouteTags } from "./modules/router";
 import { useRoute, RouteLocationRaw } from "vue-router";
 import { useRouter } from "vue-router";
@@ -200,18 +191,12 @@ import Search from "./models/search.model";
 
 @Component({
   name: "app",
-  components: { CzNotifications, CzLogin },
+  components: { CzNotifications },
 })
 class App extends Vue {
   route = useRoute();
   router = useRouter();
-  protected onOpenLogInDialog!: Subscription;
   public showMobileNavigation = false;
-  protected logInDialog: any & { isActive: boolean } = {
-    isActive: false,
-    onLoggedIn: () => {},
-    onCancel: () => {},
-  };
   public paths: any[] = [
     {
       attrs: { to: "/search" },
@@ -227,6 +212,10 @@ class App extends Vue {
 
   protected get isLoggedIn(): boolean {
     return User.$state.isLoggedIn;
+  }
+
+  protected logIn() {
+    User.logIn();
   }
 
   protected logOut() {
@@ -245,34 +234,14 @@ class App extends Vue {
     document.title = APP_NAME;
     addRouteTags(this.route, this.route);
 
-    // User.fetchSchemas();
-
-    this.onOpenLogInDialog = User.logInDialog$.subscribe(
-      (redirectTo?: RouteLocationRaw) => {
-        this.logInDialog.isActive = true;
-
-        this.logInDialog.onLoggedIn = () => {
-          if (redirectTo) this.router.push(redirectTo).catch(() => {});
-
-          this.logInDialog.isActive = false;
-        };
-      },
-    );
+    // Check if user is already logged in via Django cookies
+    await User.checkLoginStatus();
 
     try {
       Search.fetchContentTypes();
     } catch (e) {
       console.error("Failed to fetch content types", e);
     }
-  }
-
-  beforeDestroy() {
-    // Good practice
-    this.onOpenLogInDialog.unsubscribe();
-  }
-
-  protected openLogInDialog() {
-    User.openLogInDialog();
   }
 }
 export default toNative(App);
