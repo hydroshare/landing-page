@@ -138,11 +138,7 @@
 
 <script lang="ts">
 import { Component, Vue, toNative, Ref } from "vue-facing-decorator";
-import {
-  CzForm,
-  CzFileExplorer,
-  Notifications,
-} from "@cznethub/cznet-vue-core";
+import { CzForm, CzFileExplorer, Notifications } from "@cznethub/cznet-vue-core";
 import type { IFile, IFolder } from "@cznethub/cznet-vue-core/dist/types";
 import {
   S3Client,
@@ -150,6 +146,8 @@ import {
   DeleteObjectsCommand,
   ListObjectsV2Command,
   _Object,
+  HeadObjectCommand,
+  DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { stringify } from "@/utils";
 import { fetchResource, onFileDownload } from "./shared";
@@ -222,7 +220,7 @@ class App extends Vue {
     isDisabled: false,
   };
 
-  toUpload = [];
+  toUpload: any[] = [];
   rootDirectory: Partial<IFolder> = {
     name: "root",
     children: [],
@@ -249,18 +247,14 @@ class App extends Vue {
       this.resourceId = this.$route.params.resourceId as string;
     }
 
-    // notify if the resourceId is not set
     if (!this.resourceId) {
       alert(
-        "No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.",
+        "No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514."
       );
       this.resourceId = "d7b526e24f7e449098b428ae9363f514";
     }
 
-    // https://cuahsi.atlassian.net/browse/CAM-769
-    // TODO: for now we store access and secret keys in localStorage
-    // Replace when we update to Pinia
-
+    // temporary local storage for S3 keys (will move to Pinia later)
     if (!this.accessKey || !this.secretKey) {
       this.accessKey = prompt("Enter your S3 Access Key:") || "";
       this.secretKey = prompt("Enter your S3 Secret Key:") || "";
@@ -280,6 +274,7 @@ class App extends Vue {
 
     this.startS3Client();
 
+    // Load schema + uischema
     /* @ts-ignore */
     this.schema = await import(
       `@/schemas/hydroshare/scientific_dataset_json_schema.json`
@@ -369,7 +364,7 @@ class App extends Vue {
       const content = JSON.stringify(
         { name: this.data.name, description: this.data.description },
         null,
-        2,
+        2
       );
       const command = new PutObjectCommand({
         Bucket: this.s3Info.bucket,
@@ -415,75 +410,59 @@ class App extends Vue {
     return [];
   }
 
-  private async _uploadFiles(
-    itemsToUpload: (IFile | IFolder)[],
-  ): Promise<boolean[]> {
-    itemsToUpload.map((i) => (i.isDisabled = true));
+  private async _uploadFiles(itemsToUpload: (IFile | IFolder)[]): Promise<boolean[]> {
+    itemsToUpload.forEach((i) => (i.isDisabled = true));
     const filesToUpload = itemsToUpload.filter((i) =>
-      Object.prototype.hasOwnProperty.call(i, "file"),
+      Object.prototype.hasOwnProperty.call(i, "file")
     ) as IFile[];
     const foldersToUpload = itemsToUpload.filter((i) =>
-      Object.prototype.hasOwnProperty.call(i, "children"),
+      Object.prototype.hasOwnProperty.call(i, "children")
     ) as IFolder[];
 
     const basePrefix = `${this.resourceId}/data/contents/${this.currentPath}`;
 
-    // TODO: compute folder paths
-    let folderPaths = foldersToUpload
-      .map((f) => f.path)
-      .filter((f) => !!f) as string[];
+    // compute folder paths
+    let folderPaths = foldersToUpload.map((f) => f.path).filter((f) => !!f) as string[];
 
-    // Get unique paths
+    // unique + sort deeper first
     folderPaths = [...new Set(folderPaths)].sort(
-      (a, b) => b.split("/").length - a.split("/").length,
+      (a, b) => b.split("/").length - a.split("/").length
     );
 
-    // HydroShare can only create multiple folders at a time if the parent folder already exists
-    // So we traverse the tree by depth and create folders in each depth at a time
     const that = this;
-    let responses;
-    itemsToUpload.map((i) => (i.isDisabled = false));
+    let responses: boolean[] = [];
+    itemsToUpload.forEach((i) => (i.isDisabled = false));
 
     if (folderPaths.length) {
-      // Create folders
       responses = await _createFoldersByDepth(folderPaths, 1);
     } else {
-      // No folders to create. Just upload files directly.
       responses = await _uploadFiles();
     }
 
-    async function _createFoldersByDepth(
-      paths: string[],
-      depth: number,
-    ): Promise<boolean[]> {
-      const depthPaths = paths.filter((p) => p.split("/").length === depth);
+async function _createFoldersByDepth(paths: string[], depth: number): Promise<boolean[]> {
+  const depthPaths = paths.filter((p) => p.split("/").length === depth);
 
-      const folderCreatePromises = depthPaths.map((path: string) => {
-        const basePrefix = `${that.resourceId}/data/contents/`;
+  const folderCreatePromises = depthPaths.map((path: string) => {
+    const rootPrefix = `${that.resourceId}/data/contents/`;
+    const folderKey = `${rootPrefix}${path}/`; // Ensure trailing slash for folder marker
 
-        // TODO: how to create an empty folder
-        return that.s3Client.send(
-          new PutObjectCommand({
-            Bucket: that.s3Info.bucket,
-            Key: `${basePrefix}${path}`,
-            Body: "",
-            ContentType: "application/x-directory",
-          }),
-        );
-      });
+    return that.s3Client.send(
+      new PutObjectCommand({
+        Bucket: that.s3Info.bucket,
+        Key: folderKey,
+        Body: "",
+        ContentType: "application/x-directory",
+      })
+    );
+  });
 
-      await Promise.allSettled(folderCreatePromises);
-      const remaining = paths.filter((p) => p.split("/").length > depth);
+  await Promise.allSettled(folderCreatePromises);
+  const remaining = paths.filter((p) => p.split("/").length > depth);
 
-      return remaining.length
-        ? _createFoldersByDepth(remaining, depth + 1)
-        : _uploadFiles(); // Finished creating folders. Files can be added.
-    }
-
+  return remaining.length ? _createFoldersByDepth(remaining, depth + 1) : _uploadFiles();
+}
     async function _uploadFiles(): Promise<boolean[]> {
       const fileUploadPromises = filesToUpload.map(async (file: IFile) => {
-        const form = new window.FormData();
-        if (file.file) form.append("file", file.file, file.name);
         const path = that.fileExplorer.getPathString(file);
         try {
           const key = `${basePrefix}${path}`;
@@ -494,30 +473,22 @@ class App extends Vue {
               Key: key,
               Body: arrayBuffer,
               ContentType: file.file?.type || "application/octet-stream",
-            }),
+            })
           );
           return true;
-        } catch (e) {
+        } catch (_e) {
           return false;
         }
       });
 
-      const response: PromiseSettledResult<any>[] =
-        await Promise.allSettled(fileUploadPromises);
+      const response = await Promise.allSettled(fileUploadPromises);
 
       filesToUpload.forEach((f, index) => {
         if (response[index].status === "fulfilled") {
           f.isUploaded = true;
-        } else {
-          // Uplaod failed for this file
-          response[index].status = "rejected";
-          // f.parent.children = f.parent.children.filter(
-          //   file => file.name !== f.name,
-          // )
         }
       });
 
-      // TODO: figure out how to identify that fail was due to a name that already exists
       if (response.some((r) => r.status === "rejected")) {
         Notifications.toast({
           message: "Some of your files failed to upload",
@@ -532,8 +503,11 @@ class App extends Vue {
   }
 
   async deleteFileOrFolder(item: IFile | IFolder): Promise<boolean> {
-    const path = this.fileExplorer.getPathString(item);
+    let path = this.fileExplorer.getPathString(item);
     const isFolder = Object.prototype.hasOwnProperty.call(item, "children");
+    if (isFolder && !path.endsWith("/")) {
+      path += "/";
+    }
     const basePrefix = `${this.resourceId}/data/contents/`;
     try {
       if (isFolder) {
@@ -543,7 +517,7 @@ class App extends Vue {
         do {
           const listCommand = new ListObjectsV2Command({
             Bucket: this.s3Info.bucket,
-            Prefix: path,
+            Prefix: `${basePrefix}${path}`,
             ContinuationToken: continuationToken,
           });
           const listResponse = await this.s3Client.send(listCommand);
@@ -560,14 +534,16 @@ class App extends Vue {
           continuationToken = listResponse.NextContinuationToken;
         } while (continuationToken);
 
-        if (!objectsToDelete.some((obj) => obj.Key === path)) {
-          objectsToDelete.push({ Key: path });
-          console.log(`Added top-level folder marker: ${path}`);
+        // Add the folder marker key if not already included
+        const folderMarkerKey = `${basePrefix}${path}`;
+        if (!objectsToDelete.some((obj) => obj.Key === folderMarkerKey)) {
+          objectsToDelete.push({ Key: folderMarkerKey });
+          console.log(`Added top-level folder marker: ${folderMarkerKey}`);
         }
 
         const batchSize = 1000;
         if (objectsToDelete.length === 0) {
-          console.log(`No objects found to delete for folder: ${item.key}`);
+          console.log(`No objects found to delete for folder: ${path}`);
         } else {
           for (let i = 0; i < objectsToDelete.length; i += batchSize) {
             const batch = objectsToDelete.slice(i, i + batchSize);
@@ -575,15 +551,16 @@ class App extends Vue {
               new DeleteObjectsCommand({
                 Bucket: this.s3Info.bucket,
                 Delete: { Objects: batch },
-              }),
+              })
             );
             console.log(
               `Deleted batch of ${batch.length} objects:`,
-              batch.map((obj) => obj.Key),
+              batch.map((obj) => obj.Key)
             );
           }
         }
 
+        // Verify deletion
         const verifyCommand = new ListObjectsV2Command({
           Bucket: this.s3Info.bucket,
           Prefix: `${basePrefix}${path}`,
@@ -591,13 +568,14 @@ class App extends Vue {
         const verifyResponse = await this.s3Client.send(verifyCommand);
         if (verifyResponse.Contents && verifyResponse.Contents.length > 0) {
           console.warn(
-            `Objects still exist after deletion for ${item.key}:`,
-            verifyResponse.Contents.map((obj) => obj.Key),
+            `Objects still exist after deletion for ${path}:`,
+            verifyResponse.Contents.map((obj) => obj.Key)
           );
         } else {
-          console.log(`Verified: No objects remain under ${item.key}`);
+          console.log(`Verified: No objects remain under ${path}`);
         }
 
+        // Check parent listing for CommonPrefixes
         const listParentCommand = new ListObjectsV2Command({
           Bucket: this.s3Info.bucket,
           Prefix: `${this.resourceId}/data/contents/`,
@@ -607,21 +585,19 @@ class App extends Vue {
         if (
           parentResponse.CommonPrefixes &&
           parentResponse.CommonPrefixes.some(
-            (p) => p.Prefix === `${basePrefix}${path}`,
+            (p) => p.Prefix === `${basePrefix}${path}`
           )
         ) {
-          console.warn(
-            `Folder ${item.key} still appears in CommonPrefixes after deletion`,
-          );
+          console.warn(`Folder ${path} still appears in CommonPrefixes after deletion`);
         } else {
-          console.log(`Verified: ${item.key} no longer in CommonPrefixes`);
+          console.log(`Verified: ${path} no longer in CommonPrefixes`);
         }
       } else {
         await this.s3Client.send(
           new DeleteObjectsCommand({
             Bucket: this.s3Info.bucket,
-            Delete: { Objects: [{ Key: `${basePrefix}${path}` }] }, // d7b526e24f7e449098b428ae9363f514/data/contents/vite.config.ts
-          }),
+            Delete: { Objects: [{ Key: `${basePrefix}${path}` }] },
+          })
         );
         console.log(`Deleted file: ${basePrefix}${path}`);
       }
@@ -642,6 +618,204 @@ class App extends Vue {
       return false;
     }
   }
+
+  async renameFileOrFolder(item: IFile | IFolder, newNameOrPath: string): Promise<void> {
+    const isFolder = Object.prototype.hasOwnProperty.call(item, "children");
+
+    // --- in-scope utils ---
+    const normalizeRel = (p: string) => {
+      let s = (p || "").trim();
+      s = s.replace(/^\/+/, "").replace(/\/{2,}/g, "/").replace(/^\.\/+/, "").replace(/\/+$/g, "");
+      const parts: string[] = [];
+      s.split("/").forEach(seg => { if (!seg || seg === ".") return; if (seg === "..") parts.pop(); else parts.push(seg); });
+      return parts.join("/");
+    };
+    const asFolder = (p: string) => (p.endsWith("/") ? p : p + "/");
+    const splitParentBase = (rel: string, folder: boolean) => {
+      const clean = normalizeRel(folder ? rel.replace(/\/+$/, "") : rel);
+      const parts = clean.split("/").filter(Boolean);
+      const base = parts.pop() || "";
+      const parent = parts.join("/");
+      return { parent, base };
+    };
+    const sameRel = (a: string, b: string) =>
+      normalizeRel(a.replace(/\/+$/, "")) === normalizeRel(b.replace(/\/+$/, ""));
+    const encodeCopySourceKey = (key: string) => encodeURIComponent(key).replace(/%2F/g, "/");
+
+    // --- resolve old/new relative paths ---
+    let oldRel = this.fileExplorer.getPathString(item);
+    if (isFolder && !oldRel.endsWith("/")) oldRel += "/";
+    const { parent: oldParent, base: oldBase } = splitParentBase(oldRel, isFolder);
+
+    const raw = (newNameOrPath || "").trim();
+    const isRootExplicit = raw === "/" || raw === "";
+    const hasSlash = raw.includes("/");
+
+    let newRel: string;
+
+    if (isRootExplicit) {
+      // explicit move to root
+      newRel = isFolder ? asFolder(oldBase) : oldBase;
+    } else if (!hasSlash) {
+      // **Key change**:
+      // If no slash AND same basename AND item has a parent -> interpret as MOVE TO ROOT
+      if (oldParent && raw === oldBase) {
+        newRel = isFolder ? asFolder(oldBase) : oldBase; // move to root, keep name
+      } else {
+        // true rename: keep same parent
+        newRel = oldParent ? `${oldParent}/${raw}` : raw;
+        if (isFolder) newRel = asFolder(newRel);
+      }
+    } else {
+      // path includes "/": could be "drop ON folder" or full path
+      let candidate = normalizeRel(raw);
+      // If it ends with "/" or a folder marker exists, move INTO it and keep basename
+      let treatAsFolder = raw.endsWith("/");
+      if (!treatAsFolder) {
+        try {
+          await this.s3Client.send(new HeadObjectCommand({
+            Bucket: this.s3Info.bucket,
+            Key: `${this.s3Info.prefix}${asFolder(candidate)}`,
+          }));
+          treatAsFolder = true;
+        } catch { /* not a marker */ }
+      }
+      newRel = treatAsFolder
+        ? (isFolder ? asFolder(`${candidate}/${oldBase}`) : `${candidate}/${oldBase}`)
+        : (isFolder ? asFolder(candidate) : candidate);
+    }
+
+    const oldKey = `${this.s3Info.prefix}${oldRel}`;
+    const newKey = `${this.s3Info.prefix}${newRel}`;
+
+    // self / no-op guard
+    if (sameRel(oldRel, newRel)) {
+      Notifications.toast({ title: "No change", message: "Item is already there.", type: "info" });
+      return;
+    }
+
+    // --- do the move/rename safely ---
+    try {
+      // ensure destination parent for files
+      if (!isFolder) {
+        const { parent: destParent } = splitParentBase(newRel, false);
+        if (destParent) {
+          const destFolderKey = `${this.s3Info.prefix}${asFolder(destParent)}`;
+          try {
+            await this.s3Client.send(new HeadObjectCommand({ Bucket: this.s3Info.bucket, Key: destFolderKey }));
+          } catch (err: any) {
+            if (err?.name === "NotFound" || err?.$metadata?.httpStatusCode === 404) {
+              await this.s3Client.send(new PutObjectCommand({
+                Bucket: this.s3Info.bucket, Key: destFolderKey, Body: "", ContentType: "application/x-directory",
+              }));
+            } else { throw err; }
+          }
+        }
+      }
+
+      // copy (skip copy-to-self; encode CopySource)
+      if (isFolder) {
+        let token: string | undefined;
+        const jobs: Promise<any>[] = [];
+        do {
+          const list = await this.s3Client.send(new ListObjectsV2Command({
+            Bucket: this.s3Info.bucket, Prefix: oldKey, ContinuationToken: token,
+          }));
+          (list.Contents || []).forEach(obj => {
+            if (!obj.Key) return;
+            const rel = obj.Key.replace(oldKey, "");
+            const dest = `${newKey}${rel}`;
+            if (dest === obj.Key) return; // prevent illegal self-copy
+            jobs.push(this.s3Client.send(new CopyObjectCommand({
+              Bucket: this.s3Info.bucket,
+              CopySource: `${this.s3Info.bucket}/${encodeCopySourceKey(obj.Key)}`,
+              Key: dest,
+            })));
+          });
+          token = list.NextContinuationToken;
+        } while (token);
+        await Promise.allSettled(jobs);
+      } else {
+        if (oldKey !== newKey) {
+          await this.s3Client.send(new CopyObjectCommand({
+            Bucket: this.s3Info.bucket,
+            CopySource: `${this.s3Info.bucket}/${encodeCopySourceKey(oldKey)}`,
+            Key: newKey,
+          }));
+        }
+      }
+
+      // verify destination
+      if (isFolder) {
+        const verify = await this.s3Client.send(new ListObjectsV2Command({
+          Bucket: this.s3Info.bucket, Prefix: newKey, MaxKeys: 1,
+        }));
+        if (!verify.Contents || verify.Contents.length === 0) throw new Error(`Verification failed: nothing at ${newKey}`);
+      } else {
+        await this.s3Client.send(new HeadObjectCommand({ Bucket: this.s3Info.bucket, Key: newKey }));
+      }
+
+      // delete originals (and clean ancestor markers)
+      const cleanupEmptyAncestors = async (startParentRel: string) => {
+        let cur = startParentRel;
+        while (cur) {
+          const markerKey = `${this.s3Info.prefix}${asFolder(cur)}`;
+          const probe = await this.s3Client.send(new ListObjectsV2Command({
+            Bucket: this.s3Info.bucket, Prefix: markerKey, MaxKeys: 2
+          }));
+          const hasNonMarker = !!(probe.Contents && probe.Contents.some(o => o.Key && o.Key !== markerKey));
+          if (!hasNonMarker) {
+            try { await this.s3Client.send(new DeleteObjectCommand({ Bucket: this.s3Info.bucket, Key: markerKey })); }
+            catch { }
+            cur = cur.split("/").slice(0, -1).join("/");
+          } else break;
+        }
+      };
+
+      if (isFolder) {
+        let token: string | undefined;
+        do {
+          const list = await this.s3Client.send(new ListObjectsV2Command({
+            Bucket: this.s3Info.bucket, Prefix: oldKey, ContinuationToken: token,
+          }));
+          const objs = (list.Contents || []).map(o => ({ Key: o.Key! }))
+            .filter(o => !o.Key!.startsWith(newKey));
+          if (objs.length) {
+            await this.s3Client.send(new DeleteObjectsCommand({
+              Bucket: this.s3Info.bucket, Delete: { Objects: objs },
+            }));
+          }
+          token = list.NextContinuationToken;
+        } while (token);
+        try { await this.s3Client.send(new DeleteObjectCommand({ Bucket: this.s3Info.bucket, Key: oldKey })); } catch { }
+        if (oldParent) await cleanupEmptyAncestors(oldParent);
+      } else {
+        await this.s3Client.send(new DeleteObjectsCommand({
+          Bucket: this.s3Info.bucket, Delete: { Objects: [{ Key: oldKey }] },
+        }));
+        if (oldParent) await cleanupEmptyAncestors(oldParent);
+      }
+
+      // refresh
+      const root = `${this.resourceId}/data/contents/`;
+      this.rootDirectory.children = await this.readRootFolder(root);
+
+      Notifications.toast({
+        title: "Success",
+        message: `${hasSlash || isRootExplicit ? "Moved" : "Renamed"} ${isFolder ? "folder" : "file"} successfully!`,
+        type: "success",
+      });
+    } catch (error: any) {
+      console.error("Rename/move failed:", error);
+      Notifications.toast({
+        title: "Error",
+        message: `Failed to ${hasSlash || isRootExplicit ? "move" : "rename"} ${isFolder ? "folder" : "file"}: ${error?.message || error}`,
+        type: "error",
+      });
+    }
+  }
+
+
 }
 export default toNative(App);
 </script>
