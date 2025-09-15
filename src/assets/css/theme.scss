@@ -17,12 +17,10 @@ section {
   padding: 4rem 0;
 }
 
-.gap-1 {
-  gap: 1rem;
-}
-
-.gap-2 {
-  gap: 2rem;
+@for $i from 1 through 4 {
+  .gap-#{$i} {
+    gap: #{$i}rem;
+  }
 }
 
 #main-container {
