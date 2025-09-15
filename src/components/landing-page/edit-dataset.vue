@@ -198,8 +198,8 @@ class App extends Vue {
   wasLoaded = true;
 
   s3Client!: S3Client;
-  s3Host: string = "https://s3.beta.hydroshare.org";
-  hydroshareHost: string = "https://beta.hydroshare.org";
+  s3Host: string = "http://localhost:9000";
+  hydroshareHost: string = "http://localhost:8000";
   s3Info = {
     bucket: "",
     prefix: "",
@@ -344,8 +344,8 @@ class App extends Vue {
   async onRestoreDefaults() {
     this.isFetchingMetadata = true;
     this.isLoadingFiles = true;
-    this.s3Host = "https://s3.beta.hydroshare.org";
-    this.hydroshareHost = "https://beta.hydroshare.org";
+    this.s3Host = "http://localhost:9000";
+    this.hydroshareHost = "http://localhost:8000";
     await this.fetchS3Info();
     this.startS3Client();
     this.loadResource();
@@ -367,7 +367,7 @@ class App extends Vue {
   async submit() {
     try {
       const resourceId = this.resourceId;
-      const key = `${resourceId}/data/contents/hs_user_meta.json`;
+      const key = `${resourceId}/data/contents/dataset_metadata.json`;
 
       const content = JSON.stringify(
         { name: this.data.name, description: this.data.description },

@@ -124,8 +124,8 @@ class LandingPage extends Vue {
   wasLoaded = true;
 
   s3Client!: S3Client;
-  s3Host: string = "https://s3.beta.hydroshare.org";
-  hydroshareHost: string = "https://beta.hydroshare.org";
+  s3Host: string = "http://localhost:9000";
+  hydroshareHost: string = "http://localhost:8000";
 
   s3Info = {
     bucket: "",
@@ -232,7 +232,7 @@ class LandingPage extends Vue {
       this.resourceId,
       this.s3Client,
       this.s3Info.bucket,
-      `${this.s3Info.prefix}dataset_metadata.json`,
+      `${this.resourceId}/data/contents/dataset_metadata.json`,
     );
 
     if (resource) {
@@ -266,8 +266,8 @@ class LandingPage extends Vue {
   async onRestoreDefaults() {
     this.isFetchingMetadata = true;
     this.isLoadingFiles = true;
-    this.s3Host = "https://s3.beta.hydroshare.org";
-    this.hydroshareHost = "https://beta.hydroshare.org";
+    this.s3Host = "http://localhost:9000";
+    this.hydroshareHost = "http://localhost:8000";
     await this.fetchS3Info();
     this.startS3Client();
     this.loadResource();
