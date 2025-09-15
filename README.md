@@ -20,7 +20,7 @@ Assuming that you have HS running locally, with a user `asdf2` and a resource `6
 "move" the resource to the expected default:
 ```
 export STARTING_RESOURCE_ID=691cd6fc77e6403299bf5ea51ef4698f
-export DEFAULT_RESOURCE_ID=691cd6fc77e6403299bf5ea51ef4698f
+export DEFAULT_RESOURCE_ID=d7b526e24f7e449098b428ae9363f514
 docker exec -it hydroshare python manage.py modify_resource_id $STARTING_RESOURCE_ID $DEFAULT_RESOURCE_ID
 ```
 
@@ -28,7 +28,9 @@ docker exec -it hydroshare python manage.py modify_resource_id $STARTING_RESOURC
 # the bucket is your hs username
 export BUCKET=asdf2
 
-docker exec -it hydroshare mc cp example_metadata/hs_user_meta.json hydroshare/$BUCKET/md/$DEFAULT_RESOURCE_ID/
+mc alias set local-hydroshare http://localhost:9000 minioadmin minioadmin
 
-docker exec -it hydroshare mc cp example_metadata/dataset_metadata.json hydroshare/$BUCKET/$DEFAULT_RESOURCE_ID/data/contents/
+mc cp example_metadata/dataset_metadata.json local-hydroshare/$BUCKET/md/$DEFAULT_RESOURCE_ID/
+
+mc cp example_metadata/hs_user_meta.json local-hydroshare/$BUCKET/$DEFAULT_RESOURCE_ID/data/contents/
 ```

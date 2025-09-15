@@ -367,7 +367,7 @@ class App extends Vue {
   async submit() {
     try {
       const resourceId = this.resourceId;
-      const key = `${resourceId}/data/contents/dataset_metadata.json`;
+      const key = `${resourceId}/data/contents/hs_user_meta.json`;
 
       const content = JSON.stringify(
         { name: this.data.name, description: this.data.description },

@@ -232,7 +232,7 @@ class LandingPage extends Vue {
       this.resourceId,
       this.s3Client,
       this.s3Info.bucket,
-      `${this.resourceId}/data/contents/dataset_metadata.json`,
+      `${this.s3Info.prefix}dataset_metadata.json`,
     );
 
     if (resource) {
