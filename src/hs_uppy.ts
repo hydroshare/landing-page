@@ -1,186 +1,179 @@
-import {
-  Uppy,
-  Dashboard,
-  Tus,
-  GoldenRetriever,
-  GoogleDrivePicker,
-  DropTarget,
-} from "https://releases.transloadit.com/uppy/v4.13.0/uppy.min.mjs";
+import Uppy from '@uppy/core';
+import Dashboard from '@uppy/dashboard';
+  // GoldenRetriever,
+  // GoogleDrivePicker
+import AwsS3, { type AwsBody } from '@uppy/aws-s3';
 
-let uppy = null;
-if (HS_S_ID === "") {
-  uppy = new Uppy({
-    id: "uppy",
-    // https://github.com/transloadit/uppy/issues/5542
-  })
+import '@uppy/core/css/style.min.css';
+import '@uppy/dashboard/css/style.min.css';
+
+
+const WARN_ON_FILES_EXCEEDING_SIZE = 10 * 1024**3; // 10 GB
+// MAX_CHUNK should be less than the DATA_UPLOAD_MAX_MEMORY_SIZE but > 0
+let MAX_CHUNK = MAX_CHUNK_SIZE - 1000000; // 1 MB less than the max chunk size, in bytes
+if (MAX_CHUNK <= 0) {
+  MAX_CHUNK = 1;
 }
-else{
-  const WARN_ON_FILES_EXCEEDING_SIZE = 10 * 1024**3; // 10 GB
-  // MAX_CHUNK should be less than the DATA_UPLOAD_MAX_MEMORY_SIZE but > 0
-  let MAX_CHUNK = MAX_CHUNK_SIZE - 1000000; // 1 MB less than the max chunk size, in bytes
-  if (MAX_CHUNK <= 0) {
-    MAX_CHUNK = 1;
-  }
 
-  // Make sure the chunk size is not larger than the max file size
-  if (MAX_CHUNK > FILE_UPLOAD_MAX_SIZE) {
-    MAX_CHUNK = FILE_UPLOAD_MAX_SIZE;
-  }
+// Make sure the chunk size is not larger than the max file size
+if (MAX_CHUNK > FILE_UPLOAD_MAX_SIZE) {
+  MAX_CHUNK = FILE_UPLOAD_MAX_SIZE;
+}
 
-  // get the least size between max file size and remaining quota
-  // remaining quota can be null which effectively means no limit
-  let RESTRICTED_SIZE = FILE_UPLOAD_MAX_SIZE;
-  if (REMAINING_QUOTA !== null) {
-    RESTRICTED_SIZE = Math.min(FILE_UPLOAD_MAX_SIZE, REMAINING_QUOTA);
-  }
+// get the least size between max file size and remaining quota
+// remaining quota can be null which effectively means no limit
+let RESTRICTED_SIZE = FILE_UPLOAD_MAX_SIZE;
+if (REMAINING_QUOTA !== null) {
+  RESTRICTED_SIZE = Math.min(FILE_UPLOAD_MAX_SIZE, REMAINING_QUOTA);
+}
 
-  const headers = {
-    "HS-SID": HS_S_ID
-  };
+const headers = {
+  "HS-SID": HS_S_ID
+};
 
-  let quotaNote = `Max file size: ${formatBytes(parseInt(FILE_UPLOAD_MAX_SIZE))}.`;
-  if (REMAINING_QUOTA > 0) {
-    // `Remaining Quota: ${formatBytes(parseInt(REMAINING_QUOTA))}.
-    quotaNote += ` Remaining Quota: ${formatBytes(parseInt(REMAINING_QUOTA))}.`;
-  }
+let quotaNote = `Max file size: ${formatBytes(parseInt(FILE_UPLOAD_MAX_SIZE))}.`;
+if (REMAINING_QUOTA > 0) {
+  // `Remaining Quota: ${formatBytes(parseInt(REMAINING_QUOTA))}.
+  quotaNote += ` Remaining Quota: ${formatBytes(parseInt(REMAINING_QUOTA))}.`;
+}
 
-  const TUS_ENDPOINT = `${window.location.origin}${UPPY_UPLOAD_PATH}`
+const TUS_ENDPOINT = `${window.location.origin}${UPPY_UPLOAD_PATH}`
 
-  uppy = new Uppy({
-    id: "uppy",
-    // https://uppy.io/docs/uppy/#autoproceed
-    autoProceed: true,
-    // debug: true,
-    restrictions: {
-      maxFileSize: RESTRICTED_SIZE,
-      // restrict uploading a FOLDER with a total size larger than the max file size
-      maxTotalFileSize: RESTRICTED_SIZE,
-      // maxNumberOfFiles: MAX_NUMBER_OF_FILES_IN_SINGLE_LOCAL_UPLOAD,
-    },
-    // https://uppy.io/docs/dashboard/#locale
-    locale: {
-      strings: {
-        browseFolders: 'upload a folder',
-        dropPasteImportBoth: 'Drop files here, %{browseFolders} or import from:',
-      }
-    },
-    onBeforeUpload: (files) => {
-      Object.keys(files).forEach((fileId) => {
-        // add metadata to the file
-        files[fileId].meta.hs_res_id = RES_ID;
-        files[fileId].meta.hs_res_title = RES_TITLE;
-        files[fileId].meta.original_file_name = files[fileId].name;
-        files[fileId].meta.existing_path_in_resource = JSON.stringify(
-          getCurrentPath()
-        );
-        files[fileId].meta.file_size = files[fileId].data.size;
-      });
-      return files;
-    },
-    onBeforeFileAdded: (currentFile, files) => {
-      // https://uppy.io/docs/uppy/#onbeforefileaddedfile-files
-      // check for existing files before adding to the resource
-      // window.fbFiles and fbFolders are set in the file_browser.html template
+const uppy = new Uppy({
+  id: "uppy",
+  // https://uppy.io/docs/uppy/#autoproceed
+  autoProceed: true,
+  // debug: true,
+  restrictions: {
+    maxFileSize: RESTRICTED_SIZE,
+    // restrict uploading a FOLDER with a total size larger than the max file size
+    maxTotalFileSize: RESTRICTED_SIZE,
+    // maxNumberOfFiles: MAX_NUMBER_OF_FILES_IN_SINGLE_LOCAL_UPLOAD,
+  },
+  // https://uppy.io/docs/dashboard/#locale
+  locale: {
+    strings: {
+      browseFolders: 'upload a folder',
+      dropPasteImportBoth: 'Drop files here, %{browseFolders} or import from:',
+    }
+  },
+  onBeforeUpload: (files) => {
+    Object.keys(files).forEach((fileId) => {
+      // add metadata to the file
+      files[fileId].meta.hs_res_id = RES_ID;
+      files[fileId].meta.hs_res_title = RES_TITLE;
+      files[fileId].meta.original_file_name = files[fileId].name;
+      files[fileId].meta.existing_path_in_resource = JSON.stringify(
+        getCurrentPath()
+      );
+      files[fileId].meta.file_size = files[fileId].data.size;
+    });
+    return files;
+  },
+  onBeforeFileAdded: (currentFile, files) => {
+    // https://uppy.io/docs/uppy/#onbeforefileaddedfile-files
+    // check for existing files before adding to the resource
+    // window.fbFiles and fbFolders are set in the file_browser.html template
 
-      let path = currentFile?.meta?.relativePath
+    let path = currentFile?.meta?.relativePath
 
-      // check existing dirs if uploading a folder
-      if (window.fbFolders){
-        // strip the filename from the currentFile.meta.relativePath
-        // we only check the first level directory
-        if (path) {
-          path = path.split("/")[0];
-          const existingFolders = window.fbFolders.map((folder) => folder.name);
-          if (existingFolders.includes(path)) {
-            uppy.info(
-              `Folder ${path} already exists in the resource. Remove or rename.`
-            );
-            return false;
-          }
-        }
-      }
-
-      // check existing files
-      if (window.fbFiles) {
-        const existingFiles = window.fbFiles.map((f) => f.name);
-        if (existingFiles.includes(currentFile.name) && !path) {
+    // check existing dirs if uploading a folder
+    if (window.fbFolders){
+      // strip the filename from the currentFile.meta.relativePath
+      // we only check the first level directory
+      if (path) {
+        path = path.split("/")[0];
+        const existingFolders = window.fbFolders.map((folder) => folder.name);
+        if (existingFolders.includes(path)) {
           uppy.info(
-            `File ${currentFile.name} already exists in the resource. Remove or rename.`
+            `Folder ${path} already exists in the resource. Remove or rename.`
           );
           return false;
         }
       }
+    }
 
-      // check if the file size needs to be warned
-      const file_size = currentFile.data.size;
-      if (file_size >= WARN_ON_FILES_EXCEEDING_SIZE) {
-        let message = `File ${currentFile.name} is ${formatBytes(parseInt(file_size))}. ` +
-          `For files larger than ${formatBytes(parseInt(WARN_ON_FILES_EXCEEDING_SIZE))}, `+
-          "we recommend that you contact help.cuahsi.org for assistance.";
-        uppy.info(message, "warning", 5000);
+    // check existing files
+    if (window.fbFiles) {
+      const existingFiles = window.fbFiles.map((f) => f.name);
+      if (existingFiles.includes(currentFile.name) && !path) {
+        uppy.info(
+          `File ${currentFile.name} already exists in the resource. Remove or rename.`
+        );
+        return false;
       }
-    },
-  })
-  .use(Dashboard, {
-    inline: false,
-    closeModalOnClickOutside: true,
-    fileManagerSelectionType: "both", // files and folders
-    target: "#uppy",
-    showProgressDetails: true,
-    trigger: "#uppy-modal-trigger",
-    note: quotaNote,
-    // https://uppy.io/docs/dashboard/#locale
-    locale: {
-      strings: {
-        dropPasteFiles: `Drop files here or %{browseFiles} to upload to ${getCurrentPath()}.`,
-        // Used as the screen reader label for buttons that remove a file.
-        // removeFile: "Remove file from upload queue",
-        // cancel: 'Cancel',
-      },
-    },
-  })
-  .use(DropTarget, {
-    target: "#hsDropzone",
-    onDrop: (event) => {
-      // open the dashboard when files are dropped
-      if (getCurrentPath().hasOwnProperty("aggregation")) {
-        // get the file from the event and remove it from the files list
-        let file = event.dataTransfer.files[0];
-        uppy.removeFile(file.id);
-        // Display an error here
-        $("#fb-alerts .upload-failed-alert").remove();
-        $("#hsDropzone").toggleClass("glow-blue", false);
+    }
 
-        $("#fb-alerts")
-          .append(
-            '<div class="alert alert-danger alert-dismissible upload-failed-alert" role="alert">' +
-              '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
-                '<span aria-hidden="true">&times;</span></button>' +
-              "<div>" +
-                "<strong>File Upload Failed</strong>" +
-              "</div>" +
-              "<div>" +
-                "<span>File upload is not allowed. Target folder seems to contain aggregation(s).</span>" +
-              "</div>" +
-            "</div>"
-          )
-          .fadeIn(200);
-        $(".fb-drag-flag").hide();
-        return
-      }
-      uppy.getPlugin("Dashboard").openModal();
+    // check if the file size needs to be warned
+    const file_size = currentFile.data.size;
+    if (file_size >= WARN_ON_FILES_EXCEEDING_SIZE) {
+      let message = `File ${currentFile.name} is ${formatBytes(parseInt(file_size))}. ` +
+        `For files larger than ${formatBytes(parseInt(WARN_ON_FILES_EXCEEDING_SIZE))}, `+
+        "we recommend that you contact help.cuahsi.org for assistance.";
+      uppy.info(message, "warning", 5000);
+    }
+  },
+})
+.use(Dashboard, {
+  inline: false,
+  closeModalOnClickOutside: true,
+  fileManagerSelectionType: "both", // files and folders
+  target: "#uppy",
+  showProgressDetails: true,
+  trigger: "#uppy-modal-trigger",
+  note: quotaNote,
+  // https://uppy.io/docs/dashboard/#locale
+  locale: {
+    strings: {
+      dropPasteFiles: `Drop files here or %{browseFiles} to upload to ${getCurrentPath()}.`,
+      // Used as the screen reader label for buttons that remove a file.
+      // removeFile: "Remove file from upload queue",
+      // cancel: 'Cancel',
     },
-    onDragOver: (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      $(".fb-drag-flag").show();
-      $("#hsDropzone").toggleClass("glow-blue", true);
-    },
-    onDragLeave: (event) => {
-      $(".fb-drag-flag").hide();
+  },
+})
+.use(DropTarget, {
+  target: "#hsDropzone",
+  onDrop: (event) => {
+    // open the dashboard when files are dropped
+    if (getCurrentPath().hasOwnProperty("aggregation")) {
+      // get the file from the event and remove it from the files list
+      let file = event.dataTransfer.files[0];
+      uppy.removeFile(file.id);
+      // Display an error here
+      $("#fb-alerts .upload-failed-alert").remove();
       $("#hsDropzone").toggleClass("glow-blue", false);
-    },
-  });
+
+      $("#fb-alerts")
+        .append(
+          '<div class="alert alert-danger alert-dismissible upload-failed-alert" role="alert">' +
+            '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+              '<span aria-hidden="true">&times;</span></button>' +
+            "<div>" +
+              "<strong>File Upload Failed</strong>" +
+            "</div>" +
+            "<div>" +
+              "<span>File upload is not allowed. Target folder seems to contain aggregation(s).</span>" +
+            "</div>" +
+          "</div>"
+        )
+        .fadeIn(200);
+      $(".fb-drag-flag").hide();
+      return
+    }
+    uppy.getPlugin("Dashboard").openModal();
+  },
+  onDragOver: (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    $(".fb-drag-flag").show();
+    $("#hsDropzone").toggleClass("glow-blue", true);
+  },
+  onDragLeave: (event) => {
+    $(".fb-drag-flag").hide();
+    $("#hsDropzone").toggleClass("glow-blue", false);
+  },
+});
   uppy
   .use(Tus, {
     endpoint: TUS_ENDPOINT,
