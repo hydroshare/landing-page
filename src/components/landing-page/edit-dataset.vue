@@ -157,6 +157,7 @@ import {
   DeleteObjectCommand,
   CopyObjectCommand,
 } from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
 import { stringify } from "@/utils";
 import { fetchResource, onFileDownload, readRootFolder } from "./shared";
 
@@ -483,17 +484,46 @@ class App extends Vue {
         const path = that.fileExplorer.getPathString(file);
         try {
           const key = `${basePrefix}${path}`;
-          const arrayBuffer = await file.file?.arrayBuffer();
-          await that.s3Client.send(
-            new PutObjectCommand({
-              Bucket: that.s3Info.bucket,
-              Key: key,
-              Body: arrayBuffer,
-              ContentType: file.file?.type || "application/octet-stream",
-            }),
-          );
+          const readableStream = await file.file?.stream();
+          console.log("Uploading file to S3:", key);
+          const parallelUploads3 = new Upload({
+            client: that.s3Client,
+            params: { Bucket: that.s3Info.bucket, Key: key, Body: readableStream },
+
+            // optional tags
+            tags: [],
+
+            // (optional) concurrency configuration
+            queueSize: 4,
+
+            partSize: 1024 * 1024 * 5,
+
+            // (optional) when true, do not automatically call AbortMultipartUpload when
+            // a multipart upload fails to complete. You should then manually handle
+            // the leftover parts.
+            leavePartsOnError: true,
+          });
+
+          console.log("created upload:", parallelUploads3);
+
+          interface UploadProgress {
+            loaded?: number;
+            total?: number;
+            part?: number;
+            Key?: string;
+            Bucket?: string;
+            [key: string]: any;
+          }
+
+          parallelUploads3.on("httpUploadProgress", (progress: UploadProgress) => {
+            console.log(progress);
+          });
+
+          await parallelUploads3.done();
+          console.log("Upload complete:", key);
           return true;
         } catch (_e) {
+          console.error(_e);
           return false;
         }
       });
