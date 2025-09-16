@@ -484,6 +484,7 @@ class App extends Vue {
       const fileUploadPromises = filesToUpload.map(async (file: IFile) => {
         const path = that.fileExplorer.getPathString(file);
         try {
+          // TODO: use uppy to upload files
           const key = `${basePrefix}${path}`;
           const readableStream = await file.file?.stream();
 
