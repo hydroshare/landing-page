@@ -1,5 +1,6 @@
 <template>
   <div id="uppy"></div>
+  <v-btn id="uppy-button">Upload files</v-btn>
 </template>
 
 <script lang="ts">
@@ -23,26 +24,30 @@ class HsUppy extends Vue {
       autoProceed: true,
       // debug: true,
       // https://uppy.io/docs/dashboard/#locale
-      locale: {
-        strings: {
-          browseFolders: 'upload a folder',
-          dropPasteImportBoth: 'Drop files here, %{browseFolders} or import from:',
-        },
-        pluralize: function (n: number): number {
-          throw new Error('Function not implemented.');
-        }
+      onBeforeUpload: (files) => {
+        Object.keys(files).forEach((fileId) => {
+          // add metadata to the file
+          // TODO: get the bucket name from the resource
+          console.log("adding metadata for", files[fileId]);
+          files[fileId].meta.bucket_name = "asdf2";
+        });
+        return files;
       },
     })
     .use(Dashboard, {
-      inline: true,
+      inline: false,
       fileManagerSelectionType: "both", // files and folders
       target: "#uppy",
+      showProgressDetails: true,
+      trigger: "#uppy-button",
       // showProgressDetails: true,
       note: "TODO: quota note?",
       // https://uppy.io/docs/dashboard/#locale
     })
 
-    .use(AwsS3, { endpoint: 'https://localhost/companion/' })
+    .use(AwsS3, { 
+      endpoint: 'https://localhost/companion',
+    })
 
     //   uppy.use(GoogleDrivePicker, {
     //     // https://uppy.io/docs/google-drive-picker/
