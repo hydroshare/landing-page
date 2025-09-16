@@ -212,7 +212,7 @@ export default class User extends Model {
         headers: headers,
       });
 
-      if (response.status === 200 && response.data) {
+      if (response.status >= 200 && response.status < 300 && response.data) {
         console.log("createS3Credentials response:", response.data);
         return {
           access_key: response.data.access_key,
