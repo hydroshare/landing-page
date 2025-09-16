@@ -41,7 +41,7 @@ import User from "@/models/user.model";
 })
 class CzLogin extends Vue {
   protected async openLogInDialog() {
-    User.logIn(this.onLoggedIn);
+    User.logIn();
   }
 
   protected onCancel() {
