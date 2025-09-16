@@ -40,6 +40,9 @@ export default class User extends Model {
   // Cache CSRF token to avoid repeated requests
   private static _cachedCSRFToken: string | null = null;
 
+  // Cache S3 credentials to avoid repeated requests
+  private static _cachedS3Credentials: { access_key: string; secret_key: string } | null = null;
+
   // Base URL for HydroShare API - can be configured for different environments
   private static readonly hydroshareHost = "http://localhost:8000";
 
@@ -194,7 +197,11 @@ export default class User extends Model {
     return null;
   }
 
-  static async createS3Credentials() {
+  static async getOrCreateS3Credentials() {
+    // Return cached credentials if available
+    if (this._cachedS3Credentials) {
+      return this._cachedS3Credentials;
+    }
     try {
       // Get CSRF token (cached if available)
       let csrfToken = await this.getCSRFToken();
@@ -213,11 +220,12 @@ export default class User extends Model {
       });
 
       if (response.status >= 200 && response.status < 300 && response.data) {
-        console.log("createS3Credentials response:", response.data);
-        return {
+        // cache the keys in the User model
+        this._cachedS3Credentials = {
           access_key: response.data.access_key,
           secret_key: response.data.secret_key,
         };
+        return this._cachedS3Credentials
       }
     } catch (e: any) {
       // If we get a 403 CSRF error, try refreshing the token once
@@ -239,19 +247,19 @@ export default class User extends Model {
           });
 
           if (retryResponse.status === 200 && retryResponse.data) {
-            console.log("createS3Credentials retry response:", retryResponse.data);
+            console.log("getOrCreateS3Credentials retry response:", retryResponse.data);
             return {
               access_key: retryResponse.data.access_key,
               secret_key: retryResponse.data.secret_key,
             };
           }
         } catch (retryError: any) {
-          console.log("createS3Credentials retry error:", retryError);
+          console.log("getOrCreateS3Credentials retry error:", retryError);
           throw new Error(`Failed to create S3 credentials after retry: ${retryError.message}`);
         }
       }
 
-      console.log("createS3Credentials error:", e);
+      console.log("getOrCreateS3Credentials error:", e);
       throw new Error(`Failed to create S3 credentials: ${e.message}`);
     }
     return null;
