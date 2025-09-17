@@ -90,7 +90,7 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue, toNative, Ref, Watch } from "vue-facing-decorator";
+import { Component, Vue, toNative, Ref } from "vue-facing-decorator";
 import { CzForm, CzFileExplorer } from "@cznethub/cznet-vue-core";
 import type { IFolder } from "@cznethub/cznet-vue-core/dist/types";
 import { S3Client, _Object } from "@aws-sdk/client-s3";
@@ -108,18 +108,6 @@ class LandingPage extends Vue {
 
   @Ref("form") form!: InstanceType<typeof CzForm>;
   @Ref("fileExplorer") fileExplorer!: InstanceType<typeof CzFileExplorer>;
-
-  // TODO: this doesn't catch redirect back from HS login
-  @Watch("isLoggedIn")
-  onIsLoggedInChange(newVal: boolean) {
-    if (newVal) {
-      this.accessKey = User.$state.s3Credentials.access_key;
-      this.secretKey = User.$state.s3Credentials.secret_key;
-    } else {
-      this.accessKey = localStorage.getItem("s3AccessKey") || "minioadmin";
-      this.secretKey = localStorage.getItem("s3SecretKey") || "minioadmin";
-    }
-  }
 
   protected get isLoggedIn(): boolean {
     return User.$state.isLoggedIn;
@@ -210,14 +198,22 @@ class LandingPage extends Vue {
     // TODO: for now we store access and secret keys in localStorage
     // Replace when we update to Pinia
 
-    // TODO: this will only fetch credentials on refresh of the page while logged in...
-    if (this.isLoggedIn) {
-      console.log("User is logged in, fetching S3 credentials");
+    const fetchCredentials = async () => {
       const { access_key, secret_key } = await User.getOrCreateS3Credentials();
       this.accessKey = access_key;
       this.secretKey = secret_key;
+    };
+
+    if (this.isLoggedIn) {
+      console.log("user is already logged in, fetching S3 credentials");
+      fetchCredentials();
     } else {
-      console.log("User is not logged in, using localStorage for S3 credentials");
+      console.log("checking if we just returned from HydroShare login redirect")
+      User.checkLoginStatus().then((loggedIn) => {
+        if (loggedIn) {
+          fetchCredentials();
+        }
+      });
     }
 
     if (!this.accessKey || !this.secretKey) {
