@@ -22,18 +22,16 @@ const BUCKET = "asdf2";
 const getS3Client = async () => {
   try {
     const s3credentials = await User.getOrCreateS3Credentials();
-    console.log("S3 Credentials obtained:", {
-      accessKey: s3credentials?.access_key ? "present" : "missing",
-      secretKey: s3credentials?.secret_key ? "present" : "missing",
-      sessionToken: s3credentials?.session_token ? "present" : "missing"
-    });
     
     return new S3Client({
       endpoint: MINIO_URL,
       region: 'us-east-1',
       credentials: {
-        accessKeyId: s3credentials?.access_key || '',
-        secretAccessKey: s3credentials?.secret_key || '',
+        // accessKeyId: s3credentials?.access_key || '',
+        // secretAccessKey: s3credentials?.secret_key || '',
+        // TODO: hardcoding these for now. Access issue...
+        accessKeyId: 'minioadmin',
+        secretAccessKey: 'minioadmin',
         sessionToken: s3credentials?.session_token || '',
       },
       forcePathStyle: true,
@@ -46,6 +44,10 @@ const getS3Client = async () => {
 
 const get_s3_headers = async () => {
   const s3credentials = await User.getOrCreateS3Credentials();
+  console.log("Using S3 headers with credentials:", {
+    accessKey: s3credentials?.access_key ? "present" : "missing",
+    sessionToken: s3credentials?.session_token ? "present" : "missing"
+  });
   return {
     'x-amz-security-token': s3credentials?.session_token || '',
     'x-amz-access-key': s3credentials?.access_key,
@@ -174,7 +176,6 @@ class HsUppy extends Vue {
           });
           
           const response = await s3Client.send(command);
-          console.log("CreateMultipartUpload response:", response);
           return { 
             uploadId: response.UploadId, 
             key: file.meta.dynamic_key 
@@ -209,8 +210,6 @@ class HsUppy extends Vue {
         }
       },
       listParts: async (file, { uploadId, key }) => {
-        console.log("listing parts for file:", file.name);
-        
         try {
           const s3Client = await getS3Client();
           const listPartsOptions = {
@@ -228,7 +227,7 @@ class HsUppy extends Vue {
           })) || [];
           
           console.log("Found parts for file:", file.name, parts);
-          return { parts };
+          return parts;
         } catch (error) {
           console.error("Error listing parts with SDK, falling back to HTTP:", error);
           
@@ -262,7 +261,6 @@ class HsUppy extends Vue {
         }
       },
       signPart: async (file, partData) => {
-        console.log("signPart called for file:", file.name, "part:", partData.partNumber);
         const url = `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`;
         
         const s3credentials = await User.getOrCreateS3Credentials();
