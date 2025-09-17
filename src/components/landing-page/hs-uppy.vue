@@ -213,12 +213,13 @@ class HsUppy extends Vue {
         
         try {
           const s3Client = await getS3Client();
-          const command = new ListPartsCommand({
+          const listPartsOptions = {
             Bucket: BUCKET,
             Key: key,
             UploadId: uploadId,
-          });
-          
+          };
+          const command = new ListPartsCommand(listPartsOptions);
+
           const response = await s3Client.send(command);
           const parts = response.Parts?.map(part => ({
             PartNumber: part.PartNumber,
@@ -253,7 +254,7 @@ class HsUppy extends Vue {
             }));
             
             console.log("Found parts via HTTP fallback for file:", file.name, parts);
-            return { parts };
+            return parts;
           } catch (httpError) {
             console.error("HTTP fallback also failed:", httpError);
             throw error;
