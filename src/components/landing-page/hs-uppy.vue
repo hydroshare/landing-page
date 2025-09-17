@@ -9,7 +9,6 @@ import Uppy from '@uppy/core';
 import GoldenRetriever from '@uppy/golden-retriever';
 import Dashboard from '@uppy/dashboard';
 import AwsS3 from '@uppy/aws-s3';
-import User from "@/models/user.model";
 import { S3Client, ListMultipartUploadsCommand, CreateMultipartUploadCommand, ListPartsCommand, AbortMultipartUploadCommand, CompleteMultipartUploadCommand, GetBucketAclCommand, GetObjectAclCommand } from "@aws-sdk/client-s3";
 
 import '@uppy/core/css/style.min.css';
@@ -28,6 +27,15 @@ class HsUppy extends Vue {
 
   @Prop({ type: String, required: false, default: "http://localhost:9000" })
   s3Host!: string;
+
+  @Prop({ type: String, required: false, default: "minioadmin" })
+  accessKey!: string;
+
+  @Prop({ type: String, required: false, default: "minioadmin" })
+  secretKey!: string;
+
+  @Prop({ type: String, required: false, default: "" })
+  sessionToken!: string;
 
   mounted() {
     const uppy = new Uppy({
@@ -49,7 +57,7 @@ class HsUppy extends Vue {
       target: "#uppy",
       showProgressDetails: true,
       trigger: "#uppy-button",
-      note: "TODO: quota note?",
+      note: `Uploading to: ${this.s3Host}/${this.s3Info.bucket}/${this.s3Info.prefix}`,
     })
     .use(AwsS3, {
       allowedMetaFields: true,
@@ -165,13 +173,11 @@ class HsUppy extends Vue {
       },
       signPart: async (file, partData) => {
         const url = `${this.s3Host}/${this.s3Info.bucket}/${file.meta.dynamic_key}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`;
-        
-        const s3credentials = await User.getOrCreateS3Credentials();
         return { 
           url, 
           headers: {
-            'x-amz-security-token': s3credentials?.session_token || '',
-            'x-amz-access-key': s3credentials?.access_key,
+            'x-amz-security-token': this.secretKey || '',
+            'x-amz-access-key': this.accessKey || '',
           }
         };
       },
@@ -307,18 +313,13 @@ class HsUppy extends Vue {
   }
   getS3Client = async () => {
     try {
-      const s3credentials = await User.getOrCreateS3Credentials();
-      
       return new S3Client({
         endpoint: this.s3Host,
         region: 'us-east-1',
         credentials: {
-          accessKeyId: s3credentials?.access_key || '',
-          secretAccessKey: s3credentials?.secret_key || '',
-          // TODO: hardcoding these for now. Access issue...
-          // accessKeyId: 'minioadmin',
-          // secretAccessKey: 'minioadmin',
-          sessionToken: s3credentials?.session_token || '',
+          accessKeyId: this.accessKey || '',
+          secretAccessKey: this.secretKey || '',
+          sessionToken: this.sessionToken || '',
         },
         forcePathStyle: true,
       });
@@ -328,8 +329,7 @@ class HsUppy extends Vue {
     }
   };
   checkS3Credentials = async (key) => {
-    const credentials = await User.getOrCreateS3Credentials()
-    console.log(`Checking S3 credentials:`, credentials);
+    console.log(`Checking S3 credentials:`, { accessKey: this.accessKey, secretKey: this.secretKey });
     const s3Client = await this.getS3Client();
     try {
       const command = new GetBucketAclCommand({ Bucket: this.s3Info.bucket });
@@ -421,14 +421,13 @@ class HsUppy extends Vue {
     }
   };
   get_s3_http_headers = async () => {
-    const s3credentials = await User.getOrCreateS3Credentials();
     console.log("Using S3 headers with credentials:", {
-      accessKey: s3credentials?.access_key ? "present" : "missing",
-      sessionToken: s3credentials?.session_token ? "present" : "missing"
+      accessKey: this.accessKey ? "present" : "missing",
+      sessionToken: this.sessionToken ? "present" : "missing"
     });
     return {
-      'x-amz-security-token': s3credentials?.session_token || '',
-      'x-amz-access-key': s3credentials?.access_key,
+      'x-amz-security-token': this.sessionToken || '',
+      'x-amz-access-key': this.accessKey || '',
     };
   };
 }

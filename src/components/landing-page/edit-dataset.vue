@@ -1,6 +1,6 @@
 <template>
   <!-- TODO: integrate HsUppy with the file browser -->
-  <HsUppy :s3Info="s3Info" :s3Host="s3Host" />
+  <HsUppy :s3Info="s3Info" :s3Host="s3Host" :accessKey="accessKey" :secretKey="secretKey" />
   <v-container>
     <div class="d-flex gap-1">
       <div class="text-h5">Edit Resource</div>
