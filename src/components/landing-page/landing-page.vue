@@ -90,13 +90,14 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue, toNative, Ref } from "vue-facing-decorator";
+import { Component, Vue, toNative, Ref, Watch } from "vue-facing-decorator";
 import { CzForm, CzFileExplorer } from "@cznethub/cznet-vue-core";
 import type { IFolder } from "@cznethub/cznet-vue-core/dist/types";
 import { S3Client, _Object } from "@aws-sdk/client-s3";
 import { stringify } from "@/utils";
 import { fetchResource, onFileDownload } from "./shared";
 import S3Form from "./s3-form.vue";
+import User from "@/models/user.model";
 
 @Component({
   components: { CzForm, CzFileExplorer, S3Form },
@@ -107,6 +108,22 @@ class LandingPage extends Vue {
 
   @Ref("form") form!: InstanceType<typeof CzForm>;
   @Ref("fileExplorer") fileExplorer!: InstanceType<typeof CzFileExplorer>;
+
+  // TODO: this doesn't catch redirect back from HS login
+  @Watch("isLoggedIn")
+  onIsLoggedInChange(newVal: boolean) {
+    if (newVal) {
+      this.accessKey = User.$state.s3Credentials.access_key;
+      this.secretKey = User.$state.s3Credentials.secret_key;
+    } else {
+      this.accessKey = localStorage.getItem("s3AccessKey") || "minioadmin";
+      this.secretKey = localStorage.getItem("s3SecretKey") || "minioadmin";
+    }
+  }
+
+  protected get isLoggedIn(): boolean {
+    return User.$state.isLoggedIn;
+  }
 
   schema!: any;
   uischema!: any;
@@ -192,6 +209,16 @@ class LandingPage extends Vue {
     // https://cuahsi.atlassian.net/browse/CAM-769
     // TODO: for now we store access and secret keys in localStorage
     // Replace when we update to Pinia
+
+    // TODO: this will only fetch credentials on refresh of the page while logged in...
+    if (this.isLoggedIn) {
+      console.log("User is logged in, fetching S3 credentials");
+      const { access_key, secret_key } = await User.getOrCreateS3Credentials();
+      this.accessKey = access_key;
+      this.secretKey = secret_key;
+    } else {
+      console.log("User is not logged in, using localStorage for S3 credentials");
+    }
 
     if (!this.accessKey || !this.secretKey) {
       this.accessKey = prompt("Enter your S3 Access Key:") || "minioadmin";
