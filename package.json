@@ -19,6 +19,7 @@
     "@uppy/aws-s3": "^5.0.0",
     "@uppy/core": "^5.0.1",
     "@uppy/dashboard": "^5.0.1",
+    "@uppy/golden-retriever": "^5.1.0",
     "@vueuse/core": "^13.5.0",
     "@vueuse/head": "^2.0.0",
     "@vuex-orm/core": "^0.36.4",

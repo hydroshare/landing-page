@@ -6,6 +6,7 @@
 <script lang="ts">
 import { Component, Vue, toNative } from "vue-facing-decorator";
 import Uppy from '@uppy/core';
+import GoldenRetriever from '@uppy/golden-retriever';
 import Dashboard from '@uppy/dashboard';
 import AwsS3 from '@uppy/aws-s3';
 import User from "@/models/user.model";
@@ -400,6 +401,7 @@ class HsUppy extends Vue {
         }
       } catch (e) {}
     })
+    .use(GoldenRetriever);
   }
 }
 export default toNative(HsUppy);
