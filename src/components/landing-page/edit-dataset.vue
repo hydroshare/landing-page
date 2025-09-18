@@ -1,6 +1,6 @@
 <template>
   <!-- TODO: integrate HsUppy with the file browser -->
-  <HsUppy :s3Info="s3Info" :s3Host="s3Host" :accessKey="accessKey" :secretKey="secretKey" />
+  <HsUppy ref="hsUppyRef" :s3Info="s3Info" :s3Host="s3Host" :accessKey="accessKey" :secretKey="secretKey" />
   <v-container>
     <div class="d-flex gap-1">
       <div class="text-h5">Edit Resource</div>
@@ -180,9 +180,7 @@ class App extends Vue {
   @Ref("fileInput") fileInput!: HTMLInputElement;
   @Ref("folderInput") folderInput!: HTMLInputElement;
   @Ref("fileExplorer") fileExplorer!: InstanceType<typeof CzFileExplorer>;
-  protected get isLoggedIn(): boolean {
-    return User.$state.isLoggedIn;
-  }
+  @Ref("hsUppyRef") hsUppyRef!: InstanceType<typeof HsUppy>;
 
   protected get isLoggedIn(): boolean {
     return User.$state.isLoggedIn;
@@ -507,44 +505,93 @@ class App extends Vue {
         ? _createFoldersByDepth(remaining, depth + 1)
         : _uploadFiles();
     }
+
     async function _uploadFiles(): Promise<boolean[]> {
       const fileUploadPromises = filesToUpload.map(async (file: IFile) => {
         const path = that.fileExplorer.getPathString(file);
         try {
-          // TODO: use uppy to upload files
-          const key = `${basePrefix}${path}`;
-          const readableStream = await file.file?.stream();
+          if (!that.hsUppyRef) {
+            throw new Error("HsUppy component not available");
+          }
 
-          const id = uppy.addFile(/* ... */);
+          // const uppy = that.hsUppyRef.uppyInstance;
+          const uppy = that.$refs.hsUppyRef.getUppyInstance();
+          if (!uppy) {
+            throw new Error("Uppy instance not available");
+          }
+          console.log("Uppy instance:", uppy);
 
-          await uppy.upload();
+          console.log("Adding file to Uppy:", file.name, "at path:", path);
 
-          const body = uppy.getFile(id).response.body!;
-          const { location } = body; // This is now type safe
+          const fileId = uppy.addFile({
+            name: file.name,
+            type: file.file?.type || "application/octet-stream",
+            data: file.file,
+            meta: {
+              bucket_name: that.s3Info.bucket,
+              dynamic_key: `${that.s3Info.prefix}${path}`,
+            },
+          });
 
-          return true;
+          if (!fileId) {
+            throw new Error("Failed to add file to Uppy");
+          }
+
+          // Since Uppy has autoProceed: true, it will start uploading automatically
+          // Wait for the upload to complete for this specific file
+          return new Promise<boolean>((resolve) => {
+            const successHandler = (successFileId: string, response: any) => {
+              if (successFileId === fileId) {
+                uppy.off('upload-success', successHandler);
+                uppy.off('upload-error', errorHandler);
+                resolve(true);
+              }
+            };
+            
+            const errorHandler = (errorFileId: string, error: any) => {
+              if (errorFileId === fileId) {
+                uppy.off('upload-success', successHandler);
+                uppy.off('upload-error', errorHandler);
+                console.error("Upload error for file:", file.name, error);
+                resolve(false);
+              }
+            };
+
+            uppy.on('upload-success', successHandler);
+            uppy.on('upload-error', errorHandler);
+
+            // Add timeout as fallback
+            setTimeout(() => {
+              uppy.off('upload-success', successHandler);
+              uppy.off('upload-error', errorHandler);
+              console.warn("Upload timeout for file:", file.name);
+              resolve(false);
+            }, 300000); // 5 minute timeout
+          });
         } catch (_e) {
-          console.error(_e);
+          console.error("Error in file upload:", _e);
           return false;
         }
       });
 
-      const response = await Promise.allSettled(fileUploadPromises);
-
+      const results = await Promise.allSettled(fileUploadPromises);
+      
       filesToUpload.forEach((f, index) => {
-        if (response[index].status === "fulfilled") {
+        if (results[index].status === "fulfilled" && results[index].value) {
           f.isUploaded = true;
         }
       });
 
-      if (response.some((r) => r.status === "rejected")) {
+      if (results.some((r) => r.status === "rejected")) {
         Notifications.toast({
           message: "Some of your files failed to upload",
           type: "error",
         });
       }
 
-      return response.map((r) => r.status === "fulfilled");
+      return results.map((r) => 
+        r.status === "fulfilled" ? r.value : false
+      );
     }
 
     return responses;
