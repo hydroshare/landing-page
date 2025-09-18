@@ -7,11 +7,14 @@
 import { Component, Vue, toNative } from "vue-facing-decorator";
 import Uppy from '@uppy/core';
 import Dashboard from '@uppy/dashboard';
-import AwsS3, { type AwsBody } from '@uppy/aws-s3';
-// import User from "@/models/user.model";
+import AwsS3 from '@uppy/aws-s3';
+import User from "@/models/user.model";
 
 import '@uppy/core/css/style.min.css';
 import '@uppy/dashboard/css/style.min.css';
+
+const MINIO_URL = 'http://localhost:9000';
+const BUCKET = "asdf2";
 
 @Component({
   name: "hs-uppy",
@@ -30,7 +33,7 @@ class HsUppy extends Vue {
           // add metadata to the file
           // TODO: get the bucket name from the resource
           console.log("adding metadata for", files[fileId]);
-          files[fileId].meta.bucket_name = "asdf2";
+          files[fileId].meta.bucket_name = BUCKET;
           files[fileId].meta.dynamic_key = `d7b526e24f7e449098b428ae9363f514/data/contents/${files[fileId].name}`;
         });
         return files;
@@ -48,36 +51,96 @@ class HsUppy extends Vue {
     })
 
     .use(AwsS3, {
-      endpoint: 'https://localhost/companion',
       allowedMetaFields: true,
-      // signPart: async (file, partData) => {
-      //   alert("signPart called");
-      //   // https://uppy.io/docs/aws-s3/#signpartfile-partdata
-      //   console.log("signPart called for file:", file, "part:", partData);
-      //   const result = await User.createS3Credentials();
-      //   console.log("createS3Credentials result:", result);
+      createMultipartUpload: async (file) => {
+        // https://uppy.io/docs/aws-s3/#createmultipartuploadfile
+        console.log("createMultipartUpload called for file:", file);
+        const result = await User.createS3Credentials();
+        console.log("createS3Credentials result:", result);
 
-      //   const headers: Record<string, string> = {
-      //     'x-amz-security-token': result.session_token || '',
-      //     'x-amz-access-key': result.access_key,
-      //   };
-      //   const BUCKET = "asdf2";
-      //   const url = `htts://localhost:9000/${BUCKET}/${file.meta.dynamic_key}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`;
-      //   return { url, headers };
-      // },
-      // async getTemporarySecurityCredentials({ signal }) {
-      //   // https://uppy.io/docs/aws-s3/#gettemporarysecuritycredentialsoptions
-      //   const result = await User.createS3Credentials();
-      //   console.log("getTemporarySecurityCredentials result:", result);
-      //   const credentials: AwsBody = {
-      //     accessKeyId: result.access_key,
-      //     secretAccessKey: result.secret_key,
-      //     sessionToken: null,
-      //     expiration: null,
-      //   };
-      //   return { credentials, bucket: "asdf2", region: null };
-      // },
-      // shouldUseMultipart: (file) => file.size > 100 * 2 ** 20,
+        const headers: Record<string, string> = {
+          'x-amz-security-token': result?.session_token || '',
+          'x-amz-access-key': result?.access_key,
+        };
+        const url = `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}`;
+
+        // now call the S3 API to create the multipart upload
+        const response = await fetch(url + "?uploads", {
+          method: 'POST',
+          headers,
+        });
+        const data = await response.text();
+        console.log("S3 create multipart upload response:", data);
+        const uploadIdMatch = data.match(/<UploadId>(.+?)<\/UploadId>/);
+        const uploadId = uploadIdMatch ? uploadIdMatch[1] : null;
+        console.log("Extracted uploadId:", uploadId);
+        return { uploadId, key: file.meta.dynamic_key };
+      },
+      signPart: async (file, partData) => {
+        // https://uppy.io/docs/aws-s3/#signpartfile-partdata
+        console.log("signPart called for file:", file, "part:", partData);
+        const result = await User.createS3Credentials();
+        console.log("createS3Credentials result:", result);
+
+        const headers: Record<string, string> = {
+          'x-amz-security-token': result.session_token || '',
+          'x-amz-access-key': result.access_key,
+        };
+        const url = `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`;
+        console.log("signPart URL:", url);
+        return { url, headers };
+      },
+      completeMultipartUpload: async (file, uploadData) => {
+        // https://uppy.io/docs/aws-s3/#completemultipartuploadfile--uploadid-key-parts-
+        console.log("completeMultipartUpload called for file:", file, "uploadData:", uploadData);
+        const result = await User.createS3Credentials();
+        console.log("createS3Credentials result:", result);
+
+        const headers: Record<string, string> = {
+          'x-amz-security-token': result.session_token || '',
+          'x-amz-access-key': result.access_key,
+          'Content-Type': 'application/xml',
+        };
+        const url = `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}?uploadId=${uploadData.uploadId}`;
+
+        // construct the XML body for completing the multipart upload
+        let partsXml = '';
+        uploadData.parts.forEach(part => {
+          partsXml += `<Part><PartNumber>${part.PartNumber}</PartNumber><ETag>${part.ETag}</ETag></Part>`;
+        });
+        const body = `<CompleteMultipartUpload>${partsXml}</CompleteMultipartUpload>`;
+        console.log("completeMultipartUpload body:", body);
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers,
+          body,
+        });
+        const data = await response.text();
+        console.log("S3 complete multipart upload response:", data);
+        // return A publicly accessible URL to the object in the S3 bucket.
+        return `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}`;
+      },
+      shouldUseMultipart: (file) => {
+        // https://uppy.io/docs/aws-s3/#shouldusemultipartfile
+        // use multipart for files larger than 5MB
+        return file?.size > 5 * 1024 * 1024;
+      },
+      getUploadParameters: (file, options) => {
+        // https://uppy.io/docs/aws-s3/#getuploadparametersfile-options
+        // This will be called for non multipart uploads
+        console.log("getUploadParameters called for file:", file);
+        // return the parameters for a simple upload
+        return {
+          method: 'PUT',
+          url: `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}`,
+          headers: {
+            // 'x-amz-acl': 'public-read', // TODO: make configurable?
+            // 'Content-Type': file.type,
+          },
+          fields: {},
+        };
+      },
     })
 
     //   uppy.use(GoogleDrivePicker, {
