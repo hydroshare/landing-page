@@ -10,7 +10,7 @@ import GoldenRetriever from '@uppy/golden-retriever';
 import Dashboard from '@uppy/dashboard';
 import AwsS3 from '@uppy/aws-s3';
 import User from "@/models/user.model";
-import { S3Client, ListMultipartUploadsCommand, CreateMultipartUploadCommand, ListPartsCommand, AbortMultipartUploadCommand, CompleteMultipartUploadCommand } from "@aws-sdk/client-s3";
+import { S3Client, ListMultipartUploadsCommand, CreateMultipartUploadCommand, ListPartsCommand, AbortMultipartUploadCommand, CompleteMultipartUploadCommand, GetBucketAclCommand, GetObjectAclCommand } from "@aws-sdk/client-s3";
 
 import '@uppy/core/css/style.min.css';
 import '@uppy/dashboard/css/style.min.css';
@@ -27,11 +27,11 @@ const getS3Client = async () => {
       endpoint: MINIO_URL,
       region: 'us-east-1',
       credentials: {
-        // accessKeyId: s3credentials?.access_key || '',
-        // secretAccessKey: s3credentials?.secret_key || '',
+        accessKeyId: s3credentials?.access_key || '',
+        secretAccessKey: s3credentials?.secret_key || '',
         // TODO: hardcoding these for now. Access issue...
-        accessKeyId: 'minioadmin',
-        secretAccessKey: 'minioadmin',
+        // accessKeyId: 'minioadmin',
+        // secretAccessKey: 'minioadmin',
         sessionToken: s3credentials?.session_token || '',
       },
       forcePathStyle: true,
@@ -52,6 +52,33 @@ const get_s3_headers = async () => {
     'x-amz-security-token': s3credentials?.session_token || '',
     'x-amz-access-key': s3credentials?.access_key,
   };
+};
+
+const checkS3Credentials = async (bucket, key) => {
+  const credentials = await User.getOrCreateS3Credentials()
+  console.log(`Checking S3 credentials:`, credentials);
+  const s3Client = await getS3Client();
+  console.log(s3Client)
+  try {
+    const command = new GetBucketAclCommand({ Bucket: bucket || BUCKET });
+    console.log(`Checking bucket ACLs on ${bucket || BUCKET}...`);
+    const response = await s3Client.send(command);
+    console.log("GetBucketAclCommand response:", response);
+  } catch (error) {
+    console.error("S3 credentials are invalid or error occurred:", error);
+    return false;
+  }
+  if (key) {
+    try {
+      const command = new GetObjectAclCommand({ Bucket: bucket || BUCKET, Key: key });
+      console.log(`Checking object ACLs on ${key}...`);
+      const objResponse = await s3Client.send(command);
+      console.log(`GetObjectAclCommand response for ${key}:`, objResponse);
+    } catch (error) {
+      console.error("S3 object access error occurred:", error);
+      return false;
+    }
+  }
 };
 
 const findExistingMultipartUpload = async (file) => {
@@ -229,6 +256,7 @@ class HsUppy extends Vue {
           console.log("Found parts for file:", file.name, parts);
           return parts;
         } catch (error) {
+          await checkS3Credentials(BUCKET, key);
           console.error("Error listing parts with SDK, falling back to HTTP:", error);
           
           // Fallback to HTTP
