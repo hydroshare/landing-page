@@ -1,6 +1,9 @@
 <template>
   <div id="uppy"></div>
   <v-btn id="uppy-button">Upload files with Uppy</v-btn>
+  <div>{{ `${s3Host}/${s3Info.bucket}/${s3Info.prefix}` }}</div>
+  <div>{{ `Access Key: ${accessKey}` }}</div>
+  <div>{{ `Secret Key: ${secretKey}` }}</div>
 </template>
 
 <script lang="ts">
@@ -57,7 +60,7 @@ class HsUppy extends Vue {
       target: "#uppy",
       showProgressDetails: true,
       trigger: "#uppy-button",
-      note: `Uploading to: ${this.s3Host}/${this.s3Info.bucket}/${this.s3Info.prefix}`,
+      note: `TODO: quota?`,
     })
     .use(AwsS3, {
       allowedMetaFields: true,
@@ -72,7 +75,7 @@ class HsUppy extends Vue {
             return existingUpload;
           }
         } catch (error) {
-          console.warn("Error finding existing upload, proceeding with new upload:", error);
+          console.warn("Error checking for existing upload, proceeding with new upload:", error);
         }
 
         // If no existing upload found or error occurred, create new one
@@ -312,8 +315,7 @@ class HsUppy extends Vue {
     .use(GoldenRetriever);
   }
   getS3Client = async () => {
-    try {
-      return new S3Client({
+    const options = {
         endpoint: this.s3Host,
         region: 'us-east-1',
         credentials: {
@@ -322,7 +324,10 @@ class HsUppy extends Vue {
           sessionToken: this.sessionToken || '',
         },
         forcePathStyle: true,
-      });
+      };
+    console.log(`Creating S3 client with options: ${JSON.stringify(options)}`);
+    try {
+      return new S3Client(options);
     } catch (error) {
       console.error("Error getting S3 client:", error);
       throw error;
@@ -353,8 +358,7 @@ class HsUppy extends Vue {
     }
   };
   findExistingMultipartUpload = async (file) => {
-    console.log("Checking for existing MultipartUpload for file:", file.name);
-    
+    console.log(`Checking for existing MultipartUpload for ${this.s3Host}/${this.s3Info.bucket}/${this.s3Info.prefix}/${file.name}...`);
     try {
       const s3Client = await this.getS3Client();
       const command = new ListMultipartUploadsCommand({
