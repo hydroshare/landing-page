@@ -8,6 +8,7 @@ import { Component, Vue, toNative } from "vue-facing-decorator";
 import Uppy from '@uppy/core';
 import Dashboard from '@uppy/dashboard';
 import AwsS3, { type AwsBody } from '@uppy/aws-s3';
+// import User from "@/models/user.model";
 
 import '@uppy/core/css/style.min.css';
 import '@uppy/dashboard/css/style.min.css';
@@ -30,6 +31,7 @@ class HsUppy extends Vue {
           // TODO: get the bucket name from the resource
           console.log("adding metadata for", files[fileId]);
           files[fileId].meta.bucket_name = "asdf2";
+          files[fileId].meta.dynamic_key = `d7b526e24f7e449098b428ae9363f514/data/contents/${files[fileId].name}`;
         });
         return files;
       },
@@ -45,8 +47,37 @@ class HsUppy extends Vue {
       // https://uppy.io/docs/dashboard/#locale
     })
 
-    .use(AwsS3, { 
+    .use(AwsS3, {
       endpoint: 'https://localhost/companion',
+      allowedMetaFields: true,
+      // signPart: async (file, partData) => {
+      //   alert("signPart called");
+      //   // https://uppy.io/docs/aws-s3/#signpartfile-partdata
+      //   console.log("signPart called for file:", file, "part:", partData);
+      //   const result = await User.createS3Credentials();
+      //   console.log("createS3Credentials result:", result);
+
+      //   const headers: Record<string, string> = {
+      //     'x-amz-security-token': result.session_token || '',
+      //     'x-amz-access-key': result.access_key,
+      //   };
+      //   const BUCKET = "asdf2";
+      //   const url = `htts://localhost:9000/${BUCKET}/${file.meta.dynamic_key}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`;
+      //   return { url, headers };
+      // },
+      // async getTemporarySecurityCredentials({ signal }) {
+      //   // https://uppy.io/docs/aws-s3/#gettemporarysecuritycredentialsoptions
+      //   const result = await User.createS3Credentials();
+      //   console.log("getTemporarySecurityCredentials result:", result);
+      //   const credentials: AwsBody = {
+      //     accessKeyId: result.access_key,
+      //     secretAccessKey: result.secret_key,
+      //     sessionToken: null,
+      //     expiration: null,
+      //   };
+      //   return { credentials, bucket: "asdf2", region: null };
+      // },
+      // shouldUseMultipart: (file) => file.size > 100 * 2 ** 20,
     })
 
     //   uppy.use(GoogleDrivePicker, {
