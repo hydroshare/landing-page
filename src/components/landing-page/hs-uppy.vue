@@ -17,6 +17,7 @@ import '@uppy/dashboard/css/style.min.css';
 @Component({
   name: "hs-uppy",
   components: {},
+  expose: ["getUppyInstance", "addFile", "upload"],
 })
 class HsUppy extends Vue {
   @Prop({required: false, default: () => ({
@@ -37,9 +38,35 @@ class HsUppy extends Vue {
   @Prop({ type: String, required: false, default: "" })
   sessionToken!: string;
 
+  uppyInstance: Uppy | null = null;
+
+  // Method to expose the Uppy instance
+  getUppyInstance(): Uppy | null {
+    return this.uppyInstance;
+  }
+  // Add files through the component
+  addFile(fileData: any): string | null {
+    if (this.uppyInstance) {
+      try {
+        return this.uppyInstance.addFile(fileData);
+      } catch (error) {
+        console.error("Error adding file to Uppy:", error);
+        return null;
+      }
+    }
+    return null;
+  }
+
+  upload(): Promise<void> {
+    if (this.uppyInstance) {
+      return this.uppyInstance.upload();
+    }
+    return Promise.reject(new Error("Uppy instance not available"));
+  }
+
   mounted() {
     const uppyComponent = this;
-    const uppy = new Uppy({
+    this.uppyInstance = new Uppy({
       id: "uppy",
       autoProceed: true,
       onBeforeUpload: (files) => {
