@@ -97,6 +97,7 @@ import { S3Client, _Object } from "@aws-sdk/client-s3";
 import { stringify } from "@/utils";
 import { fetchResource, onFileDownload } from "./shared";
 import S3Form from "./s3-form.vue";
+import User from "@/models/user.model";
 
 @Component({
   components: { CzForm, CzFileExplorer, S3Form },
@@ -107,6 +108,10 @@ class LandingPage extends Vue {
 
   @Ref("form") form!: InstanceType<typeof CzForm>;
   @Ref("fileExplorer") fileExplorer!: InstanceType<typeof CzFileExplorer>;
+
+  protected get isLoggedIn(): boolean {
+    return User.$state.isLoggedIn;
+  }
 
   schema!: any;
   uischema!: any;
@@ -192,6 +197,24 @@ class LandingPage extends Vue {
     // https://cuahsi.atlassian.net/browse/CAM-769
     // TODO: for now we store access and secret keys in localStorage
     // Replace when we update to Pinia
+
+    const fetchCredentials = async () => {
+      const { access_key, secret_key } = await User.getOrCreateS3Credentials();
+      this.accessKey = access_key;
+      this.secretKey = secret_key;
+    };
+
+    if (this.isLoggedIn) {
+      console.log("user is already logged in, fetching S3 credentials");
+      fetchCredentials();
+    } else {
+      console.log("checking if we just returned from HydroShare login redirect")
+      User.checkLoginStatus().then((loggedIn) => {
+        if (loggedIn) {
+          fetchCredentials();
+        }
+      });
+    }
 
     if (!this.accessKey || !this.secretKey) {
       this.accessKey = prompt("Enter your S3 Access Key:") || "minioadmin";

@@ -159,6 +159,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { stringify } from "@/utils";
 import { fetchResource, onFileDownload, readRootFolder } from "./shared";
+import User from "@/models/user.model";
 
 interface FormError {
   title: string;
@@ -176,6 +177,9 @@ class App extends Vue {
   @Ref("fileInput") fileInput!: HTMLInputElement;
   @Ref("folderInput") folderInput!: HTMLInputElement;
   @Ref("fileExplorer") fileExplorer!: InstanceType<typeof CzFileExplorer>;
+  protected get isLoggedIn(): boolean {
+    return User.$state.isLoggedIn;
+  }
 
   schema!: any;
   uischema!: any;
@@ -260,6 +264,24 @@ class App extends Vue {
         "No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.",
       );
       this.resourceId = "d7b526e24f7e449098b428ae9363f514";
+    }
+
+    const fetchCredentials = async () => {
+      const { access_key, secret_key } = await User.getOrCreateS3Credentials();
+      this.accessKey = access_key;
+      this.secretKey = secret_key;
+    };
+
+    if (this.isLoggedIn) {
+      console.log("user is already logged in, fetching S3 credentials");
+      fetchCredentials();
+    } else {
+      console.log("checking if we just returned from HydroShare login redirect")
+      User.checkLoginStatus().then((loggedIn) => {
+        if (loggedIn) {
+          fetchCredentials();
+        }
+      });
     }
 
     // temporary local storage for S3 keys (will move to Pinia later)
