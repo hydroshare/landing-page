@@ -162,6 +162,7 @@ import {
 import { stringify } from "@/utils";
 import { fetchResource, onFileDownload, readRootFolder } from "./shared";
 import HsUppy from "./hs-uppy.vue";
+import User from "@/models/user.model";
 
 interface FormError {
   title: string;
@@ -179,6 +180,10 @@ class App extends Vue {
   @Ref("fileInput") fileInput!: HTMLInputElement;
   @Ref("folderInput") folderInput!: HTMLInputElement;
   @Ref("fileExplorer") fileExplorer!: InstanceType<typeof CzFileExplorer>;
+  protected get isLoggedIn(): boolean {
+    return User.$state.isLoggedIn;
+  }
+
   protected get isLoggedIn(): boolean {
     return User.$state.isLoggedIn;
   }
