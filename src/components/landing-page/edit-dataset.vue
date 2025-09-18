@@ -60,7 +60,7 @@
           <span />
         </template>
       </cz-file-explorer>
-      <div v-if="!isLoadingFiles" id="uppy"></div>
+      <HsUppy v-if="wasLoaded" />
       <v-skeleton-loader class="mb-12" v-else type="card"></v-skeleton-loader>
 
       <v-skeleton-loader
@@ -160,14 +160,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { stringify } from "@/utils";
 import { fetchResource, onFileDownload, readRootFolder } from "./shared";
-import User from "@/models/user.model";
-
-import Uppy from '@uppy/core';
-import Dashboard from '@uppy/dashboard';
-import AwsS3, { type AwsBody } from '@uppy/aws-s3';
-
-import '@uppy/core/css/style.min.css';
-import '@uppy/dashboard/css/style.min.css';
+import HsUppy from "./hs-uppy.vue";
 
 interface FormError {
   title: string;
@@ -175,7 +168,7 @@ interface FormError {
 }
 
 @Component({
-  components: { CzForm, CzFileExplorer },
+  components: { CzForm, CzFileExplorer, HsUppy },
   name: "App",
 })
 class App extends Vue {
@@ -514,15 +507,6 @@ class App extends Vue {
         try {
           const key = `${basePrefix}${path}`;
           const readableStream = await file.file?.stream();
-          
-          // TODO: move this out of the _uploadFiles function
-          // Set this to `any` or `Record<string, unknown>`
-          // if you do not set any metadata yourself
-          type Meta = { license: string };
-
-          const uppy = new Uppy<Meta, AwsBody>()
-            .use(Dashboard, { inline: true, target: '#uppy', height:550, width:750 })
-            // .use(AwsS3, { endpoint: '...' });
 
           const id = uppy.addFile(/* ... */);
 

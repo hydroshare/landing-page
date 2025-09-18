@@ -19,6 +19,8 @@ declare module 'vue' {
     copy: typeof import('./components/search/cd.search copy.vue')['default']
     'Cz.login': typeof import('./components/account/cz.login.vue')['default']
     EditDataset: typeof import('./components/landing-page/edit-dataset.vue')['default']
+    HsUppy: typeof import('./components/landing-page/hs-uppy.vue')['default']
+    HSUppy: typeof import('./components/landing-page/HSUppy.vue')['default']
     LandingPage: typeof import('./components/landing-page/landing-page.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
