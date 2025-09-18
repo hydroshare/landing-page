@@ -1,9 +1,6 @@
 <template>
   <div id="uppy"></div>
   <v-btn id="uppy-button">Upload files with Uppy</v-btn>
-  <div>{{ `${s3Host}/${s3Info.bucket}/${s3Info.prefix}` }}</div>
-  <div>{{ `Access Key: ${accessKey}` }}</div>
-  <div>{{ `Secret Key: ${secretKey}` }}</div>
 </template>
 
 <script lang="ts">
@@ -41,6 +38,7 @@ class HsUppy extends Vue {
   sessionToken!: string;
 
   mounted() {
+    const uppyComponent = this;
     const uppy = new Uppy({
       id: "uppy",
       autoProceed: true,
@@ -48,8 +46,8 @@ class HsUppy extends Vue {
         Object.keys(files).forEach((fileId) => {
           const file = files[fileId]
           console.log("adding metadata for", file.name);
-          file.meta.bucket_name = this.s3Info.bucket;
-          file.meta.dynamic_key = `${this.s3Info.prefix}${file.name}`;
+          file.meta.bucket_name = uppyComponent.s3Info.bucket;
+          file.meta.dynamic_key = `${uppyComponent.s3Info.prefix}${file.name}`;
         });
         return files;
       },
@@ -69,7 +67,7 @@ class HsUppy extends Vue {
         
         // First try to find existing upload with SDK
         try {
-          const existingUpload = await this.findExistingMultipartUpload(file);
+          const existingUpload = await uppyComponent.findExistingMultipartUpload(file);
           if (existingUpload) {
             console.log("Found existing MultipartUpload for file:", file.name);
             return existingUpload;
@@ -82,9 +80,9 @@ class HsUppy extends Vue {
         console.log("creating new MultipartUpload for file:", file.name);
         
         try {
-          const s3Client = await this.getS3Client();
+          const s3Client = await uppyComponent.getS3Client();
           const command = new CreateMultipartUploadCommand({
-            Bucket: this.s3Info.bucket,
+            Bucket: uppyComponent.s3Info.bucket,
             Key: file.meta.dynamic_key,
           });
           
@@ -98,10 +96,10 @@ class HsUppy extends Vue {
           
           // Fallback to HTTP
           try {
-            const url = `${this.s3Host}/${this.s3Info.bucket}/${file.meta.dynamic_key}?uploads`;
+            const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploads`;
             const response = await fetch(url, {
               method: 'POST',
-              headers: await this.get_s3_http_headers(),
+              headers: await uppyComponent.get_s3_http_headers(),
             });
             
             const data = await response.text();
@@ -124,9 +122,9 @@ class HsUppy extends Vue {
       },
       listParts: async (file, { uploadId, key }) => {
         try {
-          const s3Client = await this.getS3Client();
+          const s3Client = await uppyComponent.getS3Client();
           const listPartsOptions = {
-            Bucket: this.s3Info.bucket,
+            Bucket: uppyComponent.s3Info.bucket,
             Key: key,
             UploadId: uploadId,
           };
@@ -142,15 +140,15 @@ class HsUppy extends Vue {
           console.log("Found parts for file:", file.name, parts);
           return parts;
         } catch (error) {
-          await this.checkS3Credentials(key);
+          await uppyComponent.checkS3Credentials(key);
           console.error("Error listing parts with SDK, falling back to HTTP:", error);
           
           // Fallback to HTTP
           try {
-            const url = `${this.s3Host}/${this.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
+            const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
             const response = await fetch(url, {
               method: 'GET',
-              headers: await this.get_s3_http_headers(),
+              headers: await uppyComponent.get_s3_http_headers(),
             });
             
             if (response.status < 200 || response.status >= 300) {
@@ -175,12 +173,12 @@ class HsUppy extends Vue {
         }
       },
       signPart: async (file, partData) => {
-        const url = `${this.s3Host}/${this.s3Info.bucket}/${file.meta.dynamic_key}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`;
+        const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`;
         return { 
           url, 
           headers: {
-            'x-amz-security-token': this.secretKey || '',
-            'x-amz-access-key': this.accessKey || '',
+            'x-amz-security-token': uppyComponent.secretKey || '',
+            'x-amz-access-key': uppyComponent.accessKey || '',
           }
         };
       },
@@ -188,9 +186,9 @@ class HsUppy extends Vue {
         console.log("aborting MultipartUpload for file:", file.name);
         
         try {
-          const s3Client = await this.getS3Client();
+          const s3Client = await uppyComponent.getS3Client();
           const command = new AbortMultipartUploadCommand({
-            Bucket: this.s3Info.bucket,
+            Bucket: uppyComponent.s3Info.bucket,
             Key: key,
             UploadId: uploadId,
           });
@@ -202,10 +200,10 @@ class HsUppy extends Vue {
           
           // Fallback to HTTP
           try {
-            const url = `${this.s3Host}/${this.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
+            const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
             const response = await fetch(url, {
               method: 'DELETE',
-              headers: await this.get_s3_http_headers(),
+              headers: await uppyComponent.get_s3_http_headers(),
             });
             
             const data = await response.text();
@@ -224,9 +222,9 @@ class HsUppy extends Vue {
         console.log("completing MultipartUpload for file:", file.name);
         
         try {
-          const s3Client = await this.getS3Client();
+          const s3Client = await uppyComponent.getS3Client();
           const command = new CompleteMultipartUploadCommand({
-            Bucket: this.s3Info.bucket,
+            Bucket: uppyComponent.s3Info.bucket,
             Key: key,
             UploadId: uploadId,
             MultipartUpload: {
@@ -240,17 +238,17 @@ class HsUppy extends Vue {
           const response = await s3Client.send(command);
           console.log("Multipart upload completed successfully for file:", file.name);
           
-          return `${this.s3Host}/${this.s3Info.bucket}/${file.meta.dynamic_key}`;
+          return `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}`;
         } catch (error) {
           console.error("Error completing multipart upload with SDK, falling back to HTTP:", error);
           
           // Fallback to HTTP
           try {
             const headers = {
-              ...await this.get_s3_http_headers(),
+              ...await uppyComponent.get_s3_http_headers(),
               'Content-Type': 'application/xml',
             };
-            const url = `${this.s3Host}/${this.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
+            const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
 
             let partsXml = '';
             parts.forEach(part => {
@@ -270,7 +268,7 @@ class HsUppy extends Vue {
             }
             
             console.log("Multipart upload completed successfully via HTTP fallback for file:", file.name);
-            return `${this.s3Host}/${this.s3Info.bucket}/${file.meta.dynamic_key}`;
+            return `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}`;
           } catch (httpError) {
             console.error("HTTP fallback also failed:", httpError);
             throw error;
@@ -287,7 +285,7 @@ class HsUppy extends Vue {
         console.log("getUploadParameters called for file:", file);
         return {
           method: 'PUT',
-          url: `${this.s3Host}/${this.s3Info.bucket}/${file.meta.dynamic_key}`,
+          url: `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}`,
           headers: {},
           fields: {},
         };
@@ -314,7 +312,7 @@ class HsUppy extends Vue {
     })
     .use(GoldenRetriever);
   }
-  getS3Client = async () => {
+  async getS3Client() {
     const options = {
         endpoint: this.s3Host,
         region: 'us-east-1',
@@ -333,7 +331,7 @@ class HsUppy extends Vue {
       throw error;
     }
   };
-  checkS3Credentials = async (key) => {
+  async checkS3Credentials(key) {
     console.log(`Checking S3 credentials:`, { accessKey: this.accessKey, secretKey: this.secretKey });
     const s3Client = await this.getS3Client();
     try {
@@ -356,8 +354,8 @@ class HsUppy extends Vue {
         return false;
       }
     }
-  };
-  findExistingMultipartUpload = async (file) => {
+  }
+  async findExistingMultipartUpload(file) {
     console.log(`Checking for existing MultipartUpload for ${this.s3Host}/${this.s3Info.bucket}/${this.s3Info.prefix}/${file.name}...`);
     try {
       const s3Client = await this.getS3Client();
@@ -423,8 +421,8 @@ class HsUppy extends Vue {
         throw error; // Re-throw the original SDK error
       }
     }
-  };
-  get_s3_http_headers = async () => {
+  }
+  async get_s3_http_headers() {
     console.log("Using S3 headers with credentials:", {
       accessKey: this.accessKey ? "present" : "missing",
       sessionToken: this.sessionToken ? "present" : "missing"
