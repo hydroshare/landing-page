@@ -1,6 +1,6 @@
 <template>
   <div id="uppy"></div>
-  <v-btn id="uppy-button">Upload files</v-btn>
+  <v-btn id="uppy-button">Upload files with Uppy</v-btn>
 </template>
 
 <script lang="ts">
@@ -13,8 +13,17 @@ import User from "@/models/user.model";
 import '@uppy/core/css/style.min.css';
 import '@uppy/dashboard/css/style.min.css';
 
+// TODO: get the bucket dynamically
 const MINIO_URL = 'http://localhost:9000';
 const BUCKET = "asdf2";
+
+const get_s3_headers = async () => {
+  const s3credentials = await User.getOrCreateS3Credentials();
+  return {
+    'x-amz-security-token': s3credentials?.session_token || '',
+    'x-amz-access-key': s3credentials?.access_key,
+  };
+};
 
 @Component({
   name: "hs-uppy",
@@ -32,7 +41,7 @@ class HsUppy extends Vue {
         Object.keys(files).forEach((fileId) => {
           // add metadata to the file
           // TODO: get the bucket name from the resource
-          console.log("adding metadata for", files[fileId]);
+          console.log("adding metadata for", files[fileId].name);
           files[fileId].meta.bucket_name = BUCKET;
           files[fileId].meta.dynamic_key = `d7b526e24f7e449098b428ae9363f514/data/contents/${files[fileId].name}`;
         });
@@ -47,58 +56,40 @@ class HsUppy extends Vue {
       trigger: "#uppy-button",
       // showProgressDetails: true,
       note: "TODO: quota note?",
-      // https://uppy.io/docs/dashboard/#locale
     })
-
     .use(AwsS3, {
       allowedMetaFields: true,
       createMultipartUpload: async (file) => {
         // https://uppy.io/docs/aws-s3/#createmultipartuploadfile
-        console.log("createMultipartUpload called for file:", file);
-        const result = await User.createS3Credentials();
-        console.log("createS3Credentials result:", result);
-
-        const headers: Record<string, string> = {
-          'x-amz-security-token': result?.session_token || '',
-          'x-amz-access-key': result?.access_key,
-        };
+        console.log("creating MultipartUpload for file:", file.name);
         const url = `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}`;
 
         // now call the S3 API to create the multipart upload
         const response = await fetch(url + "?uploads", {
           method: 'POST',
-          headers,
+          headers: await get_s3_headers(),
         });
         const data = await response.text();
-        console.log("S3 create multipart upload response:", data);
+        // if the response is not 200, throw an error
+        if (response.status < 200 || response.status >= 300) {
+          throw new Error(`Error creating multipart upload: ${response.status} ${data}`);
+        }
         const uploadIdMatch = data.match(/<UploadId>(.+?)<\/UploadId>/);
         const uploadId = uploadIdMatch ? uploadIdMatch[1] : null;
-        console.log("Extracted uploadId:", uploadId);
         return { uploadId, key: file.meta.dynamic_key };
       },
       signPart: async (file, partData) => {
         // https://uppy.io/docs/aws-s3/#signpartfile-partdata
-        console.log("signPart called for file:", file, "part:", partData);
-        const result = await User.createS3Credentials();
-        console.log("createS3Credentials result:", result);
-
-        const headers: Record<string, string> = {
-          'x-amz-security-token': result.session_token || '',
-          'x-amz-access-key': result.access_key,
-        };
+        console.log("signPart called for file:", file.name, "part:", partData.partNumber);
         const url = `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`;
-        console.log("signPart URL:", url);
-        return { url, headers };
+        return { url, headers: await get_s3_headers() };
       },
       completeMultipartUpload: async (file, uploadData) => {
         // https://uppy.io/docs/aws-s3/#completemultipartuploadfile--uploadid-key-parts-
-        console.log("completeMultipartUpload called for file:", file, "uploadData:", uploadData);
-        const result = await User.createS3Credentials();
-        console.log("createS3Credentials result:", result);
+        console.log("completing MultipartUpload for file:", file.name);
 
         const headers: Record<string, string> = {
-          'x-amz-security-token': result.session_token || '',
-          'x-amz-access-key': result.access_key,
+          ...await get_s3_headers(),
           'Content-Type': 'application/xml',
         };
         const url = `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}?uploadId=${uploadData.uploadId}`;
@@ -109,7 +100,6 @@ class HsUppy extends Vue {
           partsXml += `<Part><PartNumber>${part.PartNumber}</PartNumber><ETag>${part.ETag}</ETag></Part>`;
         });
         const body = `<CompleteMultipartUpload>${partsXml}</CompleteMultipartUpload>`;
-        console.log("completeMultipartUpload body:", body);
 
         const response = await fetch(url, {
           method: 'POST',
@@ -117,14 +107,20 @@ class HsUppy extends Vue {
           body,
         });
         const data = await response.text();
-        console.log("S3 complete multipart upload response:", data);
+        if (response.status < 200 || response.status >= 300) {
+          throw new Error(`Error completing multipart upload: ${response.status} ${data}`);
+        }
+        console.log("Multipart upload completed successfully for file:", file.name);
         // return A publicly accessible URL to the object in the S3 bucket.
         return `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}`;
       },
       shouldUseMultipart: (file) => {
         // https://uppy.io/docs/aws-s3/#shouldusemultipartfile
         // use multipart for files larger than 5MB
-        return file?.size > 5 * 1024 * 1024;
+        if (!file) return false;
+        const useMultipart = file?.size > 5 * 1024 * 1024;
+        console.log(`shouldUseMultipart for file ${file.name} (${file.size} bytes):`, useMultipart);
+        return useMultipart;
       },
       getUploadParameters: (file, options) => {
         // https://uppy.io/docs/aws-s3/#getuploadparametersfile-options
@@ -134,10 +130,7 @@ class HsUppy extends Vue {
         return {
           method: 'PUT',
           url: `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}`,
-          headers: {
-            // 'x-amz-acl': 'public-read', // TODO: make configurable?
-            // 'Content-Type': file.type,
-          },
+          headers: {},
           fields: {},
         };
       },
