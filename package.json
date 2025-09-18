@@ -12,7 +12,8 @@
     "up": "taze major -I"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.846.0",
+    "@aws-sdk/client-s3": "^3.890.0",
+    "@aws-sdk/lib-storage": "^3.890.0",
     "@cznethub/cznet-vue-core": "^0.2.42",
     "@unhead/vue": "^2.0.11",
     "@uppy/aws-s3": "^5.0.0",
