@@ -16,6 +16,7 @@
     "@aws-sdk/lib-storage": "^3.888.0",
     "@cznethub/cznet-vue-core": "^0.2.42",
     "@unhead/vue": "^2.0.11",
+    "@uppy/aws-s3": "^5.0.0",
     "@vueuse/core": "^13.5.0",
     "@vueuse/head": "^2.0.0",
     "@vuex-orm/core": "^0.36.4",
