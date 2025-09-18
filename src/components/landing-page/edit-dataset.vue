@@ -1,4 +1,6 @@
 <template>
+  <!-- TODO: integrate HsUppy with the file browser -->
+  <HsUppy :s3Info="s3Info" :s3Host="s3Host" />
   <v-container>
     <div class="d-flex gap-1">
       <div class="text-h5">Edit Resource</div>
@@ -60,7 +62,6 @@
           <span />
         </template>
       </cz-file-explorer>
-      <HsUppy v-if="wasLoaded" />
       <v-skeleton-loader class="mb-12" v-else type="card"></v-skeleton-loader>
 
       <v-skeleton-loader

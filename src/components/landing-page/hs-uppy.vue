@@ -4,7 +4,7 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue, toNative } from "vue-facing-decorator";
+import { Component, Vue, toNative, Prop } from "vue-facing-decorator";
 import Uppy from '@uppy/core';
 import GoldenRetriever from '@uppy/golden-retriever';
 import Dashboard from '@uppy/dashboard';
@@ -15,155 +15,30 @@ import { S3Client, ListMultipartUploadsCommand, CreateMultipartUploadCommand, Li
 import '@uppy/core/css/style.min.css';
 import '@uppy/dashboard/css/style.min.css';
 
-// TODO: get the bucket dynamically
-const MINIO_URL = 'http://localhost:9000';
-const BUCKET = "asdf2";
-
-const getS3Client = async () => {
-  try {
-    const s3credentials = await User.getOrCreateS3Credentials();
-    
-    return new S3Client({
-      endpoint: MINIO_URL,
-      region: 'us-east-1',
-      credentials: {
-        accessKeyId: s3credentials?.access_key || '',
-        secretAccessKey: s3credentials?.secret_key || '',
-        // TODO: hardcoding these for now. Access issue...
-        // accessKeyId: 'minioadmin',
-        // secretAccessKey: 'minioadmin',
-        sessionToken: s3credentials?.session_token || '',
-      },
-      forcePathStyle: true,
-    });
-  } catch (error) {
-    console.error("Error getting S3 client:", error);
-    throw error;
-  }
-};
-
-const get_s3_headers = async () => {
-  const s3credentials = await User.getOrCreateS3Credentials();
-  console.log("Using S3 headers with credentials:", {
-    accessKey: s3credentials?.access_key ? "present" : "missing",
-    sessionToken: s3credentials?.session_token ? "present" : "missing"
-  });
-  return {
-    'x-amz-security-token': s3credentials?.session_token || '',
-    'x-amz-access-key': s3credentials?.access_key,
-  };
-};
-
-const checkS3Credentials = async (bucket, key) => {
-  const credentials = await User.getOrCreateS3Credentials()
-  console.log(`Checking S3 credentials:`, credentials);
-  const s3Client = await getS3Client();
-  console.log(s3Client)
-  try {
-    const command = new GetBucketAclCommand({ Bucket: bucket || BUCKET });
-    console.log(`Checking bucket ACLs on ${bucket || BUCKET}...`);
-    const response = await s3Client.send(command);
-    console.log("GetBucketAclCommand response:", response);
-  } catch (error) {
-    console.error("S3 credentials are invalid or error occurred:", error);
-    return false;
-  }
-  if (key) {
-    try {
-      const command = new GetObjectAclCommand({ Bucket: bucket || BUCKET, Key: key });
-      console.log(`Checking object ACLs on ${key}...`);
-      const objResponse = await s3Client.send(command);
-      console.log(`GetObjectAclCommand response for ${key}:`, objResponse);
-    } catch (error) {
-      console.error("S3 object access error occurred:", error);
-      return false;
-    }
-  }
-};
-
-const findExistingMultipartUpload = async (file) => {
-  console.log("Checking for existing MultipartUpload for file:", file.name);
-  
-  try {
-    const s3Client = await getS3Client();
-    const command = new ListMultipartUploadsCommand({
-      Bucket: BUCKET,
-    });
-    
-    console.log("Sending ListMultipartUploadsCommand...");
-    const response = await s3Client.send(command);
-    console.log("ListMultipartUploads response:", response);
-    
-    if (response.Uploads) {
-      const existingUpload = response.Uploads.find(upload => 
-        upload.Key === file.meta.dynamic_key
-      );
-      
-      if (existingUpload) {
-        console.log("Existing MultipartUpload found for file:", file.name, "UploadId:", existingUpload.UploadId);
-        return { 
-          uploadId: existingUpload.UploadId, 
-          key: existingUpload.Key 
-        };
-      }
-    }
-    
-    console.log("No existing multipart upload found for file:", file.name);
-    return null;
-  } catch (error) {
-    console.error("Error listing multipart uploads:", error);
-    
-    // Fallback to direct HTTP request for debugging
-    console.log("Falling back to HTTP request for debugging...");
-    try {
-      const url = `${MINIO_URL}/${BUCKET}?uploads`;
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: await get_s3_headers(),
-      });
-      
-      if (response.status < 200 || response.status >= 300) {
-        const errorText = await response.text();
-        console.error("HTTP fallback error:", response.status, errorText);
-        throw new Error(`HTTP fallback: ${response.status} ${errorText}`);
-      }
-      
-      const data = await response.text();
-      console.log("HTTP fallback response:", data);
-      
-      // Manual parsing as fallback
-      const uploadMatches = [...data.matchAll(/<Upload><Key>(.+?)<\/Key><UploadId>(.+?)<\/UploadId>/g)];
-      for (const match of uploadMatches) {
-        const key = match[1];
-        const uploadId = match[2];
-        if (key === file.meta.dynamic_key) {
-          console.log("Existing MultipartUpload found via HTTP fallback:", file.name, "UploadId:", uploadId);
-          return { uploadId, key };
-        }
-      }
-      
-      return null;
-    } catch (fallbackError) {
-      console.error("HTTP fallback also failed:", fallbackError);
-      throw error; // Re-throw the original SDK error
-    }
-  }
-};
-
 @Component({
   name: "hs-uppy",
   components: {},
 })
 class HsUppy extends Vue {
+  @Prop({required: false, default: () => ({
+    "prefix": "d7b526e24f7e449098b428ae9363f514/data/contents/",
+    "bucket": "asdf",
+  }) })
+  s3Info!: { prefix: string; bucket: string };
+
+  @Prop({ type: String, required: false, default: "http://localhost:9000" })
+  s3Host!: string;
+
   mounted() {
     const uppy = new Uppy({
       id: "uppy",
       autoProceed: true,
       onBeforeUpload: (files) => {
         Object.keys(files).forEach((fileId) => {
-          console.log("adding metadata for", files[fileId].name);
-          files[fileId].meta.bucket_name = BUCKET;
-          files[fileId].meta.dynamic_key = `d7b526e24f7e449098b428ae9363f514/data/contents/${files[fileId].name}`;
+          const file = files[fileId]
+          console.log("adding metadata for", file.name);
+          file.meta.bucket_name = this.s3Info.bucket;
+          file.meta.dynamic_key = `${this.s3Info.prefix}${file.name}`;
         });
         return files;
       },
@@ -183,7 +58,7 @@ class HsUppy extends Vue {
         
         // First try to find existing upload with SDK
         try {
-          const existingUpload = await findExistingMultipartUpload(file);
+          const existingUpload = await this.findExistingMultipartUpload(file);
           if (existingUpload) {
             console.log("Found existing MultipartUpload for file:", file.name);
             return existingUpload;
@@ -196,9 +71,9 @@ class HsUppy extends Vue {
         console.log("creating new MultipartUpload for file:", file.name);
         
         try {
-          const s3Client = await getS3Client();
+          const s3Client = await this.getS3Client();
           const command = new CreateMultipartUploadCommand({
-            Bucket: BUCKET,
+            Bucket: this.s3Info.bucket,
             Key: file.meta.dynamic_key,
           });
           
@@ -212,10 +87,10 @@ class HsUppy extends Vue {
           
           // Fallback to HTTP
           try {
-            const url = `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}?uploads`;
+            const url = `${this.s3Host}/${this.s3Info.bucket}/${file.meta.dynamic_key}?uploads`;
             const response = await fetch(url, {
               method: 'POST',
-              headers: await get_s3_headers(),
+              headers: await this.get_s3_http_headers(),
             });
             
             const data = await response.text();
@@ -238,9 +113,9 @@ class HsUppy extends Vue {
       },
       listParts: async (file, { uploadId, key }) => {
         try {
-          const s3Client = await getS3Client();
+          const s3Client = await this.getS3Client();
           const listPartsOptions = {
-            Bucket: BUCKET,
+            Bucket: this.s3Info.bucket,
             Key: key,
             UploadId: uploadId,
           };
@@ -256,15 +131,15 @@ class HsUppy extends Vue {
           console.log("Found parts for file:", file.name, parts);
           return parts;
         } catch (error) {
-          await checkS3Credentials(BUCKET, key);
+          await this.checkS3Credentials(key);
           console.error("Error listing parts with SDK, falling back to HTTP:", error);
           
           // Fallback to HTTP
           try {
-            const url = `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
+            const url = `${this.s3Host}/${this.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
             const response = await fetch(url, {
               method: 'GET',
-              headers: await get_s3_headers(),
+              headers: await this.get_s3_http_headers(),
             });
             
             if (response.status < 200 || response.status >= 300) {
@@ -289,7 +164,7 @@ class HsUppy extends Vue {
         }
       },
       signPart: async (file, partData) => {
-        const url = `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`;
+        const url = `${this.s3Host}/${this.s3Info.bucket}/${file.meta.dynamic_key}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`;
         
         const s3credentials = await User.getOrCreateS3Credentials();
         return { 
@@ -304,9 +179,9 @@ class HsUppy extends Vue {
         console.log("aborting MultipartUpload for file:", file.name);
         
         try {
-          const s3Client = await getS3Client();
+          const s3Client = await this.getS3Client();
           const command = new AbortMultipartUploadCommand({
-            Bucket: BUCKET,
+            Bucket: this.s3Info.bucket,
             Key: key,
             UploadId: uploadId,
           });
@@ -318,10 +193,10 @@ class HsUppy extends Vue {
           
           // Fallback to HTTP
           try {
-            const url = `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
+            const url = `${this.s3Host}/${this.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
             const response = await fetch(url, {
               method: 'DELETE',
-              headers: await get_s3_headers(),
+              headers: await this.get_s3_http_headers(),
             });
             
             const data = await response.text();
@@ -340,9 +215,9 @@ class HsUppy extends Vue {
         console.log("completing MultipartUpload for file:", file.name);
         
         try {
-          const s3Client = await getS3Client();
+          const s3Client = await this.getS3Client();
           const command = new CompleteMultipartUploadCommand({
-            Bucket: BUCKET,
+            Bucket: this.s3Info.bucket,
             Key: key,
             UploadId: uploadId,
             MultipartUpload: {
@@ -356,17 +231,17 @@ class HsUppy extends Vue {
           const response = await s3Client.send(command);
           console.log("Multipart upload completed successfully for file:", file.name);
           
-          return `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}`;
+          return `${this.s3Host}/${this.s3Info.bucket}/${file.meta.dynamic_key}`;
         } catch (error) {
           console.error("Error completing multipart upload with SDK, falling back to HTTP:", error);
           
           // Fallback to HTTP
           try {
             const headers = {
-              ...await get_s3_headers(),
+              ...await this.get_s3_http_headers(),
               'Content-Type': 'application/xml',
             };
-            const url = `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
+            const url = `${this.s3Host}/${this.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
 
             let partsXml = '';
             parts.forEach(part => {
@@ -386,7 +261,7 @@ class HsUppy extends Vue {
             }
             
             console.log("Multipart upload completed successfully via HTTP fallback for file:", file.name);
-            return `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}`;
+            return `${this.s3Host}/${this.s3Info.bucket}/${file.meta.dynamic_key}`;
           } catch (httpError) {
             console.error("HTTP fallback also failed:", httpError);
             throw error;
@@ -403,7 +278,7 @@ class HsUppy extends Vue {
         console.log("getUploadParameters called for file:", file);
         return {
           method: 'PUT',
-          url: `${MINIO_URL}/${BUCKET}/${file.meta.dynamic_key}`,
+          url: `${this.s3Host}/${this.s3Info.bucket}/${file.meta.dynamic_key}`,
           headers: {},
           fields: {},
         };
@@ -430,6 +305,132 @@ class HsUppy extends Vue {
     })
     .use(GoldenRetriever);
   }
+  getS3Client = async () => {
+    try {
+      const s3credentials = await User.getOrCreateS3Credentials();
+      
+      return new S3Client({
+        endpoint: this.s3Host,
+        region: 'us-east-1',
+        credentials: {
+          accessKeyId: s3credentials?.access_key || '',
+          secretAccessKey: s3credentials?.secret_key || '',
+          // TODO: hardcoding these for now. Access issue...
+          // accessKeyId: 'minioadmin',
+          // secretAccessKey: 'minioadmin',
+          sessionToken: s3credentials?.session_token || '',
+        },
+        forcePathStyle: true,
+      });
+    } catch (error) {
+      console.error("Error getting S3 client:", error);
+      throw error;
+    }
+  };
+  checkS3Credentials = async (key) => {
+    const credentials = await User.getOrCreateS3Credentials()
+    console.log(`Checking S3 credentials:`, credentials);
+    const s3Client = await this.getS3Client();
+    try {
+      const command = new GetBucketAclCommand({ Bucket: this.s3Info.bucket });
+      console.log(`Checking bucket ACLs on ${this.s3Info.bucket}...`);
+      const response = await s3Client.send(command);
+      console.log("GetBucketAclCommand response:", response);
+    } catch (error) {
+      console.error("S3 credentials are invalid or error occurred:", error);
+      return false;
+    }
+    if (key) {
+      try {
+        const command = new GetObjectAclCommand({ Bucket: this.s3Info.bucket, Key: key });
+        console.log(`Checking object ACLs on ${key}...`);
+        const objResponse = await s3Client.send(command);
+        console.log(`GetObjectAclCommand response for ${key}:`, objResponse);
+      } catch (error) {
+        console.error("S3 object access error occurred:", error);
+        return false;
+      }
+    }
+  };
+  findExistingMultipartUpload = async (file) => {
+    console.log("Checking for existing MultipartUpload for file:", file.name);
+    
+    try {
+      const s3Client = await this.getS3Client();
+      const command = new ListMultipartUploadsCommand({
+        Bucket: this.s3Info.bucket,
+      });
+      
+      console.log("Sending ListMultipartUploadsCommand...");
+      const response = await s3Client.send(command);
+      console.log("ListMultipartUploads response:", response);
+      
+      if (response.Uploads) {
+        const existingUpload = response.Uploads.find(upload => 
+          upload.Key === file.meta.dynamic_key
+        );
+        
+        if (existingUpload) {
+          console.log("Existing MultipartUpload found for file:", file.name, "UploadId:", existingUpload.UploadId);
+          return { 
+            uploadId: existingUpload.UploadId, 
+            key: existingUpload.Key 
+          };
+        }
+      }
+      
+      console.log("No existing multipart upload found for file:", file.name);
+      return null;
+    } catch (error) {
+      console.error("Error listing multipart uploads:", error);
+      
+      // Fallback to direct HTTP request for debugging
+      console.log("Falling back to HTTP request for debugging...");
+      try {
+        const url = `${this.s3Host}/${this.s3Info.bucket}?uploads`;
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: await this.get_s3_http_headers(),
+        });
+        
+        if (response.status < 200 || response.status >= 300) {
+          const errorText = await response.text();
+          console.error("HTTP fallback error:", response.status, errorText);
+          throw new Error(`HTTP fallback: ${response.status} ${errorText}`);
+        }
+        
+        const data = await response.text();
+        console.log("HTTP fallback response:", data);
+        
+        // Manual parsing as fallback
+        const uploadMatches = [...data.matchAll(/<Upload><Key>(.+?)<\/Key><UploadId>(.+?)<\/UploadId>/g)];
+        for (const match of uploadMatches) {
+          const key = match[1];
+          const uploadId = match[2];
+          if (key === file.meta.dynamic_key) {
+            console.log("Existing MultipartUpload found via HTTP fallback:", file.name, "UploadId:", uploadId);
+            return { uploadId, key };
+          }
+        }
+        
+        return null;
+      } catch (fallbackError) {
+        console.error("HTTP fallback also failed:", fallbackError);
+        throw error; // Re-throw the original SDK error
+      }
+    }
+  };
+  get_s3_http_headers = async () => {
+    const s3credentials = await User.getOrCreateS3Credentials();
+    console.log("Using S3 headers with credentials:", {
+      accessKey: s3credentials?.access_key ? "present" : "missing",
+      sessionToken: s3credentials?.session_token ? "present" : "missing"
+    });
+    return {
+      'x-amz-security-token': s3credentials?.session_token || '',
+      'x-amz-access-key': s3credentials?.access_key,
+    };
+  };
 }
 export default toNative(HsUppy);
 </script>
