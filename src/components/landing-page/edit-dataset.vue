@@ -60,6 +60,7 @@
           <span />
         </template>
       </cz-file-explorer>
+      <HsUppy v-if="wasLoaded" ref="hsUppyRef" :s3Info="s3Info" :s3Host="s3Host" :accessKey="accessKey" :secretKey="secretKey" />
       <v-skeleton-loader class="mb-12" v-else type="card"></v-skeleton-loader>
 
       <v-skeleton-loader
@@ -159,6 +160,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { stringify } from "@/utils";
 import { fetchResource, onFileDownload, readRootFolder } from "./shared";
+import HsUppy from "./hs-uppy.vue";
 import User from "@/models/user.model";
 
 interface FormError {
@@ -167,7 +169,7 @@ interface FormError {
 }
 
 @Component({
-  components: { CzForm, CzFileExplorer },
+  components: { CzForm, CzFileExplorer, HsUppy },
   name: "App",
 })
 class App extends Vue {
@@ -177,6 +179,8 @@ class App extends Vue {
   @Ref("fileInput") fileInput!: HTMLInputElement;
   @Ref("folderInput") folderInput!: HTMLInputElement;
   @Ref("fileExplorer") fileExplorer!: InstanceType<typeof CzFileExplorer>;
+  @Ref("hsUppyRef") hsUppyRef!: InstanceType<typeof HsUppy>;
+
   protected get isLoggedIn(): boolean {
     return User.$state.isLoggedIn;
   }
@@ -500,42 +504,89 @@ class App extends Vue {
         ? _createFoldersByDepth(remaining, depth + 1)
         : _uploadFiles();
     }
+
     async function _uploadFiles(): Promise<boolean[]> {
       const fileUploadPromises = filesToUpload.map(async (file: IFile) => {
         const path = that.fileExplorer.getPathString(file);
         try {
-          const key = `${basePrefix}${path}`;
-          const arrayBuffer = await file.file?.arrayBuffer();
-          await that.s3Client.send(
-            new PutObjectCommand({
-              Bucket: that.s3Info.bucket,
-              Key: key,
-              Body: arrayBuffer,
-              ContentType: file.file?.type || "application/octet-stream",
-            }),
-          );
-          return true;
+          if (!that.hsUppyRef) {
+            throw new Error("HsUppy component not available");
+          }
+
+          const uppy = that.hsUppyRef.getUppyInstance();
+          if (!uppy) {
+            throw new Error("Uppy instance not available");
+          }
+          uppy.getPlugin("Dashboard")?.openModal();
+          const fileId = uppy.addFile({
+            name: file.name,
+            type: file.file?.type || "application/octet-stream",
+            data: file.file,
+            meta: {
+              bucket_name: that.s3Info.bucket,
+              dynamic_key: `${that.s3Info.prefix}${path}`,
+            },
+          });
+
+          if (!fileId) {
+            throw new Error("Failed to add file to Uppy");
+          }
+
+          // Since Uppy has autoProceed: true, it will start uploading automatically
+          // Wait for the upload to complete for this specific file
+          return new Promise<boolean>((resolve) => {
+            const successHandler = (successFileId: string, response: any) => {
+              if (successFileId === fileId) {
+                uppy.off('upload-success', successHandler);
+                uppy.off('upload-error', errorHandler);
+                resolve(true);
+              }
+            };
+            
+            const errorHandler = (errorFileId: string, error: any) => {
+              if (errorFileId === fileId) {
+                uppy.off('upload-success', successHandler);
+                uppy.off('upload-error', errorHandler);
+                console.error("Upload error for file:", file.name, error);
+                resolve(false);
+              }
+            };
+
+            uppy.on('upload-success', successHandler);
+            uppy.on('upload-error', errorHandler);
+
+            // Add timeout as fallback
+            setTimeout(() => {
+              uppy.off('upload-success', successHandler);
+              uppy.off('upload-error', errorHandler);
+              console.warn("Upload timeout for file:", file.name);
+              resolve(false);
+            }, 300000); // 5 minute timeout
+          });
         } catch (_e) {
+          console.error("Error in file upload:", _e);
           return false;
         }
       });
 
-      const response = await Promise.allSettled(fileUploadPromises);
+      const results = await Promise.allSettled(fileUploadPromises);
 
       filesToUpload.forEach((f, index) => {
-        if (response[index].status === "fulfilled") {
+        if (results[index].status === "fulfilled" && results[index].value) {
           f.isUploaded = true;
         }
       });
 
-      if (response.some((r) => r.status === "rejected")) {
+      if (results.some((r) => r.status === "rejected")) {
         Notifications.toast({
           message: "Some of your files failed to upload",
           type: "error",
         });
       }
 
-      return response.map((r) => r.status === "fulfilled");
+      return results.map((r) => 
+        r.status === "fulfilled" ? r.value : false
+      );
     }
 
     return responses;
