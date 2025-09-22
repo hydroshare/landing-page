@@ -2,6 +2,10 @@ export const APP_NAME = import.meta.env.VITE_APP_NAME || "";
 export const APP_URL = import.meta.env.VITE_APP_URL || "";
 export const LOGIN_URL = import.meta.env.VITE_APP_LOGIN_URL || "";
 export const CLIENT_ID = import.meta.env.VITE_APP_CLIENT_ID || "";
+export const COMPANION_URL = import.meta.env.VITE_APP_COMPANION_URL || "http://localhost:3020/companion";
+export const GOOGLE_PICKER_CLIENT_ID = import.meta.env.VITE_APP_GOOGLE_PICKER_CLIENT_ID || "737951655407-p3d2b2bl2ln90g5plfj09e98bprk42da.apps.googleusercontent.com";
+export const GOOGLE_PICKER_API_KEY = import.meta.env.VITE_APP_GOOGLE_PICKER_API_KEY || "AIzaSyDn4rOvqfQcnzKz-6O9VlMfXA6O3uDmZ7g";
+export const GOOGLE_PICKER_APP_ID = import.meta.env.VITE_APP_GOOGLE_PICKER_APP_ID || "737951655407";
 export const SUPPORT_EMAIL = import.meta.env.VITE_APP_SUPPORT_EMAIL || "";
 export const DEFAULT_TOAST_DURATION = 3500;
 

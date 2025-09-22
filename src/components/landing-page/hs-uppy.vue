@@ -7,9 +7,11 @@
 import { Component, Vue, toNative, Prop } from "vue-facing-decorator";
 import Uppy from '@uppy/core';
 import GoldenRetriever from '@uppy/golden-retriever';
+import GoogleDrivePicker from '@uppy/google-drive-picker';
 import Dashboard from '@uppy/dashboard';
 import AwsS3 from '@uppy/aws-s3';
 import { S3Client, ListMultipartUploadsCommand, CreateMultipartUploadCommand, ListPartsCommand, AbortMultipartUploadCommand, CompleteMultipartUploadCommand, GetBucketAclCommand, GetObjectAclCommand } from "@aws-sdk/client-s3";
+import { COMPANION_URL, GOOGLE_PICKER_CLIENT_ID, GOOGLE_PICKER_API_KEY, GOOGLE_PICKER_APP_ID } from "@/constants";
 
 import '@uppy/core/css/style.min.css';
 import '@uppy/dashboard/css/style.min.css';
@@ -73,6 +75,7 @@ class HsUppy extends Vue {
         Object.keys(files).forEach((fileId) => {
           const file = files[fileId]
           console.log("adding metadata for", file.name);
+          console.log("s3Info:", uppyComponent.s3Info);
           file.meta.bucket_name = uppyComponent.s3Info.bucket;
           file.meta.dynamic_key = `${uppyComponent.s3Info.prefix}${file.name}`;
         });
@@ -337,7 +340,16 @@ class HsUppy extends Vue {
         }
       } catch (e) {}
     })
-    .use(GoldenRetriever);
+    .use(GoldenRetriever)
+    .use(GoogleDrivePicker, {
+      // https://uppy.io/docs/google-drive-picker/
+      // https://console.cloud.google.com/apis/credentials?referrer=search&project=hs-test-oauth
+      target: Dashboard,
+      companionUrl: COMPANION_URL,
+      clientId: GOOGLE_PICKER_CLIENT_ID,
+      apiKey: GOOGLE_PICKER_API_KEY,
+      appId: GOOGLE_PICKER_APP_ID,
+    });
   }
   async getS3Client() {
     const options = {
