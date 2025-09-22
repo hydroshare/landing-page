@@ -16,6 +16,8 @@ import { COMPANION_URL, GOOGLE_PICKER_CLIENT_ID, GOOGLE_PICKER_API_KEY, GOOGLE_P
 import '@uppy/core/css/style.min.css';
 import '@uppy/dashboard/css/style.min.css';
 
+let uppyInstance = {} as Uppy | null;
+
 @Component({
   name: "hs-uppy",
   components: {},
@@ -40,17 +42,15 @@ class HsUppy extends Vue {
   @Prop({ type: String, required: false, default: "" })
   sessionToken!: string;
 
-  uppyInstance: Uppy | null = null;
-
   // Method to expose the Uppy instance
   getUppyInstance(): Uppy | null {
-    return this.uppyInstance;
+    return uppyInstance;
   }
   // Add files through the component
   addFile(fileData: any): string | null {
-    if (this.uppyInstance) {
+    if (uppyInstance) {
       try {
-        return this.uppyInstance.addFile(fileData);
+        return uppyInstance.addFile(fileData);
       } catch (error) {
         console.error("Error adding file to Uppy:", error);
         return null;
@@ -60,15 +60,15 @@ class HsUppy extends Vue {
   }
 
   upload(): Promise<void> {
-    if (this.uppyInstance) {
-      return this.uppyInstance.upload();
+    if (uppyInstance) {
+      return uppyInstance.upload();
     }
     return Promise.reject(new Error("Uppy instance not available"));
   }
 
   mounted() {
     const uppyComponent = this;
-    this.uppyInstance = new Uppy({
+    uppyInstance = new Uppy({
       id: "uppy",
       autoProceed: true,
       onBeforeUpload: (files) => {

@@ -1,6 +1,4 @@
 <template>
-  <!-- TODO: integrate HsUppy with the file browser -->
-  <HsUppy ref="hsUppyRef" :s3Info="s3Info" :s3Host="s3Host" :accessKey="accessKey" :secretKey="secretKey" />
   <v-container>
     <div class="d-flex gap-1">
       <div class="text-h5">Edit Resource</div>
@@ -62,6 +60,7 @@
           <span />
         </template>
       </cz-file-explorer>
+      <HsUppy v-if="wasLoaded" ref="hsUppyRef" :s3Info="s3Info" :s3Host="s3Host" :accessKey="accessKey" :secretKey="secretKey" />
       <v-skeleton-loader class="mb-12" v-else type="card"></v-skeleton-loader>
 
       <v-skeleton-loader
@@ -514,15 +513,11 @@ class App extends Vue {
             throw new Error("HsUppy component not available");
           }
 
-          // const uppy = that.hsUppyRef.uppyInstance;
-          const uppy = that.$refs.hsUppyRef.getUppyInstance();
+          const uppy = that.hsUppyRef.getUppyInstance();
           if (!uppy) {
             throw new Error("Uppy instance not available");
           }
-          console.log("Uppy instance:", uppy);
-
-          console.log("Adding file to Uppy:", file.name, "at path:", path);
-
+          uppy.getPlugin("Dashboard")?.openModal();
           const fileId = uppy.addFile({
             name: file.name,
             type: file.file?.type || "application/octet-stream",
@@ -575,7 +570,7 @@ class App extends Vue {
       });
 
       const results = await Promise.allSettled(fileUploadPromises);
-      
+
       filesToUpload.forEach((f, index) => {
         if (results[index].status === "fulfilled" && results[index].value) {
           f.isUploaded = true;
