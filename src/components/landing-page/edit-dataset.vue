@@ -307,7 +307,12 @@ class App extends Vue {
     }
 
     if (!this.s3Info.bucket || !this.s3Info.prefix) {
-      await this.fetchS3Info();
+      User.getResourceS3prefix(this.resourceId).then((s3info) => {
+        this.s3Info = s3info;
+        this.s3Info.prefix = `${this.resourceId}/data/contents/`; // TODO: overriding wrong api response value
+        this.startS3Client();
+        this.loadResource();
+      });
     }
 
     this.startS3Client();
@@ -376,22 +381,14 @@ class App extends Vue {
     this.isLoadingFiles = true;
     this.s3Host = "http://localhost:9000";
     this.hydroshareHost = "http://localhost:8000";
-    await this.fetchS3Info();
+    User.getResourceS3prefix(this.resourceId).then((s3info) => {
+      this.s3Info = s3info;
+      this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
+      this.startS3Client();
+      this.loadResource();
+    });
     this.startS3Client();
     this.loadResource();
-  }
-
-  async fetchS3Info() {
-    const response = await fetch(
-      `${this.hydroshareHost}/hsapi/resource/s3/${this.resourceId}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      },
-    );
-    this.s3Info = await response.json();
   }
 
   async submit() {
