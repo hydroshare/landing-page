@@ -10,7 +10,7 @@
     >
       <v-container class="d-flex align-end full-height pa-0 align-center">
         <router-link :to="{ path: `/` }" class="logo">
-          <img :src="'/img/hydroshare.png'" alt="HydroShare" />
+          <img :src="'img/hydroshare.png'" alt="HydroShare" />
         </router-link>
         <div class="spacer"></div>
         <div v-if="!$vuetify.display.mdAndDown" class="d-flex gap-1 ml-6">
@@ -198,7 +198,7 @@ class App extends Vue {
   public showMobileNavigation = false;
   public paths: any[] = [
     {
-      attrs: { to: "/resource/d7b526e24f7e449098b428ae9363f514" },
+      attrs: { to: "d7b526e24f7e449098b428ae9363f514" },
       label: "Example",
       icon: "mdi-test-tube",
     },

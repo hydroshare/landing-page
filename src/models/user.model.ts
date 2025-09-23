@@ -136,7 +136,7 @@ export default class User extends Model {
     }
   }
 
-  static async getResourceS3prefix(res_id: string) {
+  static async getResourceS3prefix(res_id: string) : Promise<{ bucket: string; prefix: string } | null> {
     try {
       const response = await axios.get(`${this.hydroshareHost}/hsapi/resource/s3/${res_id}/`, {
         withCredentials: true, // Ensure cookies are sent for authentication

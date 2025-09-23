@@ -191,30 +191,34 @@ class LandingPage extends Vue {
       alert(
         "No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.",
       );
-      this.resourceId = "d7b526e24f7e449098b428ae9363f514";
+      this.$router.push({ name: "landing", params: { resourceId: "d7b526e24f7e449098b428ae9363f514" } });
     }
 
     // https://cuahsi.atlassian.net/browse/CAM-769
     // TODO: for now we store access and secret keys in localStorage
     // Replace when we update to Pinia
 
-    const fetchCredentials = async () => {
-      const { access_key, secret_key } = await User.getOrCreateS3Credentials();
-      this.accessKey = access_key;
-      this.secretKey = secret_key;
-    };
+    // TODO: fetch credentials once the permissions issues have been worked out with micro-auth
+    // const fetchCredentials = async () => {
+    //   const { access_key, secret_key } = await User.getOrCreateS3Credentials();
+    //   this.accessKey = access_key;
+    //   this.secretKey = secret_key;
+    // };
 
-    if (this.isLoggedIn) {
-      console.log("user is already logged in, fetching S3 credentials");
-      fetchCredentials();
-    } else {
-      console.log("checking if we just returned from HydroShare login redirect")
-      User.checkLoginStatus().then((loggedIn) => {
-        if (loggedIn) {
-          fetchCredentials();
-        }
-      });
-    }
+    // if (this.isLoggedIn) {
+    //   console.log("user is already logged in, fetching S3 credentials");
+    //   fetchCredentials();
+    // } else {
+    //   console.log("checking if we just returned from HydroShare login redirect")
+    //   User.checkLoginStatus().then((loggedIn) => {
+    //     if (loggedIn) {
+    //       fetchCredentials();
+    //     }
+    //   });
+    // }
+
+    this.accessKey = "minioadmin"
+    this.secretKey = "minioadmin"
 
     if (!this.accessKey || !this.secretKey) {
       this.accessKey = prompt("Enter your S3 Access Key:") || "minioadmin";
@@ -230,7 +234,12 @@ class LandingPage extends Vue {
     }
 
     if (!this.s3Info.bucket || !this.s3Info.prefix) {
-      await this.fetchS3Info();
+      User.getResourceS3prefix(this.resourceId).then((s3info) => {
+        this.s3Info = s3info;
+        this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
+        this.startS3Client();
+        this.loadResource();
+      });
     }
 
     this.startS3Client();
@@ -291,26 +300,14 @@ class LandingPage extends Vue {
     this.isLoadingFiles = true;
     this.s3Host = "http://localhost:9000";
     this.hydroshareHost = "http://localhost:8000";
-    await this.fetchS3Info();
+    User.getResourceS3prefix(this.resourceId).then((s3info) => {
+      this.s3Info = s3info;
+      this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
+      this.startS3Client();
+      this.loadResource();
+    });
     this.startS3Client();
     this.loadResource();
-  }
-
-  /**
-   * @deprecated We are trying to avoid this coupling.
-   */
-  async fetchS3Info() {
-    const response = await fetch(
-      `${this.hydroshareHost}/hsapi/resource/s3/${this.resourceId}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      },
-    );
-    this.s3Info = await response.json();
-    this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
   }
 }
 export default toNative(LandingPage);
