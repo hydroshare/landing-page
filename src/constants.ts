@@ -24,10 +24,6 @@ export const MAX_YEAR = new Date().getFullYear();
 export const MIN_YEAR = 1900;
 export const API_BASE = import.meta.env.VITE_APP_API_URL || "";
 export const ENDPOINTS: { [key: string]: string } = {
-  search: `${API_BASE}/discovery/search`,
-  typeahead: `${API_BASE}/discovery/typeahead`,
-  typeaheadCreator: `${API_BASE}/discovery/typeahead_creator`,
-  contentTypes: `${API_BASE}/discovery/content-types`,
   // submit: `${API_BASE}/catalog/dataset`,
   // register: `${API_BASE}/catalog/repository/hydroshare`,
   // refresh: `${API_BASE}/catalog/repository/hydroshare`,

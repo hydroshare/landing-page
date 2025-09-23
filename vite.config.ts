@@ -13,8 +13,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
   return {
     root: "./",
-    base: env.VITE_APP_BASE || "/",
-    envDir: "å./",
+    base: env.VITE_APP_BASE || "/resource/",
+    envDir: "./",
     resolve: {
       alias: {
         "@/": `${path.resolve(__dirname, "src")}/`,
@@ -124,7 +124,7 @@ export default defineConfig(({ mode }) => {
 
     server: {
       host: true,
-      port: 8080,
+      port: 5004,
       // strictPort: true,
       // proxy: {
       //   "/sockjs-node": {

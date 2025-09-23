@@ -13,7 +13,7 @@ cp .env.template .env  #if you haven't already
 npm install
 npm run serve
 ```
-The frontend will be available at http://localhost:8080/
+The frontend will be available at http://localhost:5004/
 
 ### Create a dummy resource for landing page work
 Assuming that you have HS running locally, with a user `asdf2` and a resource `691cd6fc77e6403299bf5ea51ef4698f`
