@@ -191,7 +191,7 @@ class LandingPage extends Vue {
       alert(
         "No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.",
       );
-      this.resourceId = "d7b526e24f7e449098b428ae9363f514";
+      this.$router.push({ name: "landing", params: { resourceId: "d7b526e24f7e449098b428ae9363f514" } });
     }
 
     // https://cuahsi.atlassian.net/browse/CAM-769
