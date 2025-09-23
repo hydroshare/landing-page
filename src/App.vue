@@ -187,7 +187,6 @@ import User from "@/models/user.model";
 import { addRouteTags } from "./modules/router";
 import { useRoute, RouteLocationRaw } from "vue-router";
 import { useRouter } from "vue-router";
-import Search from "./models/search.model";
 
 @Component({
   name: "app",
@@ -198,11 +197,6 @@ class App extends Vue {
   router = useRouter();
   public showMobileNavigation = false;
   public paths: any[] = [
-    {
-      attrs: { to: "/search" },
-      label: "Search",
-      icon: "mdi-home",
-    },
     {
       attrs: { to: "/resource/d7b526e24f7e449098b428ae9363f514" },
       label: "Example",
@@ -236,12 +230,6 @@ class App extends Vue {
 
     // Check if user is already logged in via Django cookies
     await User.checkLoginStatus();
-
-    try {
-      Search.fetchContentTypes();
-    } catch (e) {
-      console.error("Failed to fetch content types", e);
-    }
   }
 }
 export default toNative(App);
