@@ -198,23 +198,27 @@ class LandingPage extends Vue {
     // TODO: for now we store access and secret keys in localStorage
     // Replace when we update to Pinia
 
-    const fetchCredentials = async () => {
-      const { access_key, secret_key } = await User.getOrCreateS3Credentials();
-      this.accessKey = access_key;
-      this.secretKey = secret_key;
-    };
+    // TODO: fetch credentials once the permissions issues have been worked out with micro-auth
+    // const fetchCredentials = async () => {
+    //   const { access_key, secret_key } = await User.getOrCreateS3Credentials();
+    //   this.accessKey = access_key;
+    //   this.secretKey = secret_key;
+    // };
 
-    if (this.isLoggedIn) {
-      console.log("user is already logged in, fetching S3 credentials");
-      fetchCredentials();
-    } else {
-      console.log("checking if we just returned from HydroShare login redirect")
-      User.checkLoginStatus().then((loggedIn) => {
-        if (loggedIn) {
-          fetchCredentials();
-        }
-      });
-    }
+    // if (this.isLoggedIn) {
+    //   console.log("user is already logged in, fetching S3 credentials");
+    //   fetchCredentials();
+    // } else {
+    //   console.log("checking if we just returned from HydroShare login redirect")
+    //   User.checkLoginStatus().then((loggedIn) => {
+    //     if (loggedIn) {
+    //       fetchCredentials();
+    //     }
+    //   });
+    // }
+
+    this.accessKey = "minioadmin"
+    this.secretKey = "minioadmin"
 
     if (!this.accessKey || !this.secretKey) {
       this.accessKey = prompt("Enter your S3 Access Key:") || "minioadmin";
