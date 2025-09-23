@@ -1,6 +1,6 @@
 FROM node:23 as build-stage
 WORKDIR /app
-COPY ./frontend/ .
+COPY . .
 RUN npm install
 RUN npm run build-prod
 
