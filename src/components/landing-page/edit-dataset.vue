@@ -310,8 +310,6 @@ class App extends Vue {
       User.getResourceS3prefix(this.resourceId).then((s3info) => {
         this.s3Info = s3info;
         this.s3Info.prefix = `${this.resourceId}/data/contents/`; // TODO: overriding wrong api response value
-        this.startS3Client();
-        this.loadResource();
       });
     }
 
@@ -381,12 +379,9 @@ class App extends Vue {
     this.isLoadingFiles = true;
     this.s3Host = "http://localhost:9000";
     this.hydroshareHost = "https://localhost";
-    User.getResourceS3prefix(this.resourceId).then((s3info) => {
-      this.s3Info = s3info;
-      this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
-      this.startS3Client();
-      this.loadResource();
-    });
+    const s3info = await User.getResourceS3prefix(this.resourceId);
+    this.s3Info = s3info;
+    this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
     this.startS3Client();
     this.loadResource();
   }

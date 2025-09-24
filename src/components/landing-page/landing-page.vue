@@ -234,12 +234,9 @@ class LandingPage extends Vue {
     }
 
     if (!this.s3Info.bucket || !this.s3Info.prefix) {
-      User.getResourceS3prefix(this.resourceId).then((s3info) => {
-        this.s3Info = s3info;
-        this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
-        this.startS3Client();
-        this.loadResource();
-      });
+      const s3info = await User.getResourceS3prefix(this.resourceId);
+      this.s3Info = s3info;
+      this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
     }
 
     this.startS3Client();
@@ -303,8 +300,6 @@ class LandingPage extends Vue {
     User.getResourceS3prefix(this.resourceId).then((s3info) => {
       this.s3Info = s3info;
       this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
-      this.startS3Client();
-      this.loadResource();
     });
     this.startS3Client();
     this.loadResource();

@@ -151,7 +151,12 @@ export default class User extends Model {
       }
     } catch (e: any) {
       console.log("getResourceS3prefix error:", e);
-      throw new Error(`Failed to get S3 prefix for resource ${res_id}: ${e.message}`);
+      const message = `Failed to get S3 prefix for resource ${res_id}: ${e.message}`
+      Notifications.toast({
+        message: message,
+        type: "error",
+      });
+      throw new Error(message);
     }
     return null;
   }
