@@ -66,46 +66,77 @@ class HsUppy extends Vue {
 
   // Method to generate pre-signed URL with all headers properly signed
   async generatePresignedUrl(method: string, url: string, headers?: Record<string, string>): Promise<{ url: string; headers: Record<string, string> }> {
-    try {
-      const signer = this.getSigner();
-      const urlObj = new URL(url);
-      
-      // Include all headers that will be sent in the signature
-      const requestHeaders: Record<string, string> = {
-        ...headers,
-        'host': urlObj.host, // Include host in signature
-      };
+  try {
+    const signer = this.getSigner();
+    const urlObj = new URL(url);
+    
+    // Create the request for signing - include only the host header
+    const request = new HttpRequest({
+      method: method,
+      protocol: urlObj.protocol,
+      hostname: urlObj.hostname,
+      port: urlObj.port ? parseInt(urlObj.port) : undefined,
+      path: urlObj.pathname + urlObj.search,
+      headers: {
+        'host': urlObj.host, // This is crucial for the signature
+      },
+    });
 
-      const request = new HttpRequest({
-        method: method,
-        protocol: urlObj.protocol,
-        hostname: urlObj.hostname,
-        port: urlObj.port ? parseInt(urlObj.port) : undefined,
-        path: urlObj.pathname + urlObj.search,
-        headers: requestHeaders,
+    console.log("Original request for signing:", {
+      method: request.method,
+      hostname: request.hostname,
+      path: request.path,
+      headers: request.headers
+    });
+
+    // Presign the request
+    const signedRequest = await signer.presign(request, { 
+      expiresIn: 3600, // 1 hour expiry
+      signingDate: new Date() // Explicitly set the signing date
+    });
+
+    console.log("Signed request details:", {
+      method: signedRequest.method,
+      hostname: signedRequest.hostname,
+      path: signedRequest.path,
+      query: signedRequest.query,
+      headers: signedRequest.headers
+    });
+
+    // Construct the full URL with query parameters
+    const queryParams = new URLSearchParams();
+    
+    // Add all the query parameters from the signed request
+    if (signedRequest.query) {
+      Object.entries(signedRequest.query).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
       });
-
-      const signedRequest = await signer.presign(request, { expiresIn: 3600 }); // 1 hour expiry
-      
-      // For presigned URLs, we return the URL with query parameters and minimal headers
-      const presignedUrl = signedRequest.path; // This includes the query parameters
-      const finalUrl = `${urlObj.protocol}//${urlObj.host}${presignedUrl}`;
-      
-      // Only include headers that are safe for browsers
-      const safeHeaders: Record<string, string> = {};
-      if (signedRequest.headers['x-amz-security-token']) {
-        safeHeaders['x-amz-security-token'] = signedRequest.headers['x-amz-security-token'] as string;
-      }
-      
-      return {
-        url: finalUrl,
-        headers: safeHeaders
-      };
-    } catch (error) {
-      console.error("Error generating presigned URL:", error);
-      throw error;
     }
+
+    const queryString = queryParams.toString();
+    const finalPath = `${urlObj.pathname}${queryString ? '?' + queryString : ''}`;
+    const finalUrl = `${urlObj.protocol}//${urlObj.host}${finalPath}`;
+
+    console.log("Final presigned URL:", finalUrl);
+    
+    // For presigned URLs, we typically don't need additional headers
+    // except for the security token if present
+    const safeHeaders: Record<string, string> = {};
+    if (this.sessionToken) {
+      safeHeaders['x-amz-security-token'] = this.sessionToken;
+    }
+
+    return {
+      url: finalUrl,
+      headers: safeHeaders
+    };
+  } catch (error) {
+    console.error("Error generating presigned URL:", error);
+    throw error;
   }
+}
 
   // Alternative: Use query parameter authentication (presigned URLs)
   async getUploadParameters(file) {
@@ -117,7 +148,7 @@ class HsUppy extends Vue {
     try {
       // Generate a presigned URL for PUT operation
       const presigned = await this.generatePresignedUrl('PUT', url);
-      console.log("Using presigned URL for upload");
+      console.log("Using presigned URL for upload", presigned);
       
       return {
         method: 'PUT',
@@ -574,16 +605,6 @@ class HsUppy extends Vue {
       }
     }
   }
-  async get_s3_http_headers() {
-    console.log("Using S3 headers with credentials:", {
-      accessKey: this.accessKey ? "present" : "missing",
-      sessionToken: this.sessionToken ? "present" : "missing"
-    });
-    return {
-      'x-amz-security-token': this.sessionToken || '',
-      'x-amz-access-key': this.accessKey || '',
-    };
-  };
 }
 export default toNative(HsUppy);
 </script>
