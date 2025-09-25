@@ -64,66 +64,50 @@ class HsUppy extends Vue {
     return this.signatureV4;
   }
 
-  // Correct method to generate signed headers using SignatureV4
-  async generateSignedHeaders(method: string, url: string, body?: string): Promise<Record<string, string>> {
+  // Method to generate pre-signed URL with all headers properly signed
+  async generatePresignedUrl(method: string, url: string, headers?: Record<string, string>): Promise<{ url: string; headers: Record<string, string> }> {
     try {
       const signer = this.getSigner();
-      
       const urlObj = new URL(url);
+      
+      // Include all headers that will be sent in the signature
+      const requestHeaders: Record<string, string> = {
+        ...headers,
+        'host': urlObj.host, // Include host in signature
+      };
+
       const request = new HttpRequest({
         method: method,
         protocol: urlObj.protocol,
         hostname: urlObj.hostname,
         port: urlObj.port ? parseInt(urlObj.port) : undefined,
         path: urlObj.pathname + urlObj.search,
-        headers: {
-          // Don't include 'host' header - browser will set it automatically
-          ...(body && { 'content-length': Buffer.byteLength(body).toString() })
-        },
-        body: body ? body : undefined,
+        headers: requestHeaders,
       });
 
-      const signedRequest = await signer.sign(request);
+      const signedRequest = await signer.presign(request, { expiresIn: 3600 }); // 1 hour expiry
       
-      // Remove forbidden headers that browsers block
-      const forbiddenHeaders = ['host', 'user-agent', 'referer', 'origin'];
-      const filteredHeaders: Record<string, string> = {};
+      // For presigned URLs, we return the URL with query parameters and minimal headers
+      const presignedUrl = signedRequest.path; // This includes the query parameters
+      const finalUrl = `${urlObj.protocol}//${urlObj.host}${presignedUrl}`;
       
-      Object.entries(signedRequest.headers).forEach(([key, value]) => {
-        if (!forbiddenHeaders.includes(key.toLowerCase()) && value !== undefined) {
-          filteredHeaders[key] = value.toString();
-        }
-      });
+      // Only include headers that are safe for browsers
+      const safeHeaders: Record<string, string> = {};
+      if (signedRequest.headers['x-amz-security-token']) {
+        safeHeaders['x-amz-security-token'] = signedRequest.headers['x-amz-security-token'] as string;
+      }
       
-      return filteredHeaders;
-    } catch (error) {
-      console.error("Error generating signed headers:", error);
-      // Fallback to basic headers
       return {
-        'x-amz-access-key': this.accessKey,
-        'x-amz-security-token': this.sessionToken || '',
+        url: finalUrl,
+        headers: safeHeaders
       };
+    } catch (error) {
+      console.error("Error generating presigned URL:", error);
+      throw error;
     }
   }
 
-  // Alternative simplified approach for Minio - often works without complex signing
-  async generateMinioHeaders(method: string, url: string): Promise<Record<string, string>> {
-    // For Minio, sometimes simple authentication is sufficient
-    const headers: Record<string, string> = {
-      'x-amz-access-key': this.accessKey,
-    };
-    
-    if (this.sessionToken) {
-      headers['x-amz-security-token'] = this.sessionToken;
-    }
-    
-    // Add date header for better compatibility
-    headers['x-amz-date'] = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
-    
-    return headers;
-  }
-
-  // Updated getUploadParameters using proper signing
+  // Alternative: Use query parameter authentication (presigned URLs)
   async getUploadParameters(file) {
     console.log("getUploadParameters called for file:", file);
     
@@ -131,103 +115,76 @@ class HsUppy extends Vue {
     const url = `${this.s3Host}/${this.s3Info.bucket}/${key}`;
     
     try {
-      // Try the full AWS signing first
-      const signedHeaders = await this.generateSignedHeaders('PUT', url);
-      console.log("Using AWS signed headers for upload");
+      // Generate a presigned URL for PUT operation
+      const presigned = await this.generatePresignedUrl('PUT', url);
+      console.log("Using presigned URL for upload");
       
       return {
         method: 'PUT',
-        url: url,
-        headers: signedHeaders,
+        url: presigned.url,
+        headers: presigned.headers,
         fields: {},
       };
     } catch (error) {
-      console.error("Error generating signed headers, trying Minio simple auth:", error);
+      console.error("Error generating presigned URL, falling back to simple auth:", error);
       
-      // Fallback to Minio simple authentication
-      try {
-        const minioHeaders = await this.generateMinioHeaders('PUT', url);
-        console.log("Using Minio simple auth headers for upload");
-        
-        return {
-          method: 'PUT',
-          url: url,
-          headers: minioHeaders,
-          fields: {},
-        };
-      } catch (minioError) {
-        console.error("Minio auth also failed, using basic headers:", minioError);
-        
-        // Final fallback to basic headers
-        return {
-          method: 'PUT',
-          url: url,
-          headers: {
-            'x-amz-access-key': this.accessKey,
-            'x-amz-security-token': this.sessionToken || '',
-          },
-          fields: {},
-        };
-      }
+      // Fallback to simple Minio authentication
+      return {
+        method: 'PUT',
+        url: url,
+        headers: {
+          'x-amz-access-key': this.accessKey,
+          'x-amz-security-token': this.sessionToken || '',
+          'x-amz-date': new Date().toISOString().replace(/[:-]|\.\d{3}/g, ''),
+        },
+        fields: {},
+      };
     }
   }
 
-  // Updated signPart function
+  // Updated signPart function to use presigned URLs
   async signPart(file, partData) {
     const key = file.meta.dynamic_key || `${this.s3Info.prefix}${file.name}`;
-    const url = `${this.s3Host}/${this.s3Info.bucket}/${key}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`;
+    const baseUrl = `${this.s3Host}/${this.s3Info.bucket}/${key}`;
+    const url = `${baseUrl}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`;
     
     try {
-      const signedHeaders = await this.generateSignedHeaders('PUT', url);
+      const presigned = await this.generatePresignedUrl('PUT', url);
+      
+      return { 
+        url: presigned.url,
+        headers: presigned.headers
+      };
+    } catch (error) {
+      console.error("Error signing part URL, falling back to simple auth:", error);
       
       return { 
         url: url,
-        headers: signedHeaders
+        headers: {
+          'x-amz-access-key': this.accessKey,
+          'x-amz-security-token': this.sessionToken || '',
+          'x-amz-date': new Date().toISOString().replace(/[:-]|\.\d{3}/g, ''),
+        }
       };
-    } catch (error) {
-      console.error("Error signing part URL, falling back to Minio auth:", error);
-      
-      try {
-        const minioHeaders = await this.generateMinioHeaders('PUT', url);
-        
-        return { 
-          url: url,
-          headers: minioHeaders
-        };
-      } catch (minioError) {
-        console.error("Minio auth also failed, using basic headers:", minioError);
-        
-        return { 
-          url: url,
-          headers: {
-            'x-amz-access-key': this.accessKey,
-            'x-amz-security-token': this.sessionToken || '',
-          }
-        };
-      }
     }
   }
 
-  // Updated HTTP fallback methods to use proper signing
-  async get_s3_http_headers(method: string = 'GET', url?: string, body?: string) {
+  // Simple Minio authentication for non-critical operations
+  async get_s3_http_headers(method: string = 'GET', url?: string) {
     if (url && method) {
       try {
-        return await this.generateSignedHeaders(method, url, body);
+        const presigned = await this.generatePresignedUrl(method, url);
+        return presigned.headers;
       } catch (error) {
-        console.error("Error generating signed headers, trying Minio auth:", error);
-        
-        try {
-          return await this.generateMinioHeaders(method, url);
-        } catch (minioError) {
-          console.error("Minio auth also failed, using fallback:", minioError);
-        }
+        console.error("Error generating presigned headers, using simple auth:", error);
       }
     }
     
-    // Final fallback for existing usage
+    // Fallback for existing usage
     return {
+      'x-amz-access-key': this.accessKey,
       'x-amz-security-token': this.sessionToken || '',
-      'x-amz-access-key': this.accessKey || '',
+      'x-amz-date': new Date().toISOString().replace(/[:-]|\.\d{3}/g, ''),
     };
   }
 
@@ -287,16 +244,16 @@ class HsUppy extends Vue {
             key: file.meta.dynamic_key 
           };
         } catch (sdkError) {
-          console.error("SDK CreateMultipartUpload failed, falling back to HTTP:", sdkError);
+          console.error("SDK CreateMultipartUpload failed, falling back to presigned URL:", sdkError);
           
-          // Fallback to HTTP with proper signing
+          // Fallback to HTTP with presigned URL
           try {
             const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploads`;
-            const headers = await uppyComponent.get_s3_http_headers('POST', url);
+            const presigned = await uppyComponent.generatePresignedUrl('POST', url);
             
-            const response = await fetch(url, {
+            const response = await fetch(presigned.url, {
               method: 'POST',
-              headers: headers,
+              headers: presigned.headers,
             });
             
             const data = await response.text();
