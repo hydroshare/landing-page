@@ -12,6 +12,8 @@ import Dashboard from '@uppy/dashboard';
 import AwsS3 from '@uppy/aws-s3';
 import { S3Client, ListMultipartUploadsCommand, CreateMultipartUploadCommand, ListPartsCommand, AbortMultipartUploadCommand, CompleteMultipartUploadCommand, GetBucketAclCommand, GetObjectAclCommand } from "@aws-sdk/client-s3";
 import { HttpRequest } from "@aws-sdk/protocol-http";
+import { SignatureV4 } from "@aws-sdk/signature-v4";
+import { Sha256 } from "@aws-crypto/sha256-js";
 import { COMPANION_URL, GOOGLE_PICKER_CLIENT_ID, GOOGLE_PICKER_API_KEY, GOOGLE_PICKER_APP_ID } from "@/constants";
 
 import '@uppy/core/css/style.min.css';
@@ -43,59 +45,46 @@ class HsUppy extends Vue {
   @Prop({ type: String, required: false, default: "" })
   sessionToken!: string;
 
-  // Method to expose the Uppy instance
-  getUppyInstance(): Uppy | null {
-    return uppyInstance;
-  }
+  private signatureV4: SignatureV4 | null = null;
 
-  // Add files through the component
-  addFile(fileData: any): string | null {
-    if (uppyInstance) {
-      try {
-        return uppyInstance.addFile(fileData);
-      } catch (error) {
-        console.error("Error adding file to Uppy:", error);
-        return null;
-      }
+  // Method to get or create the SignatureV4 instance
+  getSigner(): SignatureV4 {
+    if (!this.signatureV4) {
+      this.signatureV4 = new SignatureV4({
+        service: 's3',
+        region: 'us-east-1',
+        credentials: {
+          accessKeyId: this.accessKey,
+          secretAccessKey: this.secretKey,
+          sessionToken: this.sessionToken || undefined,
+        },
+        sha256: Sha256,
+      });
     }
-    return null;
+    return this.signatureV4;
   }
 
-  upload(): Promise<void> {
-    if (uppyInstance) {
-      return uppyInstance.upload();
-    }
-    return Promise.reject(new Error("Uppy instance not available"));
-  }
-
-  // New method to generate signed headers using S3Client
+  // Correct method to generate signed headers using SignatureV4
   async generateSignedHeaders(method: string, url: string, body?: string): Promise<Record<string, string>> {
     try {
-      const s3Client = await this.getS3Client();
+      const signer = this.getSigner();
       
-      // Create a minimal HTTP request that the signer will recognize
+      const urlObj = new URL(url);
       const request = new HttpRequest({
         method: method,
-        protocol: new URL(url).protocol,
-        hostname: new URL(url).hostname,
-        port: new URL(url).port ? parseInt(new URL(url).port) : undefined,
-        path: new URL(url).pathname + new URL(url).search,
+        protocol: urlObj.protocol,
+        hostname: urlObj.hostname,
+        port: urlObj.port ? parseInt(urlObj.port) : undefined,
+        path: urlObj.pathname + urlObj.search,
         headers: {
-          host: new URL(url).host,
+          host: urlObj.host,
           ...(body && { 'content-length': Buffer.byteLength(body).toString() })
         },
         body: body ? body : undefined,
       });
 
-      // Use the client's built-in signer to sign the request
-      // The sign method is available on the client's config.middlewareStack
-      const signer = (s3Client as any).config.signer;
-      if (signer) {
-        const signedRequest = await signer.sign(request);
-        return signedRequest.headers;
-      } else {
-        throw new Error("Signer not available on S3Client");
-      }
+      const signedRequest = await signer.sign(request);
+      return signedRequest.headers;
     } catch (error) {
       console.error("Error generating signed headers:", error);
       // Fallback to basic headers
@@ -106,7 +95,7 @@ class HsUppy extends Vue {
     }
   }
 
-  // Updated getUploadParameters using S3Client for signing
+  // Updated getUploadParameters using proper signing
   async getUploadParameters(file) {
     console.log("getUploadParameters called for file:", file);
     
@@ -164,10 +153,10 @@ class HsUppy extends Vue {
   }
 
   // Updated HTTP fallback methods to use proper signing
-  async get_s3_http_headers(method: string = 'GET', url?: string) {
+  async get_s3_http_headers(method: string = 'GET', url?: string, body?: string) {
     if (url && method) {
       try {
-        return await this.generateSignedHeaders(method, url);
+        return await this.generateSignedHeaders(method, url, body);
       } catch (error) {
         console.error("Error generating signed headers, using fallback:", error);
       }
