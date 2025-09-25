@@ -77,14 +77,25 @@ class HsUppy extends Vue {
         port: urlObj.port ? parseInt(urlObj.port) : undefined,
         path: urlObj.pathname + urlObj.search,
         headers: {
-          host: urlObj.host,
+          // Don't include 'host' header - browser will set it automatically
           ...(body && { 'content-length': Buffer.byteLength(body).toString() })
         },
         body: body ? body : undefined,
       });
 
       const signedRequest = await signer.sign(request);
-      return signedRequest.headers;
+      
+      // Remove forbidden headers that browsers block
+      const forbiddenHeaders = ['host', 'user-agent', 'referer', 'origin'];
+      const filteredHeaders: Record<string, string> = {};
+      
+      Object.entries(signedRequest.headers).forEach(([key, value]) => {
+        if (!forbiddenHeaders.includes(key.toLowerCase()) && value !== undefined) {
+          filteredHeaders[key] = value.toString();
+        }
+      });
+      
+      return filteredHeaders;
     } catch (error) {
       console.error("Error generating signed headers:", error);
       // Fallback to basic headers
@@ -95,6 +106,23 @@ class HsUppy extends Vue {
     }
   }
 
+  // Alternative simplified approach for Minio - often works without complex signing
+  async generateMinioHeaders(method: string, url: string): Promise<Record<string, string>> {
+    // For Minio, sometimes simple authentication is sufficient
+    const headers: Record<string, string> = {
+      'x-amz-access-key': this.accessKey,
+    };
+    
+    if (this.sessionToken) {
+      headers['x-amz-security-token'] = this.sessionToken;
+    }
+    
+    // Add date header for better compatibility
+    headers['x-amz-date'] = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
+    
+    return headers;
+  }
+
   // Updated getUploadParameters using proper signing
   async getUploadParameters(file) {
     console.log("getUploadParameters called for file:", file);
@@ -103,7 +131,9 @@ class HsUppy extends Vue {
     const url = `${this.s3Host}/${this.s3Info.bucket}/${key}`;
     
     try {
+      // Try the full AWS signing first
       const signedHeaders = await this.generateSignedHeaders('PUT', url);
+      console.log("Using AWS signed headers for upload");
       
       return {
         method: 'PUT',
@@ -112,18 +142,33 @@ class HsUppy extends Vue {
         fields: {},
       };
     } catch (error) {
-      console.error("Error generating signed headers, falling back to basic auth:", error);
+      console.error("Error generating signed headers, trying Minio simple auth:", error);
       
-      // Fallback to basic headers
-      return {
-        method: 'PUT',
-        url: url,
-        headers: {
-          'x-amz-access-key': this.accessKey,
-          'x-amz-security-token': this.sessionToken || '',
-        },
-        fields: {},
-      };
+      // Fallback to Minio simple authentication
+      try {
+        const minioHeaders = await this.generateMinioHeaders('PUT', url);
+        console.log("Using Minio simple auth headers for upload");
+        
+        return {
+          method: 'PUT',
+          url: url,
+          headers: minioHeaders,
+          fields: {},
+        };
+      } catch (minioError) {
+        console.error("Minio auth also failed, using basic headers:", minioError);
+        
+        // Final fallback to basic headers
+        return {
+          method: 'PUT',
+          url: url,
+          headers: {
+            'x-amz-access-key': this.accessKey,
+            'x-amz-security-token': this.sessionToken || '',
+          },
+          fields: {},
+        };
+      }
     }
   }
 
@@ -140,15 +185,26 @@ class HsUppy extends Vue {
         headers: signedHeaders
       };
     } catch (error) {
-      console.error("Error signing part URL, falling back to basic auth:", error);
+      console.error("Error signing part URL, falling back to Minio auth:", error);
       
-      return { 
-        url: url,
-        headers: {
-          'x-amz-access-key': this.accessKey,
-          'x-amz-security-token': this.sessionToken || '',
-        }
-      };
+      try {
+        const minioHeaders = await this.generateMinioHeaders('PUT', url);
+        
+        return { 
+          url: url,
+          headers: minioHeaders
+        };
+      } catch (minioError) {
+        console.error("Minio auth also failed, using basic headers:", minioError);
+        
+        return { 
+          url: url,
+          headers: {
+            'x-amz-access-key': this.accessKey,
+            'x-amz-security-token': this.sessionToken || '',
+          }
+        };
+      }
     }
   }
 
@@ -158,11 +214,17 @@ class HsUppy extends Vue {
       try {
         return await this.generateSignedHeaders(method, url, body);
       } catch (error) {
-        console.error("Error generating signed headers, using fallback:", error);
+        console.error("Error generating signed headers, trying Minio auth:", error);
+        
+        try {
+          return await this.generateMinioHeaders(method, url);
+        } catch (minioError) {
+          console.error("Minio auth also failed, using fallback:", minioError);
+        }
       }
     }
     
-    // Fallback for existing usage
+    // Final fallback for existing usage
     return {
       'x-amz-security-token': this.sessionToken || '',
       'x-amz-access-key': this.accessKey || '',
