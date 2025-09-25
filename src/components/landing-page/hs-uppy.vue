@@ -10,7 +10,7 @@ import GoldenRetriever from '@uppy/golden-retriever';
 import GoogleDrivePicker from '@uppy/google-drive-picker';
 import Dashboard from '@uppy/dashboard';
 import AwsS3 from '@uppy/aws-s3';
-import { S3Client, ListMultipartUploadsCommand, CreateMultipartUploadCommand, ListPartsCommand, AbortMultipartUploadCommand, CompleteMultipartUploadCommand, GetBucketAclCommand, GetObjectAclCommand } from "@aws-sdk/client-s3";
+import { S3Client, ListMultipartUploadsCommand, CreateMultipartUploadCommand, ListPartsCommand, AbortMultipartUploadCommand, CompleteMultipartUploadCommand, GetBucketAclCommand, GetObjectAclCommand, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { HttpRequest } from "@aws-sdk/protocol-http";
 import { SignatureV4 } from "@aws-sdk/signature-v4";
 import { Sha256 } from "@aws-crypto/sha256-js";
@@ -82,15 +82,11 @@ class HsUppy extends Vue {
     let command;
     
     if (method === 'PUT') {
-      // For PutObject
-      const { PutObjectCommand } = await import("@aws-sdk/client-s3");
       command = new PutObjectCommand({
         Bucket: bucket,
         Key: key,
       });
     } else if (method === 'GET') {
-      // For GetObject
-      const { GetObjectCommand } = await import("@aws-sdk/client-s3");
       command = new GetObjectCommand({
         Bucket: bucket,
         Key: key,
