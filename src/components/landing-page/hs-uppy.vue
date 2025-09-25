@@ -11,6 +11,7 @@ import GoogleDrivePicker from '@uppy/google-drive-picker';
 import Dashboard from '@uppy/dashboard';
 import AwsS3 from '@uppy/aws-s3';
 import { S3Client, ListMultipartUploadsCommand, CreateMultipartUploadCommand, ListPartsCommand, AbortMultipartUploadCommand, CompleteMultipartUploadCommand, GetBucketAclCommand, GetObjectAclCommand } from "@aws-sdk/client-s3";
+import { HttpRequest } from "@aws-sdk/protocol-http";
 import { COMPANION_URL, GOOGLE_PICKER_CLIENT_ID, GOOGLE_PICKER_API_KEY, GOOGLE_PICKER_APP_ID } from "@/constants";
 
 import '@uppy/core/css/style.min.css';
@@ -46,6 +47,7 @@ class HsUppy extends Vue {
   getUppyInstance(): Uppy | null {
     return uppyInstance;
   }
+
   // Add files through the component
   addFile(fileData: any): string | null {
     if (uppyInstance) {
@@ -64,6 +66,118 @@ class HsUppy extends Vue {
       return uppyInstance.upload();
     }
     return Promise.reject(new Error("Uppy instance not available"));
+  }
+
+  // New method to generate signed headers using S3Client
+  async generateSignedHeaders(method: string, url: string, body?: string): Promise<Record<string, string>> {
+    try {
+      const s3Client = await this.getS3Client();
+      
+      // Create a minimal HTTP request that the signer will recognize
+      const request = new HttpRequest({
+        method: method,
+        protocol: new URL(url).protocol,
+        hostname: new URL(url).hostname,
+        port: new URL(url).port ? parseInt(new URL(url).port) : undefined,
+        path: new URL(url).pathname + new URL(url).search,
+        headers: {
+          host: new URL(url).host,
+          ...(body && { 'content-length': Buffer.byteLength(body).toString() })
+        },
+        body: body ? body : undefined,
+      });
+
+      // Use the client's built-in signer to sign the request
+      // The sign method is available on the client's config.middlewareStack
+      const signer = (s3Client as any).config.signer;
+      if (signer) {
+        const signedRequest = await signer.sign(request);
+        return signedRequest.headers;
+      } else {
+        throw new Error("Signer not available on S3Client");
+      }
+    } catch (error) {
+      console.error("Error generating signed headers:", error);
+      // Fallback to basic headers
+      return {
+        'x-amz-access-key': this.accessKey,
+        'x-amz-security-token': this.sessionToken || '',
+      };
+    }
+  }
+
+  // Updated getUploadParameters using S3Client for signing
+  async getUploadParameters(file) {
+    console.log("getUploadParameters called for file:", file);
+    
+    const key = file.meta.dynamic_key || `${this.s3Info.prefix}${file.name}`;
+    const url = `${this.s3Host}/${this.s3Info.bucket}/${key}`;
+    
+    try {
+      const signedHeaders = await this.generateSignedHeaders('PUT', url);
+      
+      return {
+        method: 'PUT',
+        url: url,
+        headers: signedHeaders,
+        fields: {},
+      };
+    } catch (error) {
+      console.error("Error generating signed headers, falling back to basic auth:", error);
+      
+      // Fallback to basic headers
+      return {
+        method: 'PUT',
+        url: url,
+        headers: {
+          'x-amz-access-key': this.accessKey,
+          'x-amz-security-token': this.sessionToken || '',
+        },
+        fields: {},
+      };
+    }
+  }
+
+  // Updated signPart function
+  async signPart(file, partData) {
+    const key = file.meta.dynamic_key || `${this.s3Info.prefix}${file.name}`;
+    const url = `${this.s3Host}/${this.s3Info.bucket}/${key}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`;
+    
+    try {
+      const signedHeaders = await this.generateSignedHeaders('PUT', url);
+      
+      return { 
+        url: url,
+        headers: signedHeaders
+      };
+    } catch (error) {
+      console.error("Error signing part URL, falling back to basic auth:", error);
+      
+      return { 
+        url: url,
+        headers: {
+          'x-amz-access-key': this.accessKey,
+          'x-amz-security-token': this.sessionToken || '',
+        }
+      };
+    }
+  }
+
+  // Updated HTTP fallback methods to use proper signing
+  async get_s3_http_headers(method: string = 'GET', url?: string) {
+    if (url && method) {
+      try {
+        return await this.generateSignedHeaders(method, url);
+      } catch (error) {
+        console.error("Error generating signed headers, using fallback:", error);
+      }
+    }
+    
+    // Fallback for existing usage
+    return {
+      'x-amz-security-token': this.sessionToken || '',
+      'x-amz-access-key': this.accessKey || '',
+    };
   }
 
   mounted() {
@@ -124,12 +238,14 @@ class HsUppy extends Vue {
         } catch (sdkError) {
           console.error("SDK CreateMultipartUpload failed, falling back to HTTP:", sdkError);
           
-          // Fallback to HTTP
+          // Fallback to HTTP with proper signing
           try {
             const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploads`;
+            const headers = await uppyComponent.get_s3_http_headers('POST', url);
+            
             const response = await fetch(url, {
               method: 'POST',
-              headers: await uppyComponent.get_s3_http_headers(),
+              headers: headers,
             });
             
             const data = await response.text();
@@ -146,7 +262,7 @@ class HsUppy extends Vue {
             return { uploadId, key: file.meta.dynamic_key };
           } catch (httpError) {
             console.error("HTTP fallback also failed:", httpError);
-            throw sdkError; // Re-throw the original SDK error
+            throw sdkError;
           }
         }
       },
@@ -173,12 +289,14 @@ class HsUppy extends Vue {
           await uppyComponent.checkS3Credentials(key);
           console.error("Error listing parts with SDK, falling back to HTTP:", error);
           
-          // Fallback to HTTP
+          // Fallback to HTTP with proper signing
           try {
             const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
+            const headers = await uppyComponent.get_s3_http_headers('GET', url);
+            
             const response = await fetch(url, {
               method: 'GET',
-              headers: await uppyComponent.get_s3_http_headers(),
+              headers: headers,
             });
             
             if (response.status < 200 || response.status >= 300) {
@@ -203,14 +321,7 @@ class HsUppy extends Vue {
         }
       },
       signPart: async (file, partData) => {
-        const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`;
-        return { 
-          url, 
-          headers: {
-            'x-amz-security-token': uppyComponent.secretKey || '',
-            'x-amz-access-key': uppyComponent.accessKey || '',
-          }
-        };
+        return await uppyComponent.signPart(file, partData);
       },
       abortMultipartUpload: async (file, { uploadId, key }) => {
         console.log("aborting MultipartUpload for file:", file.name);
@@ -228,12 +339,14 @@ class HsUppy extends Vue {
         } catch (error) {
           console.error("Error aborting multipart upload with SDK, falling back to HTTP:", error);
           
-          // Fallback to HTTP
+          // Fallback to HTTP with proper signing
           try {
             const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
+            const headers = await uppyComponent.get_s3_http_headers('DELETE', url);
+            
             const response = await fetch(url, {
               method: 'DELETE',
-              headers: await uppyComponent.get_s3_http_headers(),
+              headers: headers,
             });
             
             const data = await response.text();
@@ -272,19 +385,18 @@ class HsUppy extends Vue {
         } catch (error) {
           console.error("Error completing multipart upload with SDK, falling back to HTTP:", error);
           
-          // Fallback to HTTP
+          // Fallback to HTTP with proper signing
           try {
-            const headers = {
-              ...await uppyComponent.get_s3_http_headers(),
-              'Content-Type': 'application/xml',
-            };
             const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
-
+            
             let partsXml = '';
             parts.forEach(part => {
               partsXml += `<Part><PartNumber>${part.PartNumber}</PartNumber><ETag>${part.ETag}</ETag></Part>`;
             });
             const body = `<CompleteMultipartUpload>${partsXml}</CompleteMultipartUpload>`;
+
+            const headers = await uppyComponent.get_s3_http_headers('POST', url, body);
+            headers['Content-Type'] = 'application/xml';
 
             const response = await fetch(url, {
               method: 'POST',
@@ -311,14 +423,8 @@ class HsUppy extends Vue {
         console.log(`shouldUseMultipart for file ${file.name} (${file.size} bytes):`, useMultipart);
         return useMultipart;
       },
-      getUploadParameters: (file, options) => {
-        console.log("getUploadParameters called for file:", file);
-        return {
-          method: 'PUT',
-          url: `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}`,
-          headers: {},
-          fields: {},
-        };
+      getUploadParameters: (file) => {
+        return uppyComponent.getUploadParameters(file);
       },
     })
     .on("error", (errorMessage) => {
@@ -342,8 +448,6 @@ class HsUppy extends Vue {
     })
     .use(GoldenRetriever)
     .use(GoogleDrivePicker, {
-      // https://uppy.io/docs/google-drive-picker/
-      // https://console.cloud.google.com/apis/credentials?referrer=search&project=hs-test-oauth
       target: Dashboard,
       companionUrl: COMPANION_URL,
       clientId: GOOGLE_PICKER_CLIENT_ID,
@@ -351,6 +455,7 @@ class HsUppy extends Vue {
       appId: GOOGLE_PICKER_APP_ID,
     });
   }
+
   async getS3Client() {
     const options = {
         endpoint: this.s3Host,
