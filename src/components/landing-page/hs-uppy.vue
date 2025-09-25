@@ -65,75 +65,58 @@ class HsUppy extends Vue {
   }
 
   // Method to generate pre-signed URL with all headers properly signed
-  async generatePresignedUrl(method: string, url: string, headers?: Record<string, string>): Promise<{ url: string; headers: Record<string, string> }> {
+  async generatePresignedUrl(method: string, url: string): Promise<{ url: string; headers: Record<string, string> }> {
   try {
-    const signer = this.getSigner();
     const urlObj = new URL(url);
     
-    // Create the request for signing - include only the host header
-    const request = new HttpRequest({
-      method: method,
-      protocol: urlObj.protocol,
-      hostname: urlObj.hostname,
-      port: urlObj.port ? parseInt(urlObj.port) : undefined,
-      path: urlObj.pathname + urlObj.search,
-      headers: {
-        'host': urlObj.host, // This is crucial for the signature
-      },
-    });
-
-    console.log("Original request for signing:", {
-      method: request.method,
-      hostname: request.hostname,
-      path: request.path,
-      headers: request.headers
-    });
-
-    // Presign the request
-    const signedRequest = await signer.presign(request, { 
-      expiresIn: 3600, // 1 hour expiry
-      signingDate: new Date() // Explicitly set the signing date
-    });
-
-    console.log("Signed request details:", {
-      method: signedRequest.method,
-      hostname: signedRequest.hostname,
-      path: signedRequest.path,
-      query: signedRequest.query,
-      headers: signedRequest.headers
-    });
-
-    // Construct the full URL with query parameters
-    const queryParams = new URLSearchParams();
+    // Extract bucket and key from the URL path
+    const pathParts = urlObj.pathname.split('/').filter(part => part !== '');
+    const bucket = pathParts[0];
+    const key = pathParts.slice(1).join('/');
     
-    // Add all the query parameters from the signed request
-    if (signedRequest.query) {
-      Object.entries(signedRequest.query).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          queryParams.append(key, value.toString());
-        }
+    console.log("Extracted bucket and key:", { bucket, key });
+
+    const s3Client = await this.getS3Client();
+    
+    // Use the S3Client's command-based presigning
+    let command;
+    
+    if (method === 'PUT') {
+      // For PutObject
+      const { PutObjectCommand } = await import("@aws-sdk/client-s3");
+      command = new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
       });
+    } else if (method === 'GET') {
+      // For GetObject
+      const { GetObjectCommand } = await import("@aws-sdk/client-s3");
+      command = new GetObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      });
+    } else {
+      throw new Error(`Unsupported method: ${method}`);
     }
 
-    const queryString = queryParams.toString();
-    const finalPath = `${urlObj.pathname}${queryString ? '?' + queryString : ''}`;
-    const finalUrl = `${urlObj.protocol}//${urlObj.host}${finalPath}`;
-
-    console.log("Final presigned URL:", finalUrl);
+    // Import the presigner
+    const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
     
-    // For presigned URLs, we typically don't need additional headers
-    // except for the security token if present
+    const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    
+    console.log("Generated presigned URL:", presignedUrl);
+
     const safeHeaders: Record<string, string> = {};
     if (this.sessionToken) {
       safeHeaders['x-amz-security-token'] = this.sessionToken;
     }
 
     return {
-      url: finalUrl,
+      url: presignedUrl,
       headers: safeHeaders
     };
   } catch (error) {
-    console.error("Error generating presigned URL:", error);
+    console.error("Error generating presigned URL with S3Client:", error);
     throw error;
   }
 }
@@ -177,20 +160,63 @@ class HsUppy extends Vue {
   async signPart(file, partData) {
     const key = file.meta.dynamic_key || `${this.s3Info.prefix}${file.name}`;
     const baseUrl = `${this.s3Host}/${this.s3Info.bucket}/${key}`;
-    const url = `${baseUrl}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`;
     
     try {
-      const presigned = await this.generatePresignedUrl('PUT', url);
+      // For multipart upload parts, we need to use a different approach
+      // since UploadPartCommand doesn't work well with the standard presigner
       
+      const urlObj = new URL(baseUrl);
+      const queryParams = new URLSearchParams({
+        partNumber: partData.partNumber.toString(),
+        uploadId: partData.uploadId
+      });
+
+      const urlWithParams = `${baseUrl}?${queryParams.toString()}`;
+      
+      // Use the manual presigning approach for multipart
+      const signer = this.getSigner();
+      const request = new HttpRequest({
+        method: 'PUT',
+        protocol: urlObj.protocol,
+        hostname: urlObj.hostname,
+        port: urlObj.port ? parseInt(urlObj.port) : undefined,
+        path: `${urlObj.pathname}?${queryParams.toString()}`,
+        headers: {
+          'host': urlObj.host,
+        },
+      });
+
+      const signedRequest = await signer.presign(request, { 
+        expiresIn: 3600,
+        signingDate: new Date()
+      });
+
+      const finalQueryParams = new URLSearchParams();
+      if (signedRequest.query) {
+        Object.entries(signedRequest.query).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            finalQueryParams.append(key, value.toString());
+          }
+        });
+      }
+
+      const finalUrl = `${urlObj.protocol}//${urlObj.host}${urlObj.pathname}?${finalQueryParams.toString()}`;
+
+      const safeHeaders: Record<string, string> = {};
+      if (this.sessionToken) {
+        safeHeaders['x-amz-security-token'] = this.sessionToken;
+      }
+
       return { 
-        url: presigned.url,
-        headers: presigned.headers
+        url: finalUrl,
+        headers: safeHeaders
       };
     } catch (error) {
       console.error("Error signing part URL, falling back to simple auth:", error);
       
+      // Fallback
       return { 
-        url: url,
+        url: `${baseUrl}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`,
         headers: {
           'x-amz-access-key': this.accessKey,
           'x-amz-security-token': this.sessionToken || '',
