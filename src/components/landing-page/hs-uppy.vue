@@ -13,6 +13,7 @@ import AwsS3 from '@uppy/aws-s3';
 import { S3Client, ListMultipartUploadsCommand, CreateMultipartUploadCommand, ListPartsCommand, AbortMultipartUploadCommand, CompleteMultipartUploadCommand, GetBucketAclCommand, GetObjectAclCommand, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { HttpRequest } from "@aws-sdk/protocol-http";
 import { SignatureV4 } from "@aws-sdk/signature-v4";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 import { Sha256 } from "@aws-crypto/sha256-js";
 import { COMPANION_URL, GOOGLE_PICKER_CLIENT_ID, GOOGLE_PICKER_API_KEY, GOOGLE_PICKER_APP_ID } from "@/constants";
 
@@ -95,9 +96,7 @@ class HsUppy extends Vue {
       throw new Error(`Unsupported method: ${method}`);
     }
 
-    // Import the presigner
-    const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
-    
+    // https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/Package/-aws-sdk-s3-request-presigner/
     const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
     
     console.log("Generated presigned URL:", presignedUrl);
