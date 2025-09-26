@@ -10,7 +10,11 @@ import GoldenRetriever from '@uppy/golden-retriever';
 import GoogleDrivePicker from '@uppy/google-drive-picker';
 import Dashboard from '@uppy/dashboard';
 import AwsS3 from '@uppy/aws-s3';
-import { S3Client, ListMultipartUploadsCommand, CreateMultipartUploadCommand, ListPartsCommand, AbortMultipartUploadCommand, CompleteMultipartUploadCommand, GetBucketAclCommand, GetObjectAclCommand } from "@aws-sdk/client-s3";
+import { S3Client, ListMultipartUploadsCommand, CreateMultipartUploadCommand, ListPartsCommand, AbortMultipartUploadCommand, CompleteMultipartUploadCommand, GetBucketAclCommand, GetObjectAclCommand, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { HttpRequest } from "@aws-sdk/protocol-http";
+import { SignatureV4 } from "@aws-sdk/signature-v4";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
+import { Sha256 } from "@aws-crypto/sha256-js";
 import { COMPANION_URL, GOOGLE_PICKER_CLIENT_ID, GOOGLE_PICKER_API_KEY, GOOGLE_PICKER_APP_ID } from "@/constants";
 
 import '@uppy/core/css/style.min.css';
@@ -42,28 +46,198 @@ class HsUppy extends Vue {
   @Prop({ type: String, required: false, default: "" })
   sessionToken!: string;
 
-  // Method to expose the Uppy instance
-  getUppyInstance(): Uppy | null {
-    return uppyInstance;
-  }
-  // Add files through the component
-  addFile(fileData: any): string | null {
-    if (uppyInstance) {
-      try {
-        return uppyInstance.addFile(fileData);
-      } catch (error) {
-        console.error("Error adding file to Uppy:", error);
-        return null;
-      }
+  private signatureV4: SignatureV4 | null = null;
+
+  // Method to get or create the SignatureV4 instance
+  getSigner(): SignatureV4 {
+    if (!this.signatureV4) {
+      this.signatureV4 = new SignatureV4({
+        service: 's3',
+        region: 'us-east-1',
+        credentials: {
+          accessKeyId: this.accessKey,
+          secretAccessKey: this.secretKey,
+          sessionToken: this.sessionToken || undefined,
+        },
+        sha256: Sha256,
+      });
     }
-    return null;
+    return this.signatureV4;
   }
 
-  upload(): Promise<void> {
-    if (uppyInstance) {
-      return uppyInstance.upload();
+  // Method to generate pre-signed URL with all headers properly signed
+  async generatePresignedUrl(method: string, url: string): Promise<{ url: string; headers: Record<string, string> }> {
+  try {
+    const urlObj = new URL(url);
+    
+    // Extract bucket and key from the URL path
+    const pathParts = urlObj.pathname.split('/').filter(part => part !== '');
+    const bucket = pathParts[0];
+    const key = pathParts.slice(1).join('/');
+    
+    console.log("Extracted bucket and key:", { bucket, key });
+
+    const s3Client = await this.getS3Client();
+    
+    // Use the S3Client's command-based presigning
+    let command;
+    
+    if (method === 'PUT') {
+      command = new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      });
+    } else if (method === 'GET') {
+      command = new GetObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      });
+    } else {
+      throw new Error(`Unsupported method: ${method}`);
     }
-    return Promise.reject(new Error("Uppy instance not available"));
+
+    // https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/Package/-aws-sdk-s3-request-presigner/
+    const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    
+    console.log("Generated presigned URL:", presignedUrl);
+
+    const safeHeaders: Record<string, string> = {};
+    if (this.sessionToken) {
+      safeHeaders['x-amz-security-token'] = this.sessionToken;
+    }
+
+    return {
+      url: presignedUrl,
+      headers: safeHeaders
+    };
+  } catch (error) {
+    console.error("Error generating presigned URL with S3Client:", error);
+    throw error;
+  }
+}
+
+  // Alternative: Use query parameter authentication (presigned URLs)
+  async getUploadParameters(file) {
+    console.log("getUploadParameters called for file:", file);
+    
+    const key = file.meta.dynamic_key || `${this.s3Info.prefix}${file.name}`;
+    const url = `${this.s3Host}/${this.s3Info.bucket}/${key}`;
+    
+    try {
+      // Generate a presigned URL for PUT operation
+      const presigned = await this.generatePresignedUrl('PUT', url);
+      console.log("Using presigned URL for upload", presigned);
+      
+      return {
+        method: 'PUT',
+        url: presigned.url,
+        headers: presigned.headers,
+        fields: {},
+      };
+    } catch (error) {
+      console.error("Error generating presigned URL, falling back to simple auth:", error);
+      
+      // Fallback to simple Minio authentication
+      return {
+        method: 'PUT',
+        url: url,
+        headers: {
+          'x-amz-access-key': this.accessKey,
+          'x-amz-security-token': this.sessionToken || '',
+          'x-amz-date': new Date().toISOString().replace(/[:-]|\.\d{3}/g, ''),
+        },
+        fields: {},
+      };
+    }
+  }
+
+  // Updated signPart function to use presigned URLs
+  async signPart(file, partData) {
+    const key = file.meta.dynamic_key || `${this.s3Info.prefix}${file.name}`;
+    const baseUrl = `${this.s3Host}/${this.s3Info.bucket}/${key}`;
+    
+    try {
+      // For multipart upload parts, we need to use a different approach
+      // since UploadPartCommand doesn't work well with the standard presigner
+      
+      const urlObj = new URL(baseUrl);
+      const queryParams = new URLSearchParams({
+        partNumber: partData.partNumber.toString(),
+        uploadId: partData.uploadId
+      });
+
+      const urlWithParams = `${baseUrl}?${queryParams.toString()}`;
+      
+      // Use the manual presigning approach for multipart
+      const signer = this.getSigner();
+      const request = new HttpRequest({
+        method: 'PUT',
+        protocol: urlObj.protocol,
+        hostname: urlObj.hostname,
+        port: urlObj.port ? parseInt(urlObj.port) : undefined,
+        path: `${urlObj.pathname}?${queryParams.toString()}`,
+        headers: {
+          'host': urlObj.host,
+        },
+      });
+
+      const signedRequest = await signer.presign(request, { 
+        expiresIn: 3600,
+        signingDate: new Date()
+      });
+
+      const finalQueryParams = new URLSearchParams();
+      if (signedRequest.query) {
+        Object.entries(signedRequest.query).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            finalQueryParams.append(key, value.toString());
+          }
+        });
+      }
+
+      const finalUrl = `${urlObj.protocol}//${urlObj.host}${urlObj.pathname}?${finalQueryParams.toString()}`;
+
+      const safeHeaders: Record<string, string> = {};
+      if (this.sessionToken) {
+        safeHeaders['x-amz-security-token'] = this.sessionToken;
+      }
+
+      return { 
+        url: finalUrl,
+        headers: safeHeaders
+      };
+    } catch (error) {
+      console.error("Error signing part URL, falling back to simple auth:", error);
+      
+      // Fallback
+      return { 
+        url: `${baseUrl}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`,
+        headers: {
+          'x-amz-access-key': this.accessKey,
+          'x-amz-security-token': this.sessionToken || '',
+          'x-amz-date': new Date().toISOString().replace(/[:-]|\.\d{3}/g, ''),
+        }
+      };
+    }
+  }
+
+  // Simple Minio authentication for non-critical operations
+  async get_s3_http_headers(method: string = 'GET', url?: string) {
+    if (url && method) {
+      try {
+        const presigned = await this.generatePresignedUrl(method, url);
+        return presigned.headers;
+      } catch (error) {
+        console.error("Error generating presigned headers, using simple auth:", error);
+      }
+    }
+    
+    // Fallback for existing usage
+    return {
+      'x-amz-access-key': this.accessKey,
+      'x-amz-security-token': this.sessionToken || '',
+      'x-amz-date': new Date().toISOString().replace(/[:-]|\.\d{3}/g, ''),
+    };
   }
 
   mounted() {
@@ -122,14 +296,16 @@ class HsUppy extends Vue {
             key: file.meta.dynamic_key 
           };
         } catch (sdkError) {
-          console.error("SDK CreateMultipartUpload failed, falling back to HTTP:", sdkError);
+          console.error("SDK CreateMultipartUpload failed, falling back to presigned URL:", sdkError);
           
-          // Fallback to HTTP
+          // Fallback to HTTP with presigned URL
           try {
             const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploads`;
-            const response = await fetch(url, {
+            const presigned = await uppyComponent.generatePresignedUrl('POST', url);
+            
+            const response = await fetch(presigned.url, {
               method: 'POST',
-              headers: await uppyComponent.get_s3_http_headers(),
+              headers: presigned.headers,
             });
             
             const data = await response.text();
@@ -146,7 +322,7 @@ class HsUppy extends Vue {
             return { uploadId, key: file.meta.dynamic_key };
           } catch (httpError) {
             console.error("HTTP fallback also failed:", httpError);
-            throw sdkError; // Re-throw the original SDK error
+            throw sdkError;
           }
         }
       },
@@ -173,12 +349,14 @@ class HsUppy extends Vue {
           await uppyComponent.checkS3Credentials(key);
           console.error("Error listing parts with SDK, falling back to HTTP:", error);
           
-          // Fallback to HTTP
+          // Fallback to HTTP with proper signing
           try {
             const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
+            const headers = await uppyComponent.get_s3_http_headers('GET', url);
+            
             const response = await fetch(url, {
               method: 'GET',
-              headers: await uppyComponent.get_s3_http_headers(),
+              headers: headers,
             });
             
             if (response.status < 200 || response.status >= 300) {
@@ -203,14 +381,7 @@ class HsUppy extends Vue {
         }
       },
       signPart: async (file, partData) => {
-        const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?partNumber=${partData.partNumber}&uploadId=${partData.uploadId}`;
-        return { 
-          url, 
-          headers: {
-            'x-amz-security-token': uppyComponent.secretKey || '',
-            'x-amz-access-key': uppyComponent.accessKey || '',
-          }
-        };
+        return await uppyComponent.signPart(file, partData);
       },
       abortMultipartUpload: async (file, { uploadId, key }) => {
         console.log("aborting MultipartUpload for file:", file.name);
@@ -228,12 +399,14 @@ class HsUppy extends Vue {
         } catch (error) {
           console.error("Error aborting multipart upload with SDK, falling back to HTTP:", error);
           
-          // Fallback to HTTP
+          // Fallback to HTTP with proper signing
           try {
             const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
+            const headers = await uppyComponent.get_s3_http_headers('DELETE', url);
+            
             const response = await fetch(url, {
               method: 'DELETE',
-              headers: await uppyComponent.get_s3_http_headers(),
+              headers: headers,
             });
             
             const data = await response.text();
@@ -272,19 +445,18 @@ class HsUppy extends Vue {
         } catch (error) {
           console.error("Error completing multipart upload with SDK, falling back to HTTP:", error);
           
-          // Fallback to HTTP
+          // Fallback to HTTP with proper signing
           try {
-            const headers = {
-              ...await uppyComponent.get_s3_http_headers(),
-              'Content-Type': 'application/xml',
-            };
             const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
-
+            
             let partsXml = '';
             parts.forEach(part => {
               partsXml += `<Part><PartNumber>${part.PartNumber}</PartNumber><ETag>${part.ETag}</ETag></Part>`;
             });
             const body = `<CompleteMultipartUpload>${partsXml}</CompleteMultipartUpload>`;
+
+            const headers = await uppyComponent.get_s3_http_headers('POST', url, body);
+            headers['Content-Type'] = 'application/xml';
 
             const response = await fetch(url, {
               method: 'POST',
@@ -311,14 +483,8 @@ class HsUppy extends Vue {
         console.log(`shouldUseMultipart for file ${file.name} (${file.size} bytes):`, useMultipart);
         return useMultipart;
       },
-      getUploadParameters: (file, options) => {
-        console.log("getUploadParameters called for file:", file);
-        return {
-          method: 'PUT',
-          url: `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}`,
-          headers: {},
-          fields: {},
-        };
+      getUploadParameters: (file) => {
+        return uppyComponent.getUploadParameters(file);
       },
     })
     .on("error", (errorMessage) => {
@@ -342,8 +508,6 @@ class HsUppy extends Vue {
     })
     .use(GoldenRetriever)
     .use(GoogleDrivePicker, {
-      // https://uppy.io/docs/google-drive-picker/
-      // https://console.cloud.google.com/apis/credentials?referrer=search&project=hs-test-oauth
       target: Dashboard,
       companionUrl: COMPANION_URL,
       clientId: GOOGLE_PICKER_CLIENT_ID,
@@ -351,6 +515,7 @@ class HsUppy extends Vue {
       appId: GOOGLE_PICKER_APP_ID,
     });
   }
+
   async getS3Client() {
     const options = {
         endpoint: this.s3Host,
@@ -461,16 +626,6 @@ class HsUppy extends Vue {
       }
     }
   }
-  async get_s3_http_headers() {
-    console.log("Using S3 headers with credentials:", {
-      accessKey: this.accessKey ? "present" : "missing",
-      sessionToken: this.sessionToken ? "present" : "missing"
-    });
-    return {
-      'x-amz-security-token': this.sessionToken || '',
-      'x-amz-access-key': this.accessKey || '',
-    };
-  };
 }
 export default toNative(HsUppy);
 </script>

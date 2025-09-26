@@ -12,8 +12,12 @@
     "up": "taze major -I"
   },
   "dependencies": {
+    "@aws-crypto/sha256-js": "^5.2.0",
     "@aws-sdk/client-s3": "^3.890.0",
     "@aws-sdk/lib-storage": "^3.890.0",
+    "@aws-sdk/protocol-http": "^3.370.0",
+    "@aws-sdk/s3-request-presigner": "^3.896.0",
+    "@aws-sdk/signature-v4": "^3.370.0",
     "@cznethub/cznet-vue-core": "^0.2.42",
     "@unhead/vue": "^2.0.11",
     "@uppy/aws-s3": "^5.0.0",
