@@ -270,31 +270,23 @@ class App extends Vue {
       this.resourceId = "d7b526e24f7e449098b428ae9363f514";
     }
 
-    // TODO: fetch credentials once the permissions issues have been worked out with micro-auth
-    // The problem is that ENABLE_EDIT_ACTIONS seems not to be able to be added to the micro-auth env
-    // https://github.com/CUAHSI/minio-micro-auth/blob/a3992aa613e6e37f8bba407e4785c65f3032f4a7/api/routers/minio.py#L158-L159
+    const fetchCredentials = async () => {
+      const { access_key, secret_key } = await User.getOrCreateS3Credentials();
+      this.accessKey = access_key;
+      this.secretKey = secret_key;
+    }
 
-    // const fetchCredentials = async () => {
-    //   const { access_key, secret_key } = await User.getOrCreateS3Credentials();
-    //   this.accessKey = access_key;
-    //   this.secretKey = secret_key;
-    // }
-
-    // if (this.isLoggedIn) {
-    //   console.log("user is already logged in, fetching S3 credentials");
-    //   fetchCredentials();
-    // } else {
-    //   console.log("checking if we just returned from HydroShare login redirect")
-    //   User.checkLoginStatus().then((loggedIn) => {
-    //     if (loggedIn) {
-    //       fetchCredentials();
-    //     }
-    //   });
-    // }
-    
-    alert("using default S3 keys: minioadmin/minioadmin");
-    this.accessKey = "minioadmin";
-    this.secretKey = "minioadmin";
+    if (this.isLoggedIn) {
+      console.log("user is already logged in, fetching S3 credentials");
+      fetchCredentials();
+    } else {
+      console.log("checking if we just returned from HydroShare login redirect")
+      User.checkLoginStatus().then((loggedIn) => {
+        if (loggedIn) {
+          fetchCredentials();
+        }
+      });
+    }
 
     // temporary local storage for S3 keys (will move to Pinia later)
     if (!this.accessKey || !this.secretKey) {
