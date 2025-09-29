@@ -290,7 +290,7 @@ class App extends Vue {
     //       fetchCredentials();
     //     }
     //   });
-    }
+    // }
     
     alert("using default S3 keys: minioadmin/minioadmin");
     this.accessKey = "minioadmin";
