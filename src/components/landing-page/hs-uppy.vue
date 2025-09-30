@@ -6,6 +6,7 @@
 <script lang="ts">
 import { Component, Vue, toNative, Prop } from "vue-facing-decorator";
 import Uppy from '@uppy/core';
+import Tus from '@uppy/tus';
 import GoldenRetriever from '@uppy/golden-retriever';
 import GoogleDrivePicker from '@uppy/google-drive-picker';
 import Dashboard from '@uppy/dashboard';
@@ -246,13 +247,30 @@ class HsUppy extends Vue {
       id: "uppy",
       autoProceed: true,
       onBeforeUpload: (files) => {
+        let totalSize = 0;
         Object.keys(files).forEach((fileId) => {
-          const file = files[fileId]
-          console.log("adding metadata for", file.name);
-          console.log("s3Info:", uppyComponent.s3Info);
-          file.meta.bucket_name = uppyComponent.s3Info.bucket;
-          file.meta.dynamic_key = `${uppyComponent.s3Info.prefix}${file.name}`;
+          // add metadata to the file
+          // get the res id from the prefix
+          const resid = this.s3Info.prefix.split("/")[0];
+          files[fileId].meta.hs_res_id = resid;
+          // files[fileId].meta.hs_res_title = RES_TITLE;
+          files[fileId].meta.original_file_name = files[fileId].name;
+          // files[fileId].meta.existing_path_in_resource = JSON.stringify(
+          //   getCurrentPath()
+          // );
+          files[fileId].meta.file_size = files[fileId].data.size;
+          totalSize += files[fileId].data.size;
         });
+
+        // if (totalSize > RESTRICTED_SIZE) {
+        //   uppy.info(
+        //     `Total file size ${formatBytes(totalSize)} exceeds the maximum limit of ${formatBytes(parseInt(RESTRICTED_SIZE))}.`,
+        //     "error",
+        //     5000
+        //   );
+        //   // abort the upload
+        //   return false;
+        // }
         return files;
       },
     })
@@ -264,228 +282,262 @@ class HsUppy extends Vue {
       trigger: "#uppy-button",
       note: `TODO: quota?`,
     })
-    .use(AwsS3, {
-      allowedMetaFields: true,
-      createMultipartUpload: async (file) => {
-        console.log("createMultipartUpload called for file:", file.name);
+    // .use(AwsS3, {
+    //   allowedMetaFields: true,
+    //   createMultipartUpload: async (file) => {
+    //     console.log("createMultipartUpload called for file:", file.name);
         
-        // First try to find existing upload with SDK
-        try {
-          const existingUpload = await uppyComponent.findExistingMultipartUpload(file);
-          if (existingUpload) {
-            console.log("Found existing MultipartUpload for file:", file.name);
-            return existingUpload;
-          }
-        } catch (error) {
-          console.warn("Error checking for existing upload, proceeding with new upload:", error);
-        }
+    //     // First try to find existing upload with SDK
+    //     try {
+    //       const existingUpload = await uppyComponent.findExistingMultipartUpload(file);
+    //       if (existingUpload) {
+    //         console.log("Found existing MultipartUpload for file:", file.name);
+    //         return existingUpload;
+    //       }
+    //     } catch (error) {
+    //       console.warn("Error checking for existing upload, proceeding with new upload:", error);
+    //     }
 
-        // If no existing upload found or error occurred, create new one
-        console.log("creating new MultipartUpload for file:", file.name);
+    //     // If no existing upload found or error occurred, create new one
+    //     console.log("creating new MultipartUpload for file:", file.name);
         
-        try {
-          const s3Client = await uppyComponent.getS3Client();
-          const command = new CreateMultipartUploadCommand({
-            Bucket: uppyComponent.s3Info.bucket,
-            Key: file.meta.dynamic_key,
-          });
+    //     try {
+    //       const s3Client = await uppyComponent.getS3Client();
+    //       const command = new CreateMultipartUploadCommand({
+    //         Bucket: uppyComponent.s3Info.bucket,
+    //         Key: file.meta.dynamic_key,
+    //       });
           
-          const response = await s3Client.send(command);
-          return { 
-            uploadId: response.UploadId, 
-            key: file.meta.dynamic_key 
-          };
-        } catch (sdkError) {
-          console.error("SDK CreateMultipartUpload failed, falling back to presigned URL:", sdkError);
+    //       const response = await s3Client.send(command);
+    //       return { 
+    //         uploadId: response.UploadId, 
+    //         key: file.meta.dynamic_key 
+    //       };
+    //     } catch (sdkError) {
+    //       console.error("SDK CreateMultipartUpload failed, falling back to presigned URL:", sdkError);
           
-          // Fallback to HTTP with presigned URL
-          try {
-            const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploads`;
-            const presigned = await uppyComponent.generatePresignedUrl('POST', url);
+    //       // Fallback to HTTP with presigned URL
+    //       try {
+    //         const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploads`;
+    //         const presigned = await uppyComponent.generatePresignedUrl('POST', url);
             
-            const response = await fetch(presigned.url, {
-              method: 'POST',
-              headers: presigned.headers,
-            });
+    //         const response = await fetch(presigned.url, {
+    //           method: 'POST',
+    //           headers: presigned.headers,
+    //         });
             
-            const data = await response.text();
-            if (response.status < 200 || response.status >= 300) {
-              throw new Error(`HTTP fallback error: ${response.status} ${data}`);
-            }
+    //         const data = await response.text();
+    //         if (response.status < 200 || response.status >= 300) {
+    //           throw new Error(`HTTP fallback error: ${response.status} ${data}`);
+    //         }
             
-            const uploadIdMatch = data.match(/<UploadId>(.+?)<\/UploadId>/);
-            const uploadId = uploadIdMatch ? uploadIdMatch[1] : null;
-            if (!uploadId) {
-              throw new Error("No UploadId found in HTTP response");
-            }
+    //         const uploadIdMatch = data.match(/<UploadId>(.+?)<\/UploadId>/);
+    //         const uploadId = uploadIdMatch ? uploadIdMatch[1] : null;
+    //         if (!uploadId) {
+    //           throw new Error("No UploadId found in HTTP response");
+    //         }
             
-            return { uploadId, key: file.meta.dynamic_key };
-          } catch (httpError) {
-            console.error("HTTP fallback also failed:", httpError);
-            throw sdkError;
-          }
-        }
-      },
-      listParts: async (file, { uploadId, key }) => {
-        try {
-          const s3Client = await uppyComponent.getS3Client();
-          const listPartsOptions = {
-            Bucket: uppyComponent.s3Info.bucket,
-            Key: key,
-            UploadId: uploadId,
-          };
-          const command = new ListPartsCommand(listPartsOptions);
+    //         return { uploadId, key: file.meta.dynamic_key };
+    //       } catch (httpError) {
+    //         console.error("HTTP fallback also failed:", httpError);
+    //         throw sdkError;
+    //       }
+    //     }
+    //   },
+    //   listParts: async (file, { uploadId, key }) => {
+    //     try {
+    //       const s3Client = await uppyComponent.getS3Client();
+    //       const listPartsOptions = {
+    //         Bucket: uppyComponent.s3Info.bucket,
+    //         Key: key,
+    //         UploadId: uploadId,
+    //       };
+    //       const command = new ListPartsCommand(listPartsOptions);
 
-          const response = await s3Client.send(command);
-          const parts = response.Parts?.map(part => ({
-            PartNumber: part.PartNumber,
-            ETag: part.ETag,
-            Size: part.Size,
-          })) || [];
+    //       const response = await s3Client.send(command);
+    //       const parts = response.Parts?.map(part => ({
+    //         PartNumber: part.PartNumber,
+    //         ETag: part.ETag,
+    //         Size: part.Size,
+    //       })) || [];
           
-          console.log("Found parts for file:", file.name, parts);
-          return parts;
-        } catch (error) {
-          await uppyComponent.checkS3Credentials(key);
-          console.error("Error listing parts with SDK, falling back to HTTP:", error);
+    //       console.log("Found parts for file:", file.name, parts);
+    //       return parts;
+    //     } catch (error) {
+    //       await uppyComponent.checkS3Credentials(key);
+    //       console.error("Error listing parts with SDK, falling back to HTTP:", error);
           
-          // Fallback to HTTP with proper signing
-          try {
-            const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
-            const headers = await uppyComponent.get_s3_http_headers('GET', url);
+    //       // Fallback to HTTP with proper signing
+    //       try {
+    //         const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
+    //         const headers = await uppyComponent.get_s3_http_headers('GET', url);
             
-            const response = await fetch(url, {
-              method: 'GET',
-              headers: headers,
-            });
+    //         const response = await fetch(url, {
+    //           method: 'GET',
+    //           headers: headers,
+    //         });
             
-            if (response.status < 200 || response.status >= 300) {
-              const errorText = await response.text();
-              throw new Error(`HTTP fallback error: ${response.status} ${errorText}`);
-            }
+    //         if (response.status < 200 || response.status >= 300) {
+    //           const errorText = await response.text();
+    //           throw new Error(`HTTP fallback error: ${response.status} ${errorText}`);
+    //         }
             
-            const data = await response.text();
-            const partMatches = [...data.matchAll(/<Part>\s*<PartNumber>(\d+)<\/PartNumber>\s*<LastModified>[^<]+<\/LastModified>\s*<ETag>&#34;([^<]+)&#34;<\/ETag>\s*<Size>(\d+)<\/Size>\s*<\/Part>/g)];
-            const parts = partMatches.map(match => ({
-              PartNumber: parseInt(match[1], 10),
-              ETag: match[2],
-              Size: parseInt(match[3], 10),
-            }));
+    //         const data = await response.text();
+    //         const partMatches = [...data.matchAll(/<Part>\s*<PartNumber>(\d+)<\/PartNumber>\s*<LastModified>[^<]+<\/LastModified>\s*<ETag>&#34;([^<]+)&#34;<\/ETag>\s*<Size>(\d+)<\/Size>\s*<\/Part>/g)];
+    //         const parts = partMatches.map(match => ({
+    //           PartNumber: parseInt(match[1], 10),
+    //           ETag: match[2],
+    //           Size: parseInt(match[3], 10),
+    //         }));
             
-            console.log("Found parts via HTTP fallback for file:", file.name, parts);
-            return parts;
-          } catch (httpError) {
-            console.error("HTTP fallback also failed:", httpError);
-            throw error;
-          }
-        }
-      },
-      signPart: async (file, partData) => {
-        return await uppyComponent.signPart(file, partData);
-      },
-      abortMultipartUpload: async (file, { uploadId, key }) => {
-        console.log("aborting MultipartUpload for file:", file.name);
+    //         console.log("Found parts via HTTP fallback for file:", file.name, parts);
+    //         return parts;
+    //       } catch (httpError) {
+    //         console.error("HTTP fallback also failed:", httpError);
+    //         throw error;
+    //       }
+    //     }
+    //   },
+    //   signPart: async (file, partData) => {
+    //     return await uppyComponent.signPart(file, partData);
+    //   },
+    //   abortMultipartUpload: async (file, { uploadId, key }) => {
+    //     console.log("aborting MultipartUpload for file:", file.name);
         
-        try {
-          const s3Client = await uppyComponent.getS3Client();
-          const command = new AbortMultipartUploadCommand({
-            Bucket: uppyComponent.s3Info.bucket,
-            Key: key,
-            UploadId: uploadId,
-          });
+    //     try {
+    //       const s3Client = await uppyComponent.getS3Client();
+    //       const command = new AbortMultipartUploadCommand({
+    //         Bucket: uppyComponent.s3Info.bucket,
+    //         Key: key,
+    //         UploadId: uploadId,
+    //       });
           
-          await s3Client.send(command);
-          console.log("Multipart upload aborted successfully for file:", file.name);
-        } catch (error) {
-          console.error("Error aborting multipart upload with SDK, falling back to HTTP:", error);
+    //       await s3Client.send(command);
+    //       console.log("Multipart upload aborted successfully for file:", file.name);
+    //     } catch (error) {
+    //       console.error("Error aborting multipart upload with SDK, falling back to HTTP:", error);
           
-          // Fallback to HTTP with proper signing
-          try {
-            const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
-            const headers = await uppyComponent.get_s3_http_headers('DELETE', url);
+    //       // Fallback to HTTP with proper signing
+    //       try {
+    //         const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
+    //         const headers = await uppyComponent.get_s3_http_headers('DELETE', url);
             
-            const response = await fetch(url, {
-              method: 'DELETE',
-              headers: headers,
-            });
+    //         const response = await fetch(url, {
+    //           method: 'DELETE',
+    //           headers: headers,
+    //         });
             
-            const data = await response.text();
-            if (response.status < 200 || response.status >= 300) {
-              throw new Error(`HTTP fallback error: ${response.status} ${data}`);
-            }
+    //         const data = await response.text();
+    //         if (response.status < 200 || response.status >= 300) {
+    //           throw new Error(`HTTP fallback error: ${response.status} ${data}`);
+    //         }
             
-            console.log("Multipart upload aborted successfully via HTTP fallback for file:", file.name);
-          } catch (httpError) {
-            console.error("HTTP fallback also failed:", httpError);
-            throw error;
-          }
-        }
-      },
-      completeMultipartUpload: async (file, { uploadId, key, parts }) => {
-        console.log("completing MultipartUpload for file:", file.name);
+    //         console.log("Multipart upload aborted successfully via HTTP fallback for file:", file.name);
+    //       } catch (httpError) {
+    //         console.error("HTTP fallback also failed:", httpError);
+    //         throw error;
+    //       }
+    //     }
+    //   },
+    //   completeMultipartUpload: async (file, { uploadId, key, parts }) => {
+    //     console.log("completing MultipartUpload for file:", file.name);
         
-        try {
-          const s3Client = await uppyComponent.getS3Client();
-          const command = new CompleteMultipartUploadCommand({
-            Bucket: uppyComponent.s3Info.bucket,
-            Key: key,
-            UploadId: uploadId,
-            MultipartUpload: {
-              Parts: parts.map(part => ({
-                PartNumber: part.PartNumber,
-                ETag: part.ETag,
-              })),
-            },
-          });
+    //     try {
+    //       const s3Client = await uppyComponent.getS3Client();
+    //       const command = new CompleteMultipartUploadCommand({
+    //         Bucket: uppyComponent.s3Info.bucket,
+    //         Key: key,
+    //         UploadId: uploadId,
+    //         MultipartUpload: {
+    //           Parts: parts.map(part => ({
+    //             PartNumber: part.PartNumber,
+    //             ETag: part.ETag,
+    //           })),
+    //         },
+    //       });
           
-          const response = await s3Client.send(command);
-          console.log("Multipart upload completed successfully for file:", file.name);
+    //       const response = await s3Client.send(command);
+    //       console.log("Multipart upload completed successfully for file:", file.name);
           
-          return `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}`;
-        } catch (error) {
-          console.error("Error completing multipart upload with SDK, falling back to HTTP:", error);
+    //       return `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}`;
+    //     } catch (error) {
+    //       console.error("Error completing multipart upload with SDK, falling back to HTTP:", error);
           
-          // Fallback to HTTP with proper signing
-          try {
-            const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
+    //       // Fallback to HTTP with proper signing
+    //       try {
+    //         const url = `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}?uploadId=${uploadId}`;
             
-            let partsXml = '';
-            parts.forEach(part => {
-              partsXml += `<Part><PartNumber>${part.PartNumber}</PartNumber><ETag>${part.ETag}</ETag></Part>`;
-            });
-            const body = `<CompleteMultipartUpload>${partsXml}</CompleteMultipartUpload>`;
+    //         let partsXml = '';
+    //         parts.forEach(part => {
+    //           partsXml += `<Part><PartNumber>${part.PartNumber}</PartNumber><ETag>${part.ETag}</ETag></Part>`;
+    //         });
+    //         const body = `<CompleteMultipartUpload>${partsXml}</CompleteMultipartUpload>`;
 
-            const headers = await uppyComponent.get_s3_http_headers('POST', url, body);
-            headers['Content-Type'] = 'application/xml';
+    //         const headers = await uppyComponent.get_s3_http_headers('POST', url, body);
+    //         headers['Content-Type'] = 'application/xml';
 
-            const response = await fetch(url, {
-              method: 'POST',
-              headers,
-              body,
-            });
+    //         const response = await fetch(url, {
+    //           method: 'POST',
+    //           headers,
+    //           body,
+    //         });
             
-            const data = await response.text();
-            if (response.status < 200 || response.status >= 300) {
-              throw new Error(`HTTP fallback error: ${response.status} ${data}`);
-            }
+    //         const data = await response.text();
+    //         if (response.status < 200 || response.status >= 300) {
+    //           throw new Error(`HTTP fallback error: ${response.status} ${data}`);
+    //         }
             
-            console.log("Multipart upload completed successfully via HTTP fallback for file:", file.name);
-            return `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}`;
-          } catch (httpError) {
-            console.error("HTTP fallback also failed:", httpError);
-            throw error;
-          }
+    //         console.log("Multipart upload completed successfully via HTTP fallback for file:", file.name);
+    //         return `${uppyComponent.s3Host}/${uppyComponent.s3Info.bucket}/${file.meta.dynamic_key}`;
+    //       } catch (httpError) {
+    //         console.error("HTTP fallback also failed:", httpError);
+    //         throw error;
+    //       }
+    //     }
+    //   },
+    //   shouldUseMultipart: (file) => {
+    //     if (!file) return false;
+    //     const useMultipart = file?.size > 5 * 1024 * 1024;
+    //     console.log(`shouldUseMultipart for file ${file.name} (${file.size} bytes):`, useMultipart);
+    //     return useMultipart;
+    //   },
+    //   getUploadParameters: (file) => {
+    //     return uppyComponent.getUploadParameters(file);
+    //   },
+    // })
+    .use(Tus, {
+      endpoint: "https://localhost/django_s3/tus/",
+      // https://uppy.io/docs/tus/#headers
+      // headers: headers,
+      withCredentials: true,
+      // https://uppy.io/docs/tus/#chunksize
+      // it is not recommended to set the chunk size
+      // however in testing it seems to improve resumability
+      chunkSize: 5 * 1024 * 1024, // 5MB
+      // https://uppy.io/docs/tus/#limit
+      limit: 10,
+    })
+    .on("file-added", (file) => {
+      // TODO aggregation
+      // if (getCurrentPath().hasOwnProperty("aggregation")) {
+      //   // Remove the file from the upload list
+      //   uppy.removeFile(file.id);
+      //   uppy.info("File upload is not allowed. Target folder seems to contain aggregation(s).", "error");
+      // }
+      
+      // if the file source is "local" then impose the file number limit
+      // this is because local uploads are more resource intensive than remote (ex google drive) uploads
+      if (!file.isRemote ) {
+        // count the total number of files that are not isRemote thus far and make sure it is less than MAX_NUMBER_OF_FILES_IN_SINGLE_LOCAL_UPLOAD
+        const localFiles = uppyInstance.getFiles().filter((f) => !f.isRemote);
+        if (localFiles.length > MAX_NUMBER_OF_FILES_IN_SINGLE_LOCAL_UPLOAD) {
+          uppyInstance.removeFile(file.id);
+          uppyInstance.info(
+            `The number of files added exceeds the limit of ${MAX_NUMBER_OF_FILES_IN_SINGLE_LOCAL_UPLOAD}.`,
+            "error"
+          );
         }
-      },
-      shouldUseMultipart: (file) => {
-        if (!file) return false;
-        const useMultipart = file?.size > 5 * 1024 * 1024;
-        console.log(`shouldUseMultipart for file ${file.name} (${file.size} bytes):`, useMultipart);
-        return useMultipart;
-      },
-      getUploadParameters: (file) => {
-        return uppyComponent.getUploadParameters(file);
-      },
+      }
     })
     .on("error", (errorMessage) => {
       console.error("Uppy error:", errorMessage);
