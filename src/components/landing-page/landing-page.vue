@@ -130,7 +130,7 @@ class LandingPage extends Vue {
 
   s3Client!: S3Client;
   s3Host: string = "http://localhost:9000";
-  hydroshareHost: string = "https://localhost";
+  hydroshareHost: string = "http://local.hydroshare.org";
 
   s3Info = {
     bucket: "",
@@ -292,7 +292,7 @@ class LandingPage extends Vue {
     this.isFetchingMetadata = true;
     this.isLoadingFiles = true;
     this.s3Host = "http://localhost:9000";
-    this.hydroshareHost = "https://localhost";
+    this.hydroshareHost = "http://local.hydroshare.org";
     User.getResourceS3prefix(this.resourceId).then((s3info) => {
       this.s3Info = s3info;
       this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
