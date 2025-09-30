@@ -207,7 +207,7 @@ class App extends Vue {
 
   s3Client!: S3Client;
   s3Host: string = "http://localhost:9000";
-  hydroshareHost: string = "http://local.hydroshare.org";
+  hydroshareHost: string = "https://localhost";
   s3Info = {
     bucket: "",
     prefix: "",
@@ -374,7 +374,7 @@ class App extends Vue {
     this.isFetchingMetadata = true;
     this.isLoadingFiles = true;
     this.s3Host = "http://localhost:9000";
-    this.hydroshareHost = "http://local.hydroshare.org";
+    this.hydroshareHost = "https://localhost";
     const s3info = await User.getResourceS3prefix(this.resourceId);
     this.s3Info = s3info;
     this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
