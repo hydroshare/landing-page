@@ -535,12 +535,13 @@ class HsUppy extends Vue {
 
     const headers = {
       'X-CSRFToken': document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1] || '',
+      'HS-SID': document.cookie.split('; ').find(row => row.startsWith('sessionid='))?.split('=')[1] || '',
     };
-    console.log(`Using CSRF token: ${headers['X-CSRFToken']}`);
 
     uppyInstance.use(Tus, {
       endpoint: "https://localhost/django_s3/tus/",
-      // endpoint: "http://local.hydroshare.org/django_s3/tus/",
+      // When using companion of 3rd party uploads, you must change the endpoint to host.docker.internal
+      // endpoint: "http://host.docker.internal/django_s3/tus/",
       // https://uppy.io/docs/tus/#headers
       // add auth cookies for hydroshare django-s3 tus server
       // the cookies are the csrf token and sessionid
