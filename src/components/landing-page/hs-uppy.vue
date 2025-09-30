@@ -48,6 +48,30 @@ class HsUppy extends Vue {
 
   private signatureV4: SignatureV4 | null = null;
 
+    // Method to expose the Uppy instance
+  getUppyInstance(): Uppy | null {
+    return uppyInstance;
+  }
+  // Add files through the component
+  addFile(fileData: any): string | null {
+    if (uppyInstance) {
+      try {
+        return uppyInstance.addFile(fileData);
+      } catch (error) {
+        console.error("Error adding file to Uppy:", error);
+        return null;
+      }
+    }
+    return null;
+  }
+
+  upload(): Promise<void> {
+    if (uppyInstance) {
+      return uppyInstance.upload();
+    }
+    return Promise.reject(new Error("Uppy instance not available"));
+  }
+
   // Method to get or create the SignatureV4 instance
   getSigner(): SignatureV4 {
     if (!this.signatureV4) {
