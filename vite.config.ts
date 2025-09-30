@@ -124,7 +124,7 @@ export default defineConfig(({ mode }) => {
     },
 
     build: {
-      outDir: "../dist", // Adjust based on your project structure
+      outDir: "./dist",
       assetsDir: "assets",
       rollupOptions: {
         output: {
