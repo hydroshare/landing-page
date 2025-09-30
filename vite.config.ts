@@ -142,7 +142,7 @@ export default defineConfig(({ mode }) => {
       //   port: 8081,
       //   clientPort: 443,
       // },
-      allowedHosts: ["host.docker.internal"],
+      allowedHosts: ["host.docker.internal", "local.hydroshare.org"],
       origin: `${base}`,
     },
   };
