@@ -529,10 +529,23 @@ class HsUppy extends Vue {
     //     return uppyComponent.getUploadParameters(file);
     //   },
     // })
-    .use(Tus, {
+
+    console.log("Setting up Uppy Tus with headers from cookies...");
+    console.log(document.cookie);
+
+    const headers = {
+      'X-CSRFToken': document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1] || '',
+    };
+    console.log(`Using CSRF token: ${headers['X-CSRFToken']}`);
+
+    uppyInstance.use(Tus, {
       endpoint: "https://localhost/django_s3/tus/",
+      // endpoint: "http://local.hydroshare.org/django_s3/tus/",
       // https://uppy.io/docs/tus/#headers
-      // headers: headers,
+      // add auth cookies for hydroshare django-s3 tus server
+      // the cookies are the csrf token and sessionid
+      // they are not http-only so can be read by javascript
+      headers: headers,
       withCredentials: true,
       // https://uppy.io/docs/tus/#chunksize
       // it is not recommended to set the chunk size
@@ -589,6 +602,7 @@ class HsUppy extends Vue {
       clientId: GOOGLE_PICKER_CLIENT_ID,
       apiKey: GOOGLE_PICKER_API_KEY,
       appId: GOOGLE_PICKER_APP_ID,
+      // companionHeaders: headers,
     });
   }
 
