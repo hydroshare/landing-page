@@ -11,9 +11,10 @@ import vuetify from "vite-plugin-vuetify";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
+  const base = env.VITE_APP_BASE || "/resource/";
   return {
-    root: "./",
-    base: env.VITE_APP_BASE || "/",
+    // root: "./src",
+    base: base,
     envDir: "./",
     resolve: {
       alias: {
@@ -122,6 +123,10 @@ export default defineConfig(({ mode }) => {
       noExternal: ["workbox-window"],
     },
 
+    build: {
+      outDir: "./dist",
+    },
+
     server: {
       host: true,
       port: 5004,
@@ -138,6 +143,7 @@ export default defineConfig(({ mode }) => {
       //   clientPort: 443,
       // },
       allowedHosts: ["host.docker.internal"],
+      origin: `${base}`,
     },
   };
 });
