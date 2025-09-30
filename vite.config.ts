@@ -11,9 +11,10 @@ import vuetify from "vite-plugin-vuetify";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
+  const base = env.VITE_APP_BASE || "/resource/";
   return {
-    root: "./",
-    base: env.VITE_APP_BASE || "/",
+    // root: "./src",
+    base: base,
     envDir: "./",
     resolve: {
       alias: {
@@ -122,6 +123,26 @@ export default defineConfig(({ mode }) => {
       noExternal: ["workbox-window"],
     },
 
+    build: {
+      outDir: "../dist", // Adjust based on your project structure
+      assetsDir: "assets",
+      rollupOptions: {
+        output: {
+          chunkFileNames: 'assets/js/[name]-[hash].js',
+          entryFileNames: 'assets/js/[name]-[hash].js',
+          assetFileNames: ({name}) => {
+            if (/\.(gif|jpe?g|png|svg)$/.test(name ?? '')) {
+              return 'assets/images/[name]-[hash][extname]';
+            }
+            if (/\.css$/.test(name ?? '')) {
+              return 'assets/css/[name]-[hash][extname]';
+            }
+            return 'assets/[name]-[hash][extname]';
+          },
+        }
+      }
+    },
+
     server: {
       host: true,
       port: 5004,
@@ -138,6 +159,7 @@ export default defineConfig(({ mode }) => {
       //   clientPort: 443,
       // },
       allowedHosts: ["host.docker.internal"],
+      origin: `${base}`,
     },
   };
 });
