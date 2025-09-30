@@ -10,6 +10,7 @@ import Tus from '@uppy/tus';
 import GoldenRetriever from '@uppy/golden-retriever';
 import GoogleDrivePicker from '@uppy/google-drive-picker';
 import Dashboard from '@uppy/dashboard';
+import AwsS3 from '@uppy/aws-s3';
 import { S3Client, ListMultipartUploadsCommand, CreateMultipartUploadCommand, ListPartsCommand, AbortMultipartUploadCommand, CompleteMultipartUploadCommand, GetBucketAclCommand, GetObjectAclCommand, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { HttpRequest } from "@aws-sdk/protocol-http";
 import { SignatureV4 } from "@aws-sdk/signature-v4";
