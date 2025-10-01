@@ -265,6 +265,9 @@ class HsUppy extends Vue {
       note: `TODO: quota?`,
     })
 
+    // TODO: these headers are not reactive
+    // we need to update them if accessKey/secretKey props change
+    // maybe use a watcher on those props to update AwsS3 options?
     const headers = {
       "s3-key": this.accessKey,
       "s3-secret": this.secretKey
