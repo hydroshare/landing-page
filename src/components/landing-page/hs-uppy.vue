@@ -264,7 +264,13 @@ class HsUppy extends Vue {
       trigger: "#uppy-button",
       note: `TODO: quota?`,
     })
-    .use(AwsS3, {
+
+    const headers = {
+      "s3-key": this.accessKey,
+      "s3-secret": this.secretKey
+    };
+    uppyInstance.use(AwsS3, {
+      headers: headers,
       allowedMetaFields: true,
       createMultipartUpload: async (file) => {
         console.log("createMultipartUpload called for file:", file.name);
@@ -506,13 +512,14 @@ class HsUppy extends Vue {
         }
       } catch (e) {}
     })
-    .use(GoldenRetriever)
-    .use(GoogleDrivePicker, {
+    .use(GoldenRetriever);
+    uppyInstance.use(GoogleDrivePicker, {
       target: Dashboard,
       companionUrl: COMPANION_URL,
       clientId: GOOGLE_PICKER_CLIENT_ID,
       apiKey: GOOGLE_PICKER_API_KEY,
       appId: GOOGLE_PICKER_APP_ID,
+      companionHeaders: headers,
     });
   }
 
