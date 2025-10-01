@@ -4,7 +4,7 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue, toNative, Prop } from "vue-facing-decorator";
+import { Component, Vue, toNative, Prop, Watch } from "vue-facing-decorator";
 import Uppy from '@uppy/core';
 import GoldenRetriever from '@uppy/golden-retriever';
 import GoogleDrivePicker from '@uppy/google-drive-picker';
@@ -47,6 +47,52 @@ class HsUppy extends Vue {
   sessionToken!: string;
 
   private signatureV4: SignatureV4 | null = null;
+
+  // Method to expose the Uppy instance
+  getUppyInstance(): Uppy | null {
+    return uppyInstance;
+  }
+
+  // Add files through the component
+  addFile(fileData: any): string | null {
+    if (uppyInstance) {
+      try {
+        return uppyInstance.addFile(fileData);
+      } catch (error) {
+        console.error("Error adding file to Uppy:", error);
+        return null;
+      }
+    }
+    return null;
+  }
+
+  upload(): Promise<void> {
+    if (uppyInstance) {
+      return uppyInstance.upload();
+    }
+    return Promise.reject(new Error("Uppy instance not available"));
+  }
+
+  // Computed property for headers that reacts to credential changes
+  get s3Headers() {
+    return {
+      'x-amz-security-token': this.sessionToken || '',
+      'x-amz-access-key': this.accessKey || '',
+    };
+  }
+
+  // Watch for credential changes and recreate Uppy instance
+  @Watch('accessKey')
+  @Watch('secretKey')
+  @Watch('sessionToken')
+  onCredentialsChange() {
+    console.log('Credentials changed, recreating Uppy instance');
+    this.initializeUppy();
+  }
+
+  mounted() {
+    this.initializeUppy();
+  }
 
   // Method to get or create the SignatureV4 instance
   getSigner(): SignatureV4 {
@@ -240,8 +286,13 @@ class HsUppy extends Vue {
     };
   }
 
-  mounted() {
+  initializeUppy() {
     const uppyComponent = this;
+    const headers = {
+      "s3-key": this.accessKey,
+      "s3-secret": this.secretKey
+    };
+    console.log("Initializing Uppy");
     uppyInstance = new Uppy({
       id: "uppy",
       autoProceed: true,
@@ -265,13 +316,6 @@ class HsUppy extends Vue {
       note: `TODO: quota?`,
     })
 
-    // TODO: these headers are not reactive
-    // we need to update them if accessKey/secretKey props change
-    // maybe use a watcher on those props to update AwsS3 options?
-    const headers = {
-      "s3-key": this.accessKey,
-      "s3-secret": this.secretKey
-    };
     uppyInstance.use(AwsS3, {
       headers: headers,
       allowedMetaFields: true,
@@ -515,8 +559,8 @@ class HsUppy extends Vue {
         }
       } catch (e) {}
     })
-    .use(GoldenRetriever);
-    uppyInstance.use(GoogleDrivePicker, {
+    .use(GoldenRetriever)
+    .use(GoogleDrivePicker, {
       target: Dashboard,
       companionUrl: COMPANION_URL,
       clientId: GOOGLE_PICKER_CLIENT_ID,
