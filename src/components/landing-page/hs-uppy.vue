@@ -143,8 +143,7 @@ class HsUppy extends Vue {
     uppyInstance.use(AwsS3, {
       headers: headers,
       allowedMetaFields: true,
-      endpoint: "https://localhost/companion",
-      // endpoint: COMPANION_URL,
+      endpoint: COMPANION_URL,
     })
     .on("error", (errorMessage) => {
       console.error("Uppy error:", errorMessage);
