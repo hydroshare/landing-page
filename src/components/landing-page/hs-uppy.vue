@@ -116,6 +116,7 @@ class HsUppy extends Vue {
       "s3-secret": this.secretKey
     };
     console.log("Initializing Uppy");
+    console.log("With credentials:", this.accessKey, this.secretKey, this.sessionToken);
     uppyInstance = new Uppy({
       id: "uppy",
       autoProceed: true,
@@ -142,8 +143,8 @@ class HsUppy extends Vue {
     uppyInstance.use(AwsS3, {
       headers: headers,
       allowedMetaFields: true,
-      // endpoint: "https://localhost/companion",
-      endpoint: COMPANION_URL,
+      endpoint: "https://localhost/companion",
+      // endpoint: COMPANION_URL,
     })
     .on("error", (errorMessage) => {
       console.error("Uppy error:", errorMessage);
