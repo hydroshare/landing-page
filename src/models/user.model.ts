@@ -15,6 +15,7 @@ export interface IUserState {
   next: string;
   hasUnsavedChanges: boolean;
   showZenodoWarning: boolean;
+  toc: { to: string, text: string, level?: number }[];
 }
 
 /**
@@ -66,6 +67,7 @@ export default class User extends Model {
       next: "",
       hasUnsavedChanges: false,
       showZenodoWarning: true,
+      toc: []
     };
   }
 

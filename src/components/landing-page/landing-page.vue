@@ -129,8 +129,8 @@ class LandingPage extends Vue {
   wasLoaded = true;
 
   s3Client!: S3Client;
-  s3Host: string = "http://localhost:9000";
-  hydroshareHost: string = "http://localhost:8000";
+  s3Host: string = "https://s3.beta.hydroshare.org";
+  hydroshareHost: string = "https://beta.hydroshare.org";
 
   s3Info = {
     bucket: "",
@@ -208,7 +208,9 @@ class LandingPage extends Vue {
       console.log("user is already logged in, fetching S3 credentials");
       fetchCredentials();
     } else {
-      console.log("checking if we just returned from HydroShare login redirect")
+      console.log(
+        "checking if we just returned from HydroShare login redirect",
+      );
       User.checkLoginStatus().then((loggedIn) => {
         if (loggedIn) {
           fetchCredentials();
@@ -289,8 +291,8 @@ class LandingPage extends Vue {
   async onRestoreDefaults() {
     this.isFetchingMetadata = true;
     this.isLoadingFiles = true;
-    this.s3Host = "http://localhost:9000";
-    this.hydroshareHost = "http://localhost:8000";
+    this.s3Host = "https://s3.beta.hydroshare.org";
+    this.hydroshareHost = "https://beta.hydroshare.org";
     await this.fetchS3Info();
     this.startS3Client();
     this.loadResource();

@@ -1,0 +1,1291 @@
+<template>
+  <v-container>
+    <div class="d-flex gap-1">
+      <v-spacer></v-spacer>
+      <template v-if="!isLoadingFiles && !isFetchingMetadata">
+        <v-menu width="500" :close-on-content-click="false">
+          <template v-slot:activator="{ props }">
+            <v-btn
+              size="small"
+              v-bind="props"
+              color="primary"
+              prepend-icon="mdi-cog"
+              variant="plain"
+              >Settings</v-btn
+            >
+          </template>
+          <v-card>
+            <v-card-title
+              class="bg-grey-lighten-3 text-body-1 text-medium-emphasis"
+              >Settings</v-card-title
+            >
+            <v-divider></v-divider>
+            <v-card-text flat>
+              <s3-form
+                :prefix="s3Info.prefix"
+                :bucket="s3Info.bucket"
+                :s3-host="s3Host"
+                :hydroshare-host="hydroshareHost"
+                :accessKey="accessKey"
+                :secret-key="secretKey"
+                @apply-changes="onS3FormUpdate"
+                @restore-defaults="onRestoreDefaults"
+              ></s3-form>
+            </v-card-text>
+          </v-card>
+        </v-menu>
+
+        <v-btn
+          size="small"
+          color="primary"
+          prepend-icon="mdi-pen"
+          variant="outlined"
+          @click="$router.push({ name: 'edit-dataset' })"
+          >Edit</v-btn
+        >
+      </template>
+    </div>
+
+    <v-skeleton-loader
+      v-if="isFetchingMetadata"
+      type="card"
+    ></v-skeleton-loader>
+
+    <div v-if="!isFetchingMetadata && wasLoaded" class="d-flex">
+      <v-container
+        class="page-content"
+        :class="{ 'is-sm': $vuetify.display.mdAndDown }"
+      >
+        <h4 id="overview" class="text-h5 font-weight-medium">
+          {{ data.name }}
+        </h4>
+
+        <div
+          class="d-flex justify-space-between mb-2 flex-column flex-sm-row align-normal align-sm-end"
+        >
+          <div
+            v-if="data.creativeWorkStatus || data.dateModified"
+            class="order-2 order-sm-1"
+          >
+            <v-chip
+              v-if="data.creativeWorkStatus"
+              size="small"
+              class="mr-2 bg-primary"
+              :color="getStatusColor(data.creativeWorkStatus.name)"
+              :title="data.creativeWorkStatus.description"
+            >
+              {{ data.creativeWorkStatus.name }}
+            </v-chip>
+
+            <template v-if="data.dateModified">
+              <span class="d-block d-sm-inline" v-bind="infoLabelAttr"
+                >Last Updated:
+              </span>
+              <span v-bind="infoValueAttr">
+                {{ parseDate(data.dateModified) }}
+                <span class="font-weight-light">
+                  (<timeago :datetime="data.dateModified" />)
+                </span>
+              </span>
+            </template>
+          </div>
+
+          <!-- TODO: disabled until dataset endpoint returns current user permissions -->
+          <!-- <div class="order-1 order-sm-2">
+            <v-btn
+              v-if="data.submission_type !== 'HYDROSHARE'"
+              class="order-1 order-sm-2 mb-sm-0 mb-4 mt-sm-0 mt-2"
+              @click="
+                router.push({
+                  name: 'dataset-edit',
+                  params: { id: data._id },
+                })
+              "
+              rounded
+            >
+              <v-icon>mdi-text-box-edit</v-icon><span class="ml-1">Edit</span>
+            </v-btn>
+
+            <v-btn
+              v-if="data.repository_identifier"
+              :href="data.repository_identifier"
+              target="_blank"
+              color="blue-grey lighten-4"
+              rounded
+            >
+              <v-icon class="mr-1">mdi-open-in-new</v-icon> View in repository
+            </v-btn>
+          </div> -->
+        </div>
+        <v-divider class="my-4"></v-divider>
+
+        <v-row
+          class="my-4 align-start"
+          :no-gutters="$vuetify.display.smAndDown"
+        >
+          <v-col cols="12" sm="6" class="dataset-info">
+            <div v-bind="infoLabelAttr">Created By:</div>
+
+            <div class="infoValueAttr">
+              <v-menu
+                v-for="(creator, index) of data.creator"
+                offset-y
+                :close-on-content-click="false"
+                class="d-inline"
+                :key="index"
+              >
+                <template v-slot:activator="{ props }">
+                  <span
+                    class="mr-2 cursor-pointer"
+                    v-bind="{ ...props, ...infoValueAttr }"
+                  >
+                    <div class="d-inline-block">
+                      {{ creator.name }} <v-icon small>mdi-menu-down</v-icon>
+                    </div>
+                  </span>
+                </template>
+                <v-card v-if="creator['type'] == 'Person'">
+                  <v-card-title class="text-body-1">
+                    <v-icon class="mr-2">mdi-account-outline</v-icon>
+                    {{ creator.name }}
+                  </v-card-title>
+                  <v-divider></v-divider>
+
+                  <v-card-text
+                    v-if="creator.email || creator.identifier"
+                    class="d-flex flex-column gap-1"
+                  >
+                    <div v-if="creator.email">
+                      <v-icon
+                        class="mr-1"
+                        small
+                        color="secondary"
+                        title="Email address"
+                        icon="mdi-email-outline"
+                      />
+                      {{ creator.email }}
+                    </div>
+                    <div v-if="creator.identifier" class="d-flex align-center">
+                      <i
+                        class="fab fa-orcid mr-2 text-secondary text-h6"
+                        aria-hidden="true"
+                        title="ORCID"
+                      ></i>
+                      {{ creator.identifier }}
+                    </div>
+
+                    <div v-if="creator.affiliation">
+                      <div class="d-flex align-center">
+                        <v-icon
+                          small
+                          color="secondary"
+                          class="mr-1"
+                          title="Affiliation"
+                        >
+                          mdi-domain
+                        </v-icon>
+                        Affiliation:
+                      </div>
+                      <v-divider class="my-2"></v-divider>
+                      <div
+                        v-if="creator.affiliation.name"
+                        class="font-weight-bold mb-2"
+                      >
+                        <span
+                          v-if="creator.affiliation.url"
+                          class="d-inline-flex align-baseline"
+                        >
+                          <a :href="creator.affiliation.url">{{
+                            creator.affiliation.name
+                          }}</a>
+                        </span>
+                        <span v-else>{{ creator.affiliation.name }}</span>
+                      </div>
+
+                      <div v-if="creator.affiliation.address">
+                        {{ creator.affiliation.address }}
+                      </div>
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </v-menu>
+            </div>
+
+            <template v-if="data.provider">
+              <div v-bind="infoLabelAttr">Provider:</div>
+              <div v-bind="infoValueAttr">
+                <span v-if="data.provider.url" class="d-flex align-baseline">
+                  <a :href="data.provider.url">{{ data.provider.name }}</a>
+                </span>
+
+                <template v-else>{{ data.provider.name }}</template>
+              </div>
+            </template>
+
+            <template v-if="data.publisher">
+              <div v-bind="infoLabelAttr">Publisher:</div>
+              <div v-bind="infoValueAttr">
+                <span v-if="data.publisher.url" class="d-flex align-baseline">
+                  <a :href="data.publisher.url">{{ data.publisher.name }}</a>
+                </span>
+
+                <template v-else>{{ data.publisher.name }}</template>
+              </div>
+            </template>
+
+            <div v-bind="infoLabelAttr">Resource Type:</div>
+            <div v-bind="infoValueAttr">{{ data["@type"] }}</div>
+
+            <template v-if="contentSize">
+              <div v-bind="infoLabelAttr">Resource Size:</div>
+              <div v-bind="infoValueAttr">~{{ contentSize }}</div>
+            </template>
+
+            <div v-bind="infoLabelAttr">License:</div>
+            <div v-bind="infoValueAttr">
+              <div v-if="data.license?.url" class="d-flex align-baseline">
+                <a :href="data.license?.url">{{ data.license?.name }}</a>
+              </div>
+
+              <template v-else>{{ data.license?.name }}</template>
+
+              <div class="font-weight-light text-subtitle-2">
+                {{ data.license?.description }}
+              </div>
+            </div>
+
+            <template v-if="data.inLanguage">
+              <div v-bind="infoLabelAttr">Language:</div>
+              <div v-bind="infoValueAttr">{{ data.inLanguage }}</div>
+            </template>
+
+            <template v-if="data.version">
+              <div v-bind="infoLabelAttr">Version:</div>
+              <div v-bind="infoValueAttr">{{ data.version }}</div>
+            </template>
+          </v-col>
+
+          <v-col cols="12" sm="6" class="dataset-info">
+            <!-- <div v-bind="infoLabelAttr">URL:</div>
+            <div
+              v-bind="infoValueAttr"
+              class="d-flex align-baseline text-body-1"
+            >
+              <a :href="data.url" target="_blank" class="break-word">{{
+                data.url
+              }}</a>
+              <v-icon class="ml-2" small>mdi-open-in-new</v-icon>
+            </div> -->
+
+            <div v-bind="infoLabelAttr">Created:</div>
+            <div v-bind="infoValueAttr">
+              {{ parseDate(data.dateCreated) }}
+            </div>
+
+            <template v-if="data.datePublished">
+              <div v-bind="infoLabelAttr">Published:</div>
+              <div v-bind="infoValueAttr">
+                {{ parseDate(data.datePublished) }}
+              </div>
+            </template>
+
+            <template v-if="data.submission_type === 'HYDROSHARE'">
+              <div v-bind="infoLabelAttr">Host Repository:</div>
+              <div v-bind="infoValueAttr">
+                <v-card variant="outlined" border="grey thin">
+                  <v-card-title class="text-overline">HydroShare</v-card-title>
+                  <v-divider></v-divider>
+                  <v-card-text>
+                    <v-img
+                      max-width="200"
+                      contain
+                      class="mt-2"
+                      alt="HydroShare logo"
+                      src="/img/hydroshare.png"
+                    ></v-img>
+                  </v-card-text>
+                </v-card>
+              </div>
+            </template>
+
+            <template v-if="data.submission_type === 'S3'">
+              <div v-bind="infoLabelAttr">Host Repository:</div>
+              <div>
+                <v-card variant="outlined" border="grey thin">
+                  <v-card-title class="text-overline">Amazon S3</v-card-title>
+                  <v-divider></v-divider>
+                  <v-card-text>
+                    <v-img
+                      max-width="200"
+                      max-height="30"
+                      contain
+                      class="mt-2"
+                      alt="Amazon S3 logo"
+                      src="/img/amazon-s3.svg"
+                    ></v-img>
+                  </v-card-text>
+                  <v-divider></v-divider>
+
+                  <v-expansion-panels accordion flat>
+                    <v-expansion-panel>
+                      <v-expansion-panel-title color="text-overline">
+                        Bucket Information
+                      </v-expansion-panel-title>
+
+                      <v-expansion-panel-text>
+                        <v-table variant="elevated" density="compact">
+                          <tbody>
+                            <tr>
+                              <th>Path:</th>
+                              <td>{{ data.s3_path.path }}</td>
+                            </tr>
+                            <tr>
+                              <th>Bucket:</th>
+                              <td>{{ data.s3_path.bucket }}</td>
+                            </tr>
+                            <tr>
+                              <th>Endpoint URL:</th>
+                              <td>
+                                <a :href="data.s3_path.endpoint_url">{{
+                                  data.s3_path.endpoint_url
+                                }}</a>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </v-table>
+                      </v-expansion-panel-text>
+                    </v-expansion-panel>
+                  </v-expansion-panels>
+                </v-card>
+              </div>
+            </template>
+          </v-col>
+        </v-row>
+
+        <div class="mb-8 field" id="url">
+          <div v-bind="headingAttr">URL</div>
+          <v-divider class="mb-2"></v-divider>
+          <p class="text-body-1">
+            <a :href="data.url" class="break-word">{{ data.url }}</a>
+          </p>
+        </div>
+
+        <div class="mb-8 field" id="description">
+          <div v-bind="headingAttr">Abstract</div>
+          <v-divider class="mb-2"></v-divider>
+          <p class="text-body-1 text-medium-emphasis">{{ data.description }}</p>
+        </div>
+
+        <div class="my-4 field" id="subject">
+          <div v-bind="headingAttr">Subject Keywords</div>
+          <v-divider class="mb-2"></v-divider>
+          <v-chip
+            v-for="keyword of data.keywords"
+            :key="keyword"
+            size="small"
+            style="margin: 0.25rem"
+            variant="outlined"
+            class="bg-grey-lighten-5"
+            border="thin"
+            >{{ keyword }}</v-chip
+          >
+        </div>
+
+        <div
+          v-if="data.associatedMedia && data.associatedMedia.length"
+          class="mb-8 field"
+          id="content"
+        >
+          <div v-bind="headingAttr">Content</div>
+          <v-divider class="mb-2"></v-divider>
+
+          <cz-file-explorer
+            @showMetadata="onShowMetadata($event)"
+            id="fileExplorer"
+            class="ma-4"
+            v-if="!isLoadingFiles"
+            ref="fileExplorer"
+            :root-directory="rootDirectory"
+            :has-folders="fileExplorerConfig.hasFolders"
+            :is-read-only="true"
+            :has-file-metadata="() => true"
+            :canDownloadItem="() => true"
+            @download="
+              onFileDownload($event, resourceId, s3Client, s3Info.bucket)
+            "
+          >
+            <template #prepend>
+              <span />
+            </template>
+          </cz-file-explorer>
+          <!-- <v-skeleton-loader
+            class="mb-12"
+            v-else
+            type="card"
+          ></v-skeleton-loader> -->
+
+          <!-- <v-card
+            v-if="readmeMd || isLoadingMD"
+            class="readme-container"
+            variant="outlined"
+            border="grey thin"
+          >
+            <v-card-title class="text-overline">README</v-card-title>
+            <v-divider></v-divider>
+            <v-card-text>
+              <div class="text-center py-4" v-if="isLoadingMD">
+                <v-progress-circular
+                  indeterminate
+                  class="text-center"
+                  color="primary"
+                />
+              </div>
+              <div v-html="readmeMd" class="markdown-body px-4"></div>
+            </v-card-text>
+          </v-card> -->
+        </div>
+
+        <div
+          v-if="data.funding && data.funding.length"
+          class="mb-8 field"
+          id="funding"
+        >
+          <div v-bind="headingAttr">Funding</div>
+          <v-divider class="mb-2"></v-divider>
+          <v-expansion-panels multiple>
+            <v-expansion-panel
+              v-for="(funding, index) of data.funding"
+              :key="index"
+              :readonly="!(funding.description || funding.funder)"
+            >
+              <v-expansion-panel-title>
+                <div>
+                  <div class="text-body-1">{{ funding.name }}</div>
+
+                  <div
+                    v-if="funding.identifier"
+                    class="text-body-2 font-weight-light"
+                  >
+                    Award number: {{ funding.identifier }}
+                  </div>
+                </div>
+
+                <template
+                  v-slot:actions
+                  v-if="!(funding.description || !!funding.funder)"
+                  ><span></span
+                ></template>
+              </v-expansion-panel-title>
+
+              <v-expansion-panel-text
+                v-if="funding.description || !!funding.funder"
+              >
+                <div
+                  class="pt-2 text-body-2 font-weight-light"
+                  v-if="funding.description"
+                >
+                  {{ funding.description }}
+                </div>
+                <template v-if="!!funding.funder">
+                  <div class="d-flex align-center text-body-1 mt-4 mb-2">
+                    <v-icon class="mr-2"> mdi-domain </v-icon>
+                    <div>Funding Organization:</div>
+                  </div>
+                  <div class="text-body-2">
+                    <div class="text-body-1">
+                      {{ funding.funder.name }}
+                    </div>
+                    <div>{{ funding.funder.address }}</div>
+                    <a :href="funding.funder.url">{{ funding.funder.url }} </a>
+                  </div>
+                </template>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
+        </div>
+
+        <div
+          v-if="
+            data.hasPart?.length ||
+            data.isPartOf?.length ||
+            data.subjectOf?.length
+          "
+          class="mb-8 field"
+          id="related"
+        >
+          <div v-bind="headingAttr">Related Resources</div>
+          <v-divider class="mb-2"></v-divider>
+          <v-card variant="outlined" border="grey thin">
+            <v-table>
+              <template v-slot:default>
+                <tbody>
+                  <tr
+                    v-for="(part, index) in data.hasPart"
+                    :key="`hp-${index}`"
+                  >
+                    <td class="">Has part</td>
+                    <td>
+                      <a :href="part.url">{{ part.name }}</a>
+                    </td>
+                  </tr>
+
+                  <tr
+                    v-for="(part, index) in data.isPartOf"
+                    :key="`hp-${index}`"
+                  >
+                    <td class="">Is part of</td>
+                    <td>
+                      <a :href="part.url">{{ part.name }}</a>
+                    </td>
+                  </tr>
+
+                  <tr
+                    v-for="(part, index) in data.subjectOf"
+                    :key="`hp-${index}`"
+                  >
+                    <td class="">Subject of</td>
+                    <td>
+                      <a :href="part.url">{{ part.name }}</a>
+                    </td>
+                  </tr>
+                </tbody>
+              </template>
+            </v-table>
+          </v-card>
+        </div>
+
+        <div
+          v-if="hasSpatialFeatures && $vuetify.display.mdAndDown"
+          class="my-4 field text-body-1"
+          id="coverage"
+        >
+          <div class="text-overline primary--text darken-4">
+            Spatial Coverage
+          </div>
+
+          <v-divider class="primary mb-2"></v-divider>
+          <v-row>
+            <v-col cols="12" sm="8">
+              <v-card variant="outlined" border="grey thin">
+                <cd-spatial-coverage-map
+                  :feature="data.spatialCoverage"
+                  :flat="true"
+                />
+                <v-divider></v-divider>
+                <v-card-text
+                  v-if="data.spatialCoverage.geo['type'] == 'GeoShape'"
+                >
+                  <v-row class="align-start">
+                    <v-col cols="12" sm="6" class="dataset-info">
+                      <div v-bind="infoLabelAttr">North Latitude:</div>
+                      <div v-bind="infoValueAttr">
+                        {{ boxCoordinates.north }}°
+                      </div>
+
+                      <div v-bind="infoLabelAttr">East Longitude:</div>
+                      <div v-bind="infoValueAttr">
+                        {{ boxCoordinates.east }}°
+                      </div>
+                    </v-col>
+                    <v-col cols="12" sm="6" class="dataset-info">
+                      <div v-bind="infoLabelAttr">South Latitude:</div>
+                      <div v-bind="infoValueAttr">
+                        {{ boxCoordinates.south }}°
+                      </div>
+
+                      <div v-bind="infoLabelAttr">West Longitude:</div>
+                      <div v-bind="infoValueAttr">
+                        {{ boxCoordinates.west }}°
+                      </div>
+                    </v-col>
+                  </v-row>
+                </v-card-text>
+
+                <v-card-text
+                  v-if="data.spatialCoverage.geo['type'] == 'GeoCoordinates'"
+                >
+                  <v-row class="align-start">
+                    <v-col cols="12" sm="6" class="dataset-info">
+                      <div v-bind="infoLabelAttr">Latitude:</div>
+                      <div v-bind="infoValueAttr">
+                        {{ data.spatialCoverage.geo.latitude }}°
+                      </div>
+                    </v-col>
+
+                    <v-col cols="12" sm="6" class="dataset-info">
+                      <div v-bind="infoLabelAttr">Longitude:</div>
+                      <div v-bind="infoValueAttr">
+                        {{ data.spatialCoverage.geo.longitude }}°
+                      </div>
+                    </v-col>
+                  </v-row>
+                </v-card-text>
+              </v-card>
+            </v-col>
+            <v-col cols="12" sm="4" class="dataset-info one-col">
+              <div v-bind="infoLabelAttr">
+                Coordinate System/Geographic Projection:
+              </div>
+              <div v-bind="infoValueAttr">WGS 84 EPSG:4326</div>
+
+              <div v-bind="infoLabelAttr">Coordinate Units:</div>
+              <div v-bind="infoValueAttr">Decimal degrees</div>
+
+              <div v-bind="infoLabelAttr">Place/Area Name:</div>
+              <div v-bind="infoValueAttr">{{ data.spatialCoverage.name }}</div>
+            </v-col>
+          </v-row>
+        </div>
+
+        <div
+          v-if="data.temporalCoverage && $vuetify.display.mdAndDown"
+          class="mb-8 field text-body-1"
+        >
+          <div class="text-overline primary--text darken-4">
+            Temporal Coverage
+          </div>
+          <v-divider class="primary mb-2"></v-divider>
+
+          <v-timeline align-top density="compact" line-color="info">
+            <v-timeline-item dot-color="primary">
+              <div>
+                <div class="font-weight-normal">
+                  <strong>Start Date</strong>
+                </div>
+                <div>{{ parseDate(data.temporalCoverage.startDate) }}</div>
+              </div>
+            </v-timeline-item>
+
+            <v-timeline-item dot-color="orange">
+              <div>
+                <div class="font-weight-normal">
+                  <strong>End Date</strong>
+                </div>
+                <div>{{ parseDate(data.temporalCoverage.endDate) }}</div>
+              </div>
+            </v-timeline-item>
+          </v-timeline>
+        </div>
+      </v-container>
+
+      <div v-if="!$vuetify.display.mdAndDown" class="sidebar pr-8 break-word">
+        <div class="sidebar--content">
+          <v-card
+            v-if="hasSpatialFeatures"
+            class="mt-8"
+            variant="outlined"
+            border="grey thin"
+          >
+            <v-card-title class="text-overline">
+              Spatial Coverage
+            </v-card-title>
+            <v-divider></v-divider>
+            <v-card-text flat>
+              <cd-spatial-coverage-map :feature="data.spatialCoverage" />
+            </v-card-text>
+            <v-divider></v-divider>
+            <v-expansion-panels accordion flat>
+              <v-expansion-panel>
+                <v-expansion-panel-title color="text-overline">
+                  Extent
+                </v-expansion-panel-title>
+
+                <v-expansion-panel-text>
+                  <v-card-text
+                    v-if="data.spatialCoverage.geo['type'] == 'GeoShape'"
+                  >
+                    <v-row class="align-start">
+                      <v-col cols="12" class="dataset-info pa-0">
+                        <div v-bind="infoLabelAttr">North Latitude:</div>
+                        <div v-bind="infoValueAttr" class="text-right">
+                          {{ boxCoordinates.north }}°
+                        </div>
+
+                        <div v-bind="infoLabelAttr">East Longitude:</div>
+                        <div v-bind="infoValueAttr" class="text-right">
+                          {{ boxCoordinates.east }}°
+                        </div>
+
+                        <div v-bind="infoLabelAttr">South Latitude:</div>
+                        <div v-bind="infoValueAttr" class="text-right">
+                          {{ boxCoordinates.south }}°
+                        </div>
+
+                        <div v-bind="infoLabelAttr">West Longitude:</div>
+                        <div v-bind="infoValueAttr" class="text-right">
+                          {{ boxCoordinates.west }}°
+                        </div>
+                      </v-col>
+                    </v-row>
+                  </v-card-text>
+
+                  <v-card-text
+                    v-if="data.spatialCoverage.geo['type'] == 'GeoCoordinates'"
+                  >
+                    <v-row class="align-start">
+                      <v-col cols="12" class="dataset-info">
+                        <div v-bind="infoLabelAttr">Latitude:</div>
+                        <div v-bind="infoValueAttr">
+                          {{ data.spatialCoverage.geo.latitude }}°
+                        </div>
+                      </v-col>
+
+                      <v-col cols="12" class="dataset-info">
+                        <div v-bind="infoLabelAttr">Longitude:</div>
+                        <div v-bind="infoValueAttr">
+                          {{ data.spatialCoverage.geo.longitude }}°
+                        </div>
+                      </v-col>
+                    </v-row>
+                  </v-card-text>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+
+              <v-expansion-panel>
+                <v-expansion-panel-title color="text-overline">
+                  Coordinate System
+                </v-expansion-panel-title>
+
+                <v-expansion-panel-text>
+                  <v-card-text class="dataset-info one-col pa-0">
+                    <div v-bind="infoLabelAttr">
+                      Coordinate System/Geographic Projection:
+                    </div>
+                    <div v-bind="infoValueAttr">WGS 84 EPSG:4326</div>
+
+                    <div v-bind="infoLabelAttr">Coordinate Units:</div>
+                    <div v-bind="infoValueAttr">Decimal degrees</div>
+
+                    <div v-bind="infoLabelAttr">Place/Area Name:</div>
+                    <div v-bind="infoValueAttr">
+                      {{ data.spatialCoverage.name }}
+                    </div>
+                  </v-card-text>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </v-card>
+
+          <v-card
+            v-if="data.temporalCoverage"
+            class="mt-8"
+            variant="outlined"
+            border="grey thin"
+          >
+            <v-card-title class="text-overline primary--text darken-4">
+              Temporal Coverage
+            </v-card-title>
+            <v-divider></v-divider>
+
+            <v-card-text>
+              <v-timeline align-top density="compact" line-color="info">
+                <v-timeline-item
+                  dot-color="primary"
+                  icon="mdi-calendar"
+                  fill-dot
+                >
+                  <div>
+                    <strong>Start Date</strong>
+                    <div>{{ parseDate(data.temporalCoverage.startDate) }}</div>
+                  </div>
+                </v-timeline-item>
+
+                <v-timeline-item
+                  dot-color="orange-darken-2"
+                  icon="mdi-calendar"
+                  fill-dot
+                >
+                  <div>
+                    <strong>End Date</strong>
+                    <div>{{ parseDate(data.temporalCoverage.endDate) }}</div>
+                  </div>
+                </v-timeline-item>
+              </v-timeline>
+            </v-card-text>
+          </v-card>
+
+          <v-card
+            v-if="data.citation && data.citation.length"
+            class="mt-8"
+            variant="flat"
+          >
+            <v-card-title class="pa-0 pb-2">How to cite</v-card-title>
+            <v-card-text
+              v-for="(citation, index) of data.citation"
+              :key="index"
+              class="pa-0"
+            >
+              <div class="d-flex align-center justify-space-between gap-1">
+                <div class="citation-text">
+                  {{ citation }}
+                </div>
+
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ props }">
+                    <v-btn icon v-bind="props" @click="onCopy(citation)">
+                      <v-icon dark> mdi-content-copy </v-icon>
+                    </v-btn>
+                  </template>
+                  <span>Copy</span>
+                </v-tooltip>
+              </div>
+            </v-card-text>
+          </v-card>
+        </div>
+      </div>
+    </div>
+    <v-empty-state
+      v-if="!wasLoaded"
+      icon="mdi-cloud-cancel"
+      text="Try adjusting your settings."
+      title="We couldn't load this resource."
+    ></v-empty-state>
+  </v-container>
+</template>
+
+<script lang="ts">
+import { Component, Vue, toNative, Ref } from "vue-facing-decorator";
+import { CzForm, CzFileExplorer } from "@cznethub/cznet-vue-core";
+import type { IFolder } from "@cznethub/cznet-vue-core/dist/types";
+import { S3Client, _Object } from "@aws-sdk/client-s3";
+import { stringify } from "@/utils";
+import { fetchResource, onFileDownload } from "./shared";
+import S3Form from "./s3-form.vue";
+import User from "@/models/user.model";
+import { sizeToBytes } from "@/util";
+import prettyBytes from "pretty-bytes";
+import { useGoTo } from "vuetify";
+import { EnumCreativeWorkStatus } from "@/types";
+
+import CdSpatialCoverageMap from "@/components/search-results/cd.spatial-coverage-map.vue";
+import { mockResource } from "./resource.mock";
+
+@Component({
+  components: { CzForm, CzFileExplorer, S3Form, CdSpatialCoverageMap },
+  name: "App",
+})
+class LandingPage extends Vue {
+  resourceId!: string;
+
+  @Ref("form") form!: InstanceType<typeof CzForm>;
+  @Ref("fileExplorer") fileExplorer!: InstanceType<typeof CzFileExplorer>;
+
+  protected get isLoggedIn(): boolean {
+    return User.$state.isLoggedIn;
+  }
+
+  schema!: any;
+  uischema!: any;
+  onFileDownload = onFileDownload;
+
+  data: Record<string, any> = {};
+  stringify = stringify;
+
+  accessKey = localStorage.getItem("s3AccessKey") || "minioadmin";
+  secretKey = localStorage.getItem("s3SecretKey") || "minioadmin";
+
+  isLoadingFiles: boolean = true;
+  currentPath: string = "";
+  isFetchingMetadata = true;
+  wasLoaded = true;
+
+  s3Client!: S3Client;
+  s3Host: string = "https://s3.beta.hydroshare.org";
+  hydroshareHost: string = "https://beta.hydroshare.org";
+
+  s3Info = {
+    bucket: "",
+    prefix: "",
+  };
+
+  config = {
+    restrict: true,
+    trim: true,
+    showUnfocusedDescription: false,
+    hideRequiredAsterisk: false,
+    collapseNewItems: false,
+    breakHorizontal: false,
+    initCollapsed: false,
+    hideAvatar: false,
+    hideArraySummaryValidation: false,
+    vuetify: {
+      commonAttrs: {
+        density: "compact",
+        variant: "outlined",
+        "persistent-hint": true,
+        "hide-details": false,
+      },
+    },
+    isViewMode: true,
+    isReadOnly: false,
+    isDisabled: false,
+  };
+
+  rootDirectory: Partial<IFolder> = {
+    name: "root",
+    children: [],
+  };
+  fileExplorerConfig = {
+    isReadOnly: true, // Unused for now
+    hasFolders: true,
+  };
+
+  startS3Client() {
+    this.s3Client = new S3Client({
+      region: "us-central-2",
+      endpoint: this.s3Host,
+      forcePathStyle: true,
+      credentials: {
+        accessKeyId: this.accessKey,
+        secretAccessKey: this.secretKey,
+      },
+    });
+  }
+  infoLabelAttr = {
+    class: "text-subtitle-2 font-weight-medium",
+  };
+  selectedMetadata: any = false;
+  showMetadata = false;
+
+  infoValueAttr = {
+    class: "text-body-2 mb-2",
+  };
+  headingAttr = {
+    class: "text-teal-lighten-2 font-weight-medium text-h6 mb-2",
+  };
+  scrollOptions = {
+    offset: -80,
+    easing: "easeInOutCubic",
+  };
+  goTo = useGoTo();
+
+  onShowMetadata(item: any) {
+    this.selectedMetadata = item;
+    this.showMetadata = true;
+  }
+
+  get hasSpatialFeatures(): boolean {
+    const feat = this.data.spatialCoverage?.["type"];
+    return feat === "GeoShape" || feat === "GeoCoordinates" || feat === "Place";
+  }
+
+  get contentSize() {
+    let total = 0;
+
+    if (this.data.associatedMedia?.length) {
+      total = this.data.associatedMedia.reduce(
+        (acc: number, m: any, _index: number) => {
+          let size = 0;
+
+          if (typeof m.contentSize === "string") {
+            size = sizeToBytes(m.contentSize);
+          } else if (typeof m.size === "number") {
+            size = m.size;
+          }
+
+          acc += size;
+          return acc;
+        },
+        0,
+      );
+    }
+    return prettyBytes(total);
+  }
+
+  get boxCoordinates() {
+    const extents = this.data.spatialCoverage.geo.box
+      .trim()
+      .split(" ")
+      .map((n: string) => +n);
+    return {
+      north: extents[0],
+      east: extents[1],
+      south: extents[2],
+      west: extents[3],
+    };
+  }
+
+  async created() {
+    if (!this.resourceId && this.$route?.params?.resourceId) {
+      this.resourceId = this.$route.params.resourceId as string;
+    }
+
+    // notify if the resourceId is not set
+    if (!this.resourceId) {
+      alert(
+        "No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.",
+      );
+      this.resourceId = "d7b526e24f7e449098b428ae9363f514";
+    }
+
+    // https://cuahsi.atlassian.net/browse/CAM-769
+    // TODO: for now we store access and secret keys in localStorage
+    // Replace when we update to Pinia
+
+    const fetchCredentials = async () => {
+      const { access_key, secret_key } = await User.getOrCreateS3Credentials();
+      this.accessKey = access_key;
+      this.secretKey = secret_key;
+    };
+
+    if (this.isLoggedIn) {
+      console.log("user is already logged in, fetching S3 credentials");
+      fetchCredentials();
+    } else {
+      console.log(
+        "checking if we just returned from HydroShare login redirect",
+      );
+      User.checkLoginStatus().then((loggedIn) => {
+        if (loggedIn) {
+          fetchCredentials();
+        }
+      });
+    }
+
+    if (!this.accessKey || !this.secretKey) {
+      this.accessKey = prompt("Enter your S3 Access Key:") || "minioadmin";
+      this.secretKey = prompt("Enter your S3 Secret Key:") || "minioadmin";
+
+      if (this.accessKey && this.secretKey) {
+        localStorage.setItem("s3AccessKey", this.accessKey);
+        localStorage.setItem("s3SecretKey", this.secretKey);
+      } else {
+        alert("Access key and secret key are required to proceed.");
+        return;
+      }
+    }
+
+    if (!this.s3Info.bucket || !this.s3Info.prefix) {
+      await this.fetchS3Info();
+    }
+
+    this.startS3Client();
+
+    /* @ts-ignore */
+    this.schema = await import(
+      `@/schemas/hydroshare/scientific_dataset_json_schema.json`
+    );
+
+    /* @ts-ignore */
+    this.uischema = await import(`@/schemas/hydroshare/view-uischema.json`);
+
+    this.loadResource();
+  }
+
+  parseDate(date: string): string {
+    const parsed = new Date(Date.parse(date));
+    return parsed.toLocaleString("default", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+
+  getStatusColor(status: EnumCreativeWorkStatus) {
+    switch (status) {
+      case EnumCreativeWorkStatus.Draft:
+        return "primary";
+      case EnumCreativeWorkStatus.Incomplete:
+        return "red";
+      case EnumCreativeWorkStatus.Obsolete:
+        return "orange";
+      case EnumCreativeWorkStatus.Published:
+        return "green";
+      default:
+        "primary";
+    }
+  }
+
+  beforeUnmount() {
+    User.$state.toc = [];
+  }
+
+  async loadResource() {
+    this.isFetchingMetadata = true;
+    this.isLoadingFiles = true;
+    this.wasLoaded = true;
+    User.$state.toc = [];
+
+    const resource = await fetchResource(
+      this.resourceId,
+      this.s3Client,
+      this.s3Info.bucket,
+      `${this.s3Info.prefix}dataset_metadata.json`,
+    );
+
+    if (resource) {
+      this.data = resource.data;
+      // TODO:
+      this.data = {
+        ...this.data,
+        ...mockResource,
+      };
+      // @ts-expect-error The key property is generated when the component is initialized
+      this.rootDirectory.children = resource.initialStructure;
+    } else {
+      this.wasLoaded = false;
+    }
+    this.isFetchingMetadata = false;
+    this.isLoadingFiles = false;
+    User.$state.toc = [
+      { text: "Overview", to: "#overview" },
+      {
+        text: "Url",
+        to: "#url",
+      },
+      {
+        text: "Abstract",
+        to: "#description",
+        // isShown: (data: any) => !!data.description || false,
+      },
+      {
+        text: "Subject Keywords",
+        to: "#subject",
+        // isShown: (data: any) => data.keywords?.length || false,
+      },
+      {
+        text: "Content",
+        to: "#content",
+        // isShown: (data: any) => data.associatedMedia?.length || false,
+      },
+      {
+        text: "Content files",
+        to: "#fileExplorer",
+        level: 4,
+        // isShown: (data: any) => data.associatedMedia?.length || false,
+      },
+      {
+        text: "README",
+        to: "#readme",
+        level: 4,
+        // isShown: (data: any) => data.associatedMedia?.length || false,
+      },
+      {
+        text: "Funding",
+        to: "#funding",
+        // isShown: (data: any) => data.funding?.length || false,
+      },
+      {
+        text: "Related Resources",
+        to: "#related",
+        // isShown: (data: any) => data.hasPart?.length || false,
+      },
+      {
+        text: "Spatial Coverage",
+        to: "#spatial-coverage",
+        // isShown: (data: any) => {
+        //   const feat = data.spatialCoverage?.["type"];
+        //   const hasSpatialFeatures =
+        //     feat === "GeoShape" ||
+        //     feat === "GeoCoordinates" ||
+        //     feat === "Place";
+        //   return !!hasSpatialFeatures || false;
+        // },
+      },
+      {
+        text: "Temporal Coverage",
+        to: "#temporal-coverage",
+        // isShown: (data: any) => data.temporalCoverage || false,
+      },
+    ];
+  }
+
+  async onS3FormUpdate(params: any) {
+    this.isFetchingMetadata = true;
+    this.isLoadingFiles = true;
+    this.s3Info.bucket = params.bucket;
+    this.s3Info.prefix = params.prefix;
+    this.hydroshareHost = params.hydroshareHost;
+    this.s3Host = params.s3Host;
+
+    this.secretKey = params.secretKey;
+    this.accessKey = params.accessKey;
+    localStorage.setItem("s3AccessKey", this.accessKey);
+    localStorage.setItem("s3SecretKey", this.secretKey);
+
+    this.startS3Client();
+    this.loadResource();
+  }
+
+  async onRestoreDefaults() {
+    this.isFetchingMetadata = true;
+    this.isLoadingFiles = true;
+    this.s3Host = "https://s3.beta.hydroshare.org";
+    this.hydroshareHost = "https://beta.hydroshare.org";
+    await this.fetchS3Info();
+    this.startS3Client();
+    this.loadResource();
+  }
+
+  /**
+   * @deprecated We are trying to avoid this coupling.
+   */
+  async fetchS3Info() {
+    const response = await fetch(
+      `${this.hydroshareHost}/hsapi/resource/s3/${this.resourceId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
+    this.s3Info = await response.json();
+    this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
+  }
+}
+export default toNative(LandingPage);
+</script>
+
+<style lang="scss" scoped>
+.sidebar {
+  flex-basis: 25rem;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.page-content {
+  flex-grow: 1;
+  max-width: 100%;
+  min-width: 0;
+
+  &.is-sm {
+    .dataset-info {
+      grid-template-columns: auto;
+      gap: 0;
+    }
+  }
+}
+
+:deep(.map-container) {
+  height: 15rem;
+}
+
+.citation-text {
+  min-width: 0;
+  word-break: break-word;
+}
+
+#graph-container {
+  width: 600px;
+  height: 400px;
+  border: 1px solid #ddd;
+}
+
+.dataset-info {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0rem 1rem;
+  justify-content: start;
+  align-items: baseline;
+  align-content: baseline;
+
+  &.one-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+:deep(#fileExplorer .v-sheet) {
+  background-color: #f6f6f6 !important;
+}
+</style>

@@ -20,8 +20,10 @@ declare module 'vue' {
     'Cz.login': typeof import('./components/account/cz.login.vue')['default']
     EditDataset: typeof import('./components/landing-page/edit-dataset.vue')['default']
     LandingPage: typeof import('./components/landing-page/landing-page.vue')['default']
+    LandingPageV2: typeof import('./components/landing-page/landing-page-v2.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     S3Form: typeof import('./components/landing-page/s3-form.vue')['default']
+    Toc: typeof import('./components/base/toc.vue')['default']
   }
 }
