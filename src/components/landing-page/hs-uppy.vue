@@ -125,8 +125,8 @@ class HsUppy extends Vue {
           const file = files[fileId]
           console.log("adding metadata for", file.name);
           console.log("s3Info:", uppyComponent.s3Info);
-          file.meta.bucket_name = uppyComponent.s3Info.bucket;
-          file.meta.dynamic_key = `${uppyComponent.s3Info.prefix}${file.name}`;
+          file.meta.bucket_name = file?.meta?.bucket_name || uppyComponent.s3Info.bucket;
+          file.meta.dynamic_key = file?.meta?.dynamic_key ? file.meta.dynamic_key : `${uppyComponent.s3Info.prefix}${file.name}`;
         });
         return files;
       },
