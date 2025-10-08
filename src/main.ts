@@ -6,7 +6,7 @@ import User, { PrivilegeCodes } from "./models/user.model";
 
 import "./assets/css/global.scss";
 import { routes } from "./routes";
-import { createWebHistory } from "vue-router";
+// import { createWebHistory } from "vue-router";
 
 // Configure axios to send cookies with all requests for Django cookie authentication
 axios.defaults.withCredentials = true;
@@ -35,7 +35,8 @@ export const createApp = ViteSSG(
       else return { top: 0 }
     },
     base: import.meta.env.BASE_URL,
-    history: createWebHistory(),
+    // TODO: enable history mode and configure server to handle routes
+    // history: createWebHistory(),
   },
   (ctx) => {
     // install all modules under `modules/`
