@@ -3,6 +3,7 @@ import LandingPage from "@/components/landing-page/landing-page.vue";
 import EditDataset from "@/components/landing-page/edit-dataset.vue";
 import CdFooter from "@/components/base/cd.footer.vue";
 import AuthRedirect from "@/components/account/auth-redirect.vue";
+import Toc from "./components/base/toc.vue";
 
 export const routes: RouteRecordRaw[] = [
   {
@@ -11,9 +12,11 @@ export const routes: RouteRecordRaw[] = [
     components: {
       content: LandingPage,
       footer: CdFooter,
+      toc: Toc
     },
     meta: {
       title: "Landing Page",
+
     },
   },
   {

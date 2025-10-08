@@ -280,7 +280,9 @@ class App extends Vue {
       console.log("user is already logged in, fetching S3 credentials");
       fetchCredentials();
     } else {
-      console.log("checking if we just returned from HydroShare login redirect")
+      console.log(
+        "checking if we just returned from HydroShare login redirect",
+      );
       User.checkLoginStatus().then((loggedIn) => {
         if (loggedIn) {
           fetchCredentials();

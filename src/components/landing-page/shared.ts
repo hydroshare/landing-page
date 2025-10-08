@@ -72,6 +72,25 @@ export const _readFolderRecursive = async (
 
     // FOLDERS
     if (s3Response.CommonPrefixes) {
+      // ----------
+      // TODO: trying to find MIME type
+      // for (const prefixItem of s3Response.CommonPrefixes) {
+      //   const folderKey = prefixItem.Prefix;
+      //   if (!folderKey) continue;
+
+      //   try {
+      //     const checkCommand = new ListObjectsV2Command({
+      //       Bucket: bucket,
+      //       Prefix: folderKey,
+      //     });
+      //     const checkResult = await s3Client.send(checkCommand);
+      //     console.log(checkResult)
+      //   } catch (err) {
+      //     console.warn(`Failed to verify folder contents for ${folderKey}:`, err);
+      //   }
+      // }
+      // ---------
+
       folders = s3Response.CommonPrefixes.map(
         (p: CommonPrefix, _index: number) => {
           const folderKey = p.Prefix;

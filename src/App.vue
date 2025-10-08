@@ -1,5 +1,5 @@
 <template>
-  <v-app app>
+  <v-app id="app" app>
     <v-app-bar
       v-if="!$route.meta.hideNavigation"
       ref="appBar"
@@ -91,9 +91,9 @@
     </v-app-bar>
 
     <v-main app>
-      <v-container id="main-container">
-        <v-sheet min-height="70vh">
-          <router-view name="content" :key="$route.fullPath" />
+      <v-container id="main-container" fluid>
+        <v-sheet min-height="70vh" class="d-flex justify-space-between">
+          <router-view name="content" />
         </v-sheet>
       </v-container>
     </v-main>
@@ -165,6 +165,8 @@
         </v-list-item>
       </v-list>
     </v-navigation-drawer>
+
+    <router-view name="toc"></router-view>
 
     <cz-notifications />
 

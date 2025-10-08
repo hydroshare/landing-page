@@ -157,3 +157,16 @@ const a = [
     },
   },
 ];
+
+export enum EnumCreativeWorkStatus {
+  Draft = "Draft",
+  Incomplete = "Incomplete",
+  Obsolete = "Obsolete",
+  Published = "Published",
+}
+
+export type TocItem = {
+  to: string
+  text: string
+  level: number
+}
