@@ -60,7 +60,7 @@
           <span />
         </template>
       </cz-file-explorer>
-      <HsUppy v-if="wasLoaded" ref="hsUppyRef" :s3Info="s3Info" :s3Host="s3Host" :accessKey="accessKey" :secretKey="secretKey" />
+      <HsUppy v-if="wasLoaded" ref="hsUppyRef" :s3Info="s3Info" :s3Host="s3Host" :accessKey="accessKey" :secretKey="secretKey" :fileExplorer="fileExplorer" />
       <v-skeleton-loader class="mb-12" v-else type="card"></v-skeleton-loader>
 
       <v-skeleton-loader

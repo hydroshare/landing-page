@@ -1,10 +1,13 @@
 <template>
   <div id="uppy"></div>
-  <v-btn id="uppy-button">Upload files with Uppy</v-btn>
+  <v-btn id="uppy-button" @click.prevent>Upload files with Uppy</v-btn>
 </template>
 
 <script lang="ts">
 import { Component, Vue, toNative, Prop, Watch } from "vue-facing-decorator";
+import {
+  CzFileExplorer,
+} from "@cznethub/cznet-vue-core";
 import Uppy from '@uppy/core';
 import GoldenRetriever from '@uppy/golden-retriever';
 import GoogleDrivePicker from '@uppy/google-drive-picker';
@@ -43,6 +46,34 @@ class HsUppy extends Vue {
   @Prop({ type: String, required: false, default: "" })
   sessionToken!: string;
 
+  @Prop({ type: CzFileExplorer, required: false, default: false })
+  fileExplorer!: InstanceType<typeof CzFileExplorer>;
+
+  @Watch('fileExplorer.selected')
+  onFileSelect() {
+    // if the selected is a folder, set selectedFolder
+    let selected = this.fileExplorer.selected;
+    // if selected is an array, take the first element
+    if (Array.isArray(selected)) {
+      if (selected.length > 0) {
+        selected = selected[0];
+      } else {
+        this.selectedFolder = null;
+        return;
+      }
+    }
+    // const isFolder = Object.prototype.hasOwnProperty.call(selected, "children");
+    const isFolder = this.fileExplorer.isFolder(selected);
+    if (isFolder) {
+      this.selectedFolder = this.fileExplorer.getPathString(selected);
+    }
+    else {
+      this.selectedFolder = null;
+    }
+    console.log("selectedFolder set to:", this.selectedFolder);
+  }
+
+  private selectedFolder: string | null = null;
   private signatureV4: SignatureV4 | null = null;
 
   // Method to expose the Uppy instance
@@ -116,7 +147,7 @@ class HsUppy extends Vue {
       "s3-secret": this.secretKey
     };
     console.log("Initializing Uppy");
-    console.log("With credentials:", this.accessKey, this.secretKey, this.sessionToken);
+    const that = this;
     uppyInstance = new Uppy({
       id: "uppy",
       autoProceed: true,
@@ -125,6 +156,16 @@ class HsUppy extends Vue {
           const file = files[fileId]
           console.log("adding metadata for", file.name);
           console.log("s3Info:", uppyComponent.s3Info);
+          if (that.selectedFolder) {
+            console.log(`selectedFolder is set, using it as prefix: ${that.selectedFolder}`);
+            file.meta.dynamic_key = file.meta.dynamic_key ? file.meta.dynamic_key : `${uppyComponent.s3Info.prefix}${that.selectedFolder}/${file.name}`;
+            console.log("file.meta.dynamic_key set to:", file.meta.dynamic_key);
+          }
+          if (file.meta.existing_path_in_resource) {
+            console.log("existing_path_in_resource is set, using it as prefix:", file.meta.existing_path_in_resource);
+            file.meta.dynamic_key = file.meta.dynamic_key ? file.meta.dynamic_key : `${uppyComponent.s3Info.prefix}${file.meta.existing_path_in_resource}/${file.name}`;
+            console.log("file.meta.dynamic_key set to:", file.meta.dynamic_key);
+          }
           file.meta.bucket_name = file?.meta?.bucket_name || uppyComponent.s3Info.bucket;
           file.meta.dynamic_key = file?.meta?.dynamic_key ? file.meta.dynamic_key : `${uppyComponent.s3Info.prefix}${file.name}`;
         });
@@ -144,6 +185,14 @@ class HsUppy extends Vue {
       headers: headers,
       allowedMetaFields: true,
       endpoint: COMPANION_URL,
+    })
+    .on('dashboard:modal-open', () => {
+      // this is a hack to set the folder when the modal is opened
+      // because the selectedFolder will change when the user clicks in the dashboard
+      if (that.selectedFolder) {
+        uppyInstance.setMeta({existing_path_in_resource: that.selectedFolder});
+        console.log("Set dashboard folder state to:", that.selectedFolder);
+      }
     })
     .on("error", (errorMessage) => {
       console.error("Uppy error:", errorMessage);
