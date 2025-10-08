@@ -858,7 +858,6 @@ import { useGoTo } from "vuetify";
 import { EnumCreativeWorkStatus } from "@/types";
 
 import CdSpatialCoverageMap from "@/components/search-results/cd.spatial-coverage-map.vue";
-import { mockResource } from "./resource.mock";
 
 @Component({
   components: { CzForm, CzFileExplorer, S3Form, CdSpatialCoverageMap },
@@ -1120,7 +1119,6 @@ class LandingPage extends Vue {
       // TODO:
       this.data = {
         ...this.data,
-        ...mockResource,
       };
       // @ts-expect-error The key property is generated when the component is initialized
       this.rootDirectory.children = resource.initialStructure;
