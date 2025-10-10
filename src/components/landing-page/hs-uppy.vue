@@ -144,7 +144,8 @@ class HsUppy extends Vue {
     const uppyComponent = this;
     const headers = {
       "s3-key": this.accessKey,
-      "s3-secret": this.secretKey
+      "s3-secret": this.secretKey,
+      "s3-bucket": this.s3Info.bucket,
     };
     console.log("Initializing Uppy");
     const that = this;
