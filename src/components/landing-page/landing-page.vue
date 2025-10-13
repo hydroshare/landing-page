@@ -563,7 +563,7 @@
         >
           <div v-bind="headingAttr">Related Geospatial Features</div>
           <v-divider class="mb-2"></v-divider>
-          <geoconnex :data="data" />
+          <geoconnex :data="data" resMode="View" />
         </div>
 
         <div
