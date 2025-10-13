@@ -1116,6 +1116,10 @@ class LandingPage extends Vue {
 
     if (resource) {
       this.data = resource.data;
+      // TODO:
+      this.data = {
+        ...this.data,
+      };
       // @ts-expect-error The key property is generated when the component is initialized
       this.rootDirectory.children = resource.initialStructure;
     } else {
