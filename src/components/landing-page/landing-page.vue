@@ -563,23 +563,7 @@
         >
           <div v-bind="headingAttr">Related Geospatial Features</div>
           <v-divider class="mb-2"></v-divider>
-          <v-card variant="outlined" border="grey thin">
-            <v-table>
-              <template v-slot:default>
-                <tbody>
-                  <tr
-                    v-for="(relation, index) in data.relation"
-                    :key="`hp-${index}`"
-                  >
-                    <td class="">Related Geospatial Feature</td>
-                    <td>
-                      <a :href="relation['@id']">{{ relation.name }}</a>
-                    </td>
-                  </tr>
-                </tbody>
-              </template>
-            </v-table>
-          </v-card>
+          <geoconnex :data="data" />
         </div>
 
         <div
@@ -886,6 +870,7 @@ import { useGoTo } from "vuetify";
 import { EnumCreativeWorkStatus } from "@/types";
 
 import CdSpatialCoverageMap from "@/components/search-results/cd.spatial-coverage-map.vue";
+import Geoconnex from "@/components/geoconnex.vue";
 import mockResource from "../../../example_metadata/dataset_metadata.json";
 
 @Component({
