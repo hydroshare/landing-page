@@ -858,7 +858,7 @@ import { useGoTo } from "vuetify";
 import { EnumCreativeWorkStatus } from "@/types";
 
 import CdSpatialCoverageMap from "@/components/search-results/cd.spatial-coverage-map.vue";
-import { mockResource } from "./resource.mock";
+import mockResource from "../../../example_metadata/dataset_metadata.json";
 
 @Component({
   components: { CzForm, CzFileExplorer, S3Form, CdSpatialCoverageMap },

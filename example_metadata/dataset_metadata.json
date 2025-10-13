@@ -1,373 +1,627 @@
 {
-  "context": "https://hydroshare.org/schema",
-  "type": "FileSetAggregation",
-  "name": "a title",
-  "description": "an abstract",
-  "associatedMedia": [
+  "_id": "682242491f46daa46a9199a1",
+  "name": "Impacts of Alternative Hydrological and Demand Scenarios in the Upper Colorado River Basin on Lake Powell Storage",
+  "description": "Existing models fail to represent future drought-like hydrologic inflow conditions in the Upper Colorado River Basin (UCRB) based on intensifying basin aridification. Hence, this study uses the Colorado River Simulation System (CRSS) model to investigate the effects of intensifying drought and changes in conservation and consumption of the UCRB on Lake Powell storage. The study also investigated the impact of linking Lake Powell’s outflow to UCRB’s hydrology using a new rule. The intensifying drought-like conditions in the URCB were simulated using the natural inflow data taken during the (2000 - 2018) drought period. The data was decreased by 20%, 35%, and 50%, respectively, portraying future intensifying drought responses to climate change. Changes in demand scenarios were simulated by changing the amounts of flow diverted from Lake Powell (increased consumption) and to Lake Powell (increased conservation). Model results were also utilized to predict the amount of time until Lake Powell storage levels reach the power pool elevation of 3490 feet. The results clearly show that under the 2016 Upper and Lower Basins Demands, the intensifying drought would greatly decrease Lake Powell storage and shorten the time until storage levels drop below the power pool elevation of 3490 feet. Additionally, having the outflow linked to the basin’s hydrology would save storage from reaching alarming levels. Saving some water as low as 5 % would stabilize the elevation. The CRSS outcomes also showed that increasing consumption in the UCRB would reduce the amount of storage in Lake Powell, whereas increasing conservation would increase the storage of Lake Powell.\r\n\r\nSee readme file for instructions on how to use this resource.",
+  "creator": [
     {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/folder_aggregation/hs_user_meta.json",
-      "encodingFormat": "application/json",
-      "contentSize": "0.075 KB",
-      "name": "hs_user_meta.json",
-      "sha256": "159664447737474242118861493694596558431"
+      "type": "Person",
+      "email": "mabualqumboz@gmail.com",
+      "identifier": null,
+      "affiliation": {
+        "type": "Organization",
+        "url": null,
+        "address": null,
+        "name": "Utah State University"
+      },
+      "name": "Abualqumboz, Motasem"
     },
     {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/folder_aggregation/testfile.txt",
-      "encodingFormat": "text/plain",
-      "contentSize": "0.011 KB",
-      "name": "testfile.txt",
-      "sha256": "125893641179230474042701625388361764291"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/hs_user_meta.json",
-      "encodingFormat": "application/json",
-      "contentSize": "0.059 KB",
-      "name": "hs_user_meta.json",
-      "sha256": "44810446145178364400712097174371983939"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/netcdf/netcdf_invalid.nc",
-      "encodingFormat": "application/netcdf",
-      "contentSize": "0.0 KB",
-      "name": "netcdf_invalid.nc",
-      "sha256": "281949768489412648962353822266799178366"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/netcdf/netcdf_valid.nc",
-      "encodingFormat": "application/netcdf",
-      "contentSize": "4869.898 KB",
-      "name": "netcdf_valid.nc",
-      "sha256": "200776088754548361462115931791730617948"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/netcdf/netcdf_valid.nc.hs_user_meta.json",
-      "encodingFormat": "application/json",
-      "contentSize": "0.05 KB",
-      "name": "netcdf_valid.nc.hs_user_meta.json",
-      "sha256": "33936216652185053383779250335131623236"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/netcdf/netcdf_valid_header_info.txt",
-      "encodingFormat": "text/plain",
-      "contentSize": "2.014 KB",
-      "name": "netcdf_valid_header_info.txt",
-      "sha256": "107445714363893574167282252513829909047"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/netcdf/netcdf_valid_meta.xml",
-      "encodingFormat": "application/xml",
-      "contentSize": "4.14 KB",
-      "name": "netcdf_valid_meta.xml",
-      "sha256": "275142489067030261806271054803687066337"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/netcdf/netcdf_valid_resmap.xml",
-      "encodingFormat": "application/xml",
-      "contentSize": "4.528 KB",
-      "name": "netcdf_valid_resmap.xml",
-      "sha256": "261043732823704566605381659430925462612"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/rasters/logan.vrt",
-      "encodingFormat": ".vrt",
-      "contentSize": "2.175 KB",
-      "name": "logan.vrt",
-      "sha256": "336832123916269416285729430929585235689"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/rasters/logan1.tif",
-      "encodingFormat": "image/tiff",
-      "contentSize": "100.749 KB",
-      "name": "logan1.tif",
-      "sha256": "253529761554252295854800827845330838044"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/rasters/logan2.tif",
-      "encodingFormat": "image/tiff",
-      "contentSize": "98.943 KB",
-      "name": "logan2.tif",
-      "sha256": "152058128281633350088639499850935940327"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/rasters/logan_meta.xml",
-      "encodingFormat": "application/xml",
-      "contentSize": "3.683 KB",
-      "name": "logan_meta.xml",
-      "sha256": "301111465932169900738424183753021668018"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/rasters/logan_resmap.xml",
-      "encodingFormat": "application/xml",
-      "contentSize": "4.841 KB",
-      "name": "logan_resmap.xml",
-      "sha256": "27710914580511548664883487576853805646"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/rasters/single/logan1.tif",
-      "encodingFormat": "image/tiff",
-      "contentSize": "100.749 KB",
-      "name": "logan1.tif",
-      "sha256": "253529761554252295854800827845330838044"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/rasters/single/logan1.vrt",
-      "encodingFormat": ".vrt",
-      "contentSize": "1.861 KB",
-      "name": "logan1.vrt",
-      "sha256": "143479122967742740408480034885662745721"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/rasters/single/logan1_meta.xml",
-      "encodingFormat": "application/xml",
-      "contentSize": "3.714 KB",
-      "name": "logan1_meta.xml",
-      "sha256": "227768861647413598227360119612074714988"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/rasters/single/logan1_resmap.xml",
-      "encodingFormat": "application/xml",
-      "contentSize": "4.465 KB",
-      "name": "logan1_resmap.xml",
-      "sha256": "183591281039885156226160019863844978942"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/readme.txt",
-      "encodingFormat": "text/plain",
-      "contentSize": "0.244 KB",
-      "name": "readme.txt",
-      "sha256": "160556208432314088108441134289287548974"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/states/__init__.py",
-      "encodingFormat": "text/x-python",
-      "contentSize": "0.0 KB",
-      "name": "__init__.py",
-      "sha256": "281949768489412648962353822266799178366"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/states/states.dbf",
-      "encodingFormat": "application/x-dbase",
-      "contentSize": "2.846 KB",
-      "name": "states.dbf",
-      "sha256": "72733007327157670720949248255872201593"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/states/states.prj",
-      "encodingFormat": "text/plain",
-      "contentSize": "0.167 KB",
-      "name": "states.prj",
-      "sha256": "188942451539527101206232389616355909247"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/states/states.shp",
-      "encodingFormat": "application/x-esri-shapefile",
-      "contentSize": "222.392 KB",
-      "name": "states.shp",
-      "sha256": "118220711231020156985892427540356720620"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/states/states.shp.xml",
-      "encodingFormat": "application/xml",
-      "contentSize": "10.489 KB",
-      "name": "states.shp.xml",
-      "sha256": "237546086626760111808585929336579562480"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/states/states.shx",
-      "encodingFormat": "application/x-esri-shx",
-      "contentSize": "0.508 KB",
-      "name": "states.shx",
-      "sha256": "33798343763204516286618467977913279361"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/timeseries/ODM2_Multi_Site_One_Variable.sqlite",
-      "encodingFormat": "application/vnd.sqlite3",
-      "contentSize": "1894.4 KB",
-      "name": "ODM2_Multi_Site_One_Variable.sqlite",
-      "sha256": "24811432112593749902856433432579286617"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/timeseries/ODM2_Multi_Site_One_Variable_Test.csv",
-      "encodingFormat": "text/csv",
-      "contentSize": "0.737 KB",
-      "name": "ODM2_Multi_Site_One_Variable_Test.csv",
-      "sha256": "291709903894479780128131209692928647930"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/timeseries/ODM2_Multi_Site_One_Variable_Test_meta.xml",
-      "encodingFormat": "application/xml",
-      "contentSize": "2.672 KB",
-      "name": "ODM2_Multi_Site_One_Variable_Test_meta.xml",
-      "sha256": "285948038915959467820253061726574958083"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/timeseries/ODM2_Multi_Site_One_Variable_Test_resmap.xml",
-      "encodingFormat": "application/xml",
-      "contentSize": "4.218 KB",
-      "name": "ODM2_Multi_Site_One_Variable_Test_resmap.xml",
-      "sha256": "326131145607497596315967554825652272963"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/timeseries/ODM2_Multi_Site_One_Variable_meta.xml",
-      "encodingFormat": "application/xml",
-      "contentSize": "24.841 KB",
-      "name": "ODM2_Multi_Site_One_Variable_meta.xml",
-      "sha256": "19144195738616315036609734164298267066"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/timeseries/ODM2_Multi_Site_One_Variable_resmap.xml",
-      "encodingFormat": "application/xml",
-      "contentSize": "4.208 KB",
-      "name": "ODM2_Multi_Site_One_Variable_resmap.xml",
-      "sha256": "185575632406125948741304296975123705791"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/timeseries/ODM2_invalid.sqlite",
-      "encodingFormat": "application/vnd.sqlite3",
-      "contentSize": "185.344 KB",
-      "name": "ODM2_invalid.sqlite",
-      "sha256": "106771284163732228234472449953516882465"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/watersheds/watersheds.cpg",
-      "encodingFormat": "text/plain",
-      "contentSize": "0.005 KB",
-      "name": "watersheds.cpg",
-      "sha256": "231593273782773088282087466838687257981"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/watersheds/watersheds.dbf",
-      "encodingFormat": "application/x-dbase",
-      "contentSize": "0.666 KB",
-      "name": "watersheds.dbf",
-      "sha256": "126316042459615698351698490014559510819"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/watersheds/watersheds.prj",
-      "encodingFormat": "text/plain",
-      "contentSize": "0.425 KB",
-      "name": "watersheds.prj",
-      "sha256": "107707614381694753533801327093963665938"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/watersheds/watersheds.sbn",
-      "encodingFormat": ".sbn",
-      "contentSize": "0.18 KB",
-      "name": "watersheds.sbn",
-      "sha256": "58577006584561055974028040191821254991"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/watersheds/watersheds.sbx",
-      "encodingFormat": ".sbx",
-      "contentSize": "0.124 KB",
-      "name": "watersheds.sbx",
-      "sha256": "327724339916985862803754752616161166228"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/watersheds/watersheds.shp",
-      "encodingFormat": "application/x-esri-shapefile",
-      "contentSize": "29.228 KB",
-      "name": "watersheds.shp",
-      "sha256": "58301623521673605154686046568571714368"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/watersheds/watersheds.shp.xml",
-      "encodingFormat": "application/xml",
-      "contentSize": "0.821 KB",
-      "name": "watersheds.shp.xml",
-      "sha256": "305508720063606542137860134797324995846"
-    },
-    {
-      "type": "MediaObject",
-      "contentUrl": "https://s3.hydroshare.org/sblack/d7b526e24f7e449098b428ae9363f514/data/contents/watersheds/watersheds.shx",
-      "encodingFormat": "application/x-esri-shx",
-      "contentSize": "0.14 KB",
-      "name": "watersheds.shx",
-      "sha256": "52808542587001445075369441369807320012"
+      "type": "Person",
+      "email": "bradenrchamberlain@gmail.com",
+      "identifier": null,
+      "affiliation": {
+        "type": "Organization",
+        "url": null,
+        "address": null,
+        "name": "Utah State University"
+      },
+      "name": "Chamberlain, Braden R’Mon"
     }
   ],
+  "contributor": [],
+  "dateCreated": "2022-03-24 19:37:10.257000",
+  "keywords": [
+    "Colorado River",
+    "CRSS",
+    "Lake Powell",
+    "Drought",
+    "USU-River Basins Class"
+  ],
+  "datePublished": "2022-05-03 18:50:23.733000",
+  "creativeWorkStatus": {
+    "type": "DefinedTerm",
+    "name": "Published",
+    "description": "The resource has been permanently published and should be considered final and complete"
+  },
+  "dateModified": "2022-05-03 18:50:28.609000",
+  "funding": [
+    {
+      "type": "Grant",
+      "description": null,
+      "identifier": null,
+      "funder": {
+        "type": "Organization",
+        "url": null,
+        "address": null,
+        "name": "National Agency for the Promotion of Science and Technology"
+      },
+      "name": "PICT 1855"
+    },
+    {
+      "type": "Grant",
+      "description": null,
+      "identifier": null,
+      "funder": {
+        "type": "Organization",
+        "url": null,
+        "address": null,
+        "name": "National Scientific and Technical Research Council"
+      },
+      "name": "PIP 2010-2012"
+    }
+  ],
+  "temporalCoverage": {
+    "endDate": "2022-05-03 00:00:00",
+    "startDate": "2022-01-10 00:00:00"
+  },
+  "url": "http://localhost:8081/resource/d7b526e24f7e449098b428ae9363f514",
+  "first_creator": {
+    "type": "Person",
+    "email": "mabualqumboz@gmail.com",
+    "identifier": null,
+    "affiliation": {
+      "type": "Organization",
+      "url": null,
+      "address": null,
+      "name": "Utah State University"
+    },
+    "name": "Abualqumboz, Motasem"
+  },
+  "@type": "Composite Resource",
+  "spatialCoverage": {
+    "type": "Place",
+    "name": "Logan City",
+    "geo": {
+      "type": "GeoShape",
+      "box": "41.7491 -111.7758 41.7296 -111.84"
+    },
+    "additionalProperty": null,
+    "srs": null
+  },
+  "license": {
+    "type": "CreativeWork",
+    "description": null,
+    "url": "http://creativecommons.org/licenses/by/4.0/",
+    "name": "This resource is shared under the Creative Commons Attribution CC BY."
+  },
   "hasPart": [
     {
       "@type": "CreativeWork",
       "name": "Not Found and name is required",
       "description": null,
-      "url": "https://s3.hydroshare.org/sblack/md/d7b526e24f7e449098b428ae9363f514/netcdf/netcdf_valid.nc.json"
-    },
-    {
-      "@type": "CreativeWork",
-      "name": "Not Found and name is required",
-      "description": null,
-      "url": "https://s3.hydroshare.org/sblack/md/d7b526e24f7e449098b428ae9363f514/rasters/logan.vrt.json"
-    },
-    {
-      "@type": "CreativeWork",
-      "name": "Not Found and name is required",
-      "description": null,
-      "url": "https://s3.hydroshare.org/sblack/md/d7b526e24f7e449098b428ae9363f514/rasters/single/logan1.vrt.json"
-    },
-    {
-      "@type": "CreativeWork",
-      "name": "Not Found and name is required",
-      "description": null,
-      "url": "https://s3.hydroshare.org/sblack/md/d7b526e24f7e449098b428ae9363f514/states/states.shp.json"
-    },
-    {
-      "@type": "CreativeWork",
-      "name": "Not Found and name is required",
-      "description": null,
-      "url": "https://s3.hydroshare.org/sblack/md/d7b526e24f7e449098b428ae9363f514/watersheds/watersheds.shp.json"
-    },
-    {
-      "@type": "CreativeWork",
-      "name": "Water temperature data from the Little Bear River, UT",
-      "description": "This dataset contains time series of observations of water temperature in the Little Bear River, UT. Data were recorded every 30 minutes. The values were recorded using a HydroLab MS5 multi-parameter water quality sonde connected to a Campbell Scientific datalogger. ",
-      "url": "https://s3.hydroshare.org/sblack/md/d7b526e24f7e449098b428ae9363f514/timeseries/ODM2_Multi_Site_One_Variable.sqlite.json"
-    },
-    {
-      "@type": "CreativeWork",
-      "name": "Not Found and name is required",
-      "description": null,
-      "url": "https://s3.hydroshare.org/sblack/md/d7b526e24f7e449098b428ae9363f514/timeseries/ODM2_Multi_Site_One_Variable_Test.csv.json"
+      "url": "https://hydroshare.org/resource/extracted_metadata/4cda7a99dff04474867e336a9ccb7425/data/contents/hidrografia_madeira.shp.json"
     }
   ],
-  "url": "https://s3.hydroshare.org/sblack/md/d7b526e24f7e449098b428ae9363f514/dataset_metadata.json"
+  "score": 0.0,
+  "highlights": [],
+  "paginationToken": "CK48GhY6FGFidWFscXVtYm96LCBtb3Rhc2VtIg5aDGgiQkkfRtqkapGZoQ==",
+  "document": [
+    {
+      "_id": "682242491f46daa46a9199a1",
+      "context": "https://hydroshare.org/schema",
+      "type": "DataSet",
+      "additionalType": "CompositeResource",
+      "name": "Impacts of Alternative Hydrological and Demand Scenarios in the Upper Colorado River Basin on Lake Powell Storage",
+      "description": "Existing models fail to represent future drought-like hydrologic inflow conditions in the Upper Colorado River Basin (UCRB) based on intensifying basin aridification. Hence, this study uses the Colorado River Simulation System (CRSS) model to investigate the effects of intensifying drought and changes in conservation and consumption of the UCRB on Lake Powell storage. The study also investigated the impact of linking Lake Powell’s outflow to UCRB’s hydrology using a new rule. The intensifying drought-like conditions in the URCB were simulated using the natural inflow data taken during the (2000 - 2018) drought period. The data was decreased by 20%, 35%, and 50%, respectively, portraying future intensifying drought responses to climate change. Changes in demand scenarios were simulated by changing the amounts of flow diverted from Lake Powell (increased consumption) and to Lake Powell (increased conservation). Model results were also utilized to predict the amount of time until Lake Powell storage levels reach the power pool elevation of 3490 feet. The results clearly show that under the 2016 Upper and Lower Basins Demands, the intensifying drought would greatly decrease Lake Powell storage and shorten the time until storage levels drop below the power pool elevation of 3490 feet. Additionally, having the outflow linked to the basin’s hydrology would save storage from reaching alarming levels. Saving some water as low as 5 % would stabilize the elevation. The CRSS outcomes also showed that increasing consumption in the UCRB would reduce the amount of storage in Lake Powell, whereas increasing conservation would increase the storage of Lake Powell.\r\n\r\nSee readme file for instructions on how to use this resource.",
+      "url": "https://hydroshare.org/resource/extracted_metadata/773626e9b84248bc8d431da795ee1a16/data/contents/dataset_metadata.json",
+      "identifier": [
+        "http://www.hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16"
+      ],
+      "creator": [
+        {
+          "type": "Person",
+          "email": "mabualqumboz@gmail.com",
+          "identifier": null,
+          "affiliation": {
+            "type": "Organization",
+            "url": null,
+            "address": null,
+            "name": "Utah State University"
+          },
+          "name": "Abualqumboz, Motasem"
+        },
+        {
+          "type": "Person",
+          "email": "bradenrchamberlain@gmail.com",
+          "identifier": null,
+          "affiliation": {
+            "type": "Organization",
+            "url": null,
+            "address": null,
+            "name": "Utah State University"
+          },
+          "name": "Chamberlain, Braden R’Mon"
+        }
+      ],
+      "contributor": [],
+      "dateCreated": "2022-03-24 19:37:10.257000",
+      "keywords": [
+        "Colorado River",
+        "CRSS",
+        "Lake Powell",
+        "Drought",
+        "USU-River Basins Class"
+      ],
+      "license": {
+        "type": "CreativeWork",
+        "description": null,
+        "url": "http://creativecommons.org/licenses/by/4.0/",
+        "name": "This resource is shared under the Creative Commons Attribution CC BY."
+      },
+      "provider": {
+        "type": "Organization",
+        "url": "https://www.hydroshare.org/",
+        "address": null,
+        "name": "HYDROSHARE"
+      },
+      "publisher": {
+        "name": "Consortium of Universities for the Advancement of Hydrologic Science, Inc. (CUAHSI)",
+        "url": "https://www.cuahsi.org/"
+      },
+      "datePublished": "2022-05-03 18:50:23.733000",
+      "subjectOf": null,
+      "version": null,
+      "inLanguage": "eng",
+      "creativeWorkStatus": {
+        "type": "DefinedTerm",
+        "name": "Published",
+        "description": "The resource has been permanently published and should be considered final and complete"
+      },
+      "dateModified": "2022-05-03 18:50:28.609000",
+      "funding": [],
+      "temporalCoverage": {
+        "endDate": "2022-05-03 00:00:00",
+        "startDate": "2022-01-10 00:00:00"
+      },
+      "spatialCoverage": {
+        "type": "Place",
+        "name": "Colorado River Basin",
+        "geo": {
+          "type": "GeoShape",
+          "box": "42.2093 -105.9628 31.8555 -120.7284"
+        },
+        "additionalProperty": null,
+        "srs": null
+      },
+      "hasPart": [],
+      "isPartOf": [],
+      "associatedMedia": [
+        {
+          "@type": "DataDownload",
+          "name": "Hydrology_Resampling.R",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/1_Hydrology_Resampling/Hydrology_Resampling.R",
+          "contentSize": "5.766 KB",
+          "sha256": "210950614702071406123620133410343784201",
+          "encodingFormat": ".R"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "NaturalFlows1906-2018_20200110.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/1_Hydrology_Resampling/NaturalFlows1906-2018_20200110.xlsx",
+          "contentSize": "1572.447 KB",
+          "sha256": "296223472760736845732690168704776568912",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "HydrologyScenarios.R",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/2_Drought_Hydrology_Scenarios/HydrologyScenarios.R",
+          "contentSize": "10.853 KB",
+          "sha256": "99912453767263368981728054463543716178",
+          "encodingFormat": ".R"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Monthly_Flows_DroughtScenario_2000-2018.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/2_Drought_Hydrology_Scenarios/Monthly_Flows_DroughtScenario_2000-2018.xlsx",
+          "contentSize": "107.03 KB",
+          "sha256": "29030000596301823903563921484808759042",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "CRSS_Data_Analysis..R",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/CRSS_Data_Analysis..R",
+          "contentSize": "17.667 KB",
+          "sha256": "233874837651572023038900468824547148496",
+          "encodingFormat": ".R"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs10MAF_RuleOFF.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs10MAF_RuleOFF.xlsx",
+          "contentSize": "60.309 KB",
+          "sha256": "188525014656007162636534610824803874943",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs10MAF_RuleON_92.5.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs10MAF_RuleON_92.5.xlsx",
+          "contentSize": "64.107 KB",
+          "sha256": "152871095886953980407618725541546414262",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs10MAF_RuleON_95.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs10MAF_RuleON_95.xlsx",
+          "contentSize": "63.937 KB",
+          "sha256": "336594028816923955338205518175194412120",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs6MAF_RuleOFF.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs6MAF_RuleOFF.xlsx",
+          "contentSize": "59.904 KB",
+          "sha256": "154207557467909371641643204792762604976",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs6MAF_RuleON_92.5.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs6MAF_RuleON_92.5.xlsx",
+          "contentSize": "63.687 KB",
+          "sha256": "92833855531650593445017752805324191845",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs6MAF_RuleON_95.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs6MAF_RuleON_95.xlsx",
+          "contentSize": "63.524 KB",
+          "sha256": "264909517902979888143084240766021127986",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs8MAF_RuleOFF.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs8MAF_RuleOFF.xlsx",
+          "contentSize": "59.992 KB",
+          "sha256": "260606160005336810060283996174956339179",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs8MAF_RuleON_92.5.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs8MAF_RuleON_92.5.xlsx",
+          "contentSize": "64.049 KB",
+          "sha256": "258484048303292584567767284663281907208",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs8MAF_RuleON_95.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs8MAF_RuleON_95.xlsx",
+          "contentSize": "63.81 KB",
+          "sha256": "194991604594274801712260808600135571025",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "OutputsISM_RuleOFF.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/OutputsISM_RuleOFF.xlsx",
+          "contentSize": "66.186 KB",
+          "sha256": "149735155411847504694966665937503019788",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "OutputsISM_RuleON_92.5.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/OutputsISM_RuleON_92.5.xlsx",
+          "contentSize": "63.911 KB",
+          "sha256": "214065012416817885210215161870014039104",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "OutputsISM_RuleON_95.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/OutputsISM_RuleON_95.xlsx",
+          "contentSize": "63.897 KB",
+          "sha256": "191015951639989935508359135599408746999",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_10MAF_30000D.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_10MAF_30000D.xlsx",
+          "contentSize": "61.46 KB",
+          "sha256": "329269390803651785251654858428242301045",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_10MAF_30000RF.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_10MAF_30000RF.xlsx",
+          "contentSize": "61.608 KB",
+          "sha256": "268701586843482271101453279469159099695",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_10MAF_60000D.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_10MAF_60000D.xlsx",
+          "contentSize": "61.55 KB",
+          "sha256": "109412793595203103348859296487937483485",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_10MAF_60000RF.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_10MAF_60000RF.xlsx",
+          "contentSize": "61.88 KB",
+          "sha256": "227335795015346393590089454039360174724",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_10MAF_90000D.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_10MAF_90000D.xlsx",
+          "contentSize": "61.685 KB",
+          "sha256": "26532766300939686023161034007767981971",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_10MAF_90000RF.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_10MAF_90000RF.xlsx",
+          "contentSize": "62.126 KB",
+          "sha256": "312341352469353962066571038157515628973",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_6MAF_30000D.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_6MAF_30000D.xlsx",
+          "contentSize": "61.215 KB",
+          "sha256": "298203364443762419523832365157887527900",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_6MAF_30000RF.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_6MAF_30000RF.xlsx",
+          "contentSize": "61.206 KB",
+          "sha256": "19289658006172508266646651068053728149",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_6MAF_60000D.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_6MAF_60000D.xlsx",
+          "contentSize": "61.694 KB",
+          "sha256": "269009288093835878185154709271176943024",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_6MAF_60000RF.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_6MAF_60000RF.xlsx",
+          "contentSize": "61.332 KB",
+          "sha256": "37590060165786393381778557788753286228",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_6MAF_90000D.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_6MAF_90000D.xlsx",
+          "contentSize": "61.941 KB",
+          "sha256": "29476348988964248324507213965185530721",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_6MAF_90000RF.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_6MAF_90000RF.xlsx",
+          "contentSize": "61.443 KB",
+          "sha256": "192333146973478572000733024148418437569",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_8MAF_30000D.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_8MAF_30000D.xlsx",
+          "contentSize": "61.368 KB",
+          "sha256": "139491911932584517377945974856941624350",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_8MAF_30000RF.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_8MAF_30000RF.xlsx",
+          "contentSize": "61.328 KB",
+          "sha256": "214772420030531148486571855430487291863",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_8MAF_60000D.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_8MAF_60000D.xlsx",
+          "contentSize": "61.534 KB",
+          "sha256": "33363914712855712151016961493904507457",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_8MAF_60000RF.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_8MAF_60000RF.xlsx",
+          "contentSize": "61.553 KB",
+          "sha256": "108284095748755019833970321751908058524",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_8MAF_90000D.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_8MAF_90000D.xlsx",
+          "contentSize": "61.717 KB",
+          "sha256": "335084763460913076005948131254740907453",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_8MAF_90000RF.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_8MAF_90000RF.xlsx",
+          "contentSize": "61.855 KB",
+          "sha256": "305146164380385897376907594061319513718",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_ISM_00000D.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_ISM_00000D.xlsx",
+          "contentSize": "63.651 KB",
+          "sha256": "242686442181449371720188270603326379125",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_ISM_00000RF.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_ISM_00000RF.xlsx",
+          "contentSize": "63.694 KB",
+          "sha256": "233203144335898413504282021497268709804",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_ISM_30000D.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_ISM_30000D.xlsx",
+          "contentSize": "64.413 KB",
+          "sha256": "10071457221533462144688202406599930142",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_ISM_30000RF.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_ISM_30000RF.xlsx",
+          "contentSize": "64.873 KB",
+          "sha256": "142859544723786535042154797436151722116",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_ISM_60000D.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_ISM_60000D.xlsx",
+          "contentSize": "63.417 KB",
+          "sha256": "67439863086186335251743647080991866702",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_ISM_60000RF.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_ISM_60000RF.xlsx",
+          "contentSize": "65.145 KB",
+          "sha256": "158941262069109407790958064934118216125",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_ISM_90000D.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_ISM_90000D.xlsx",
+          "contentSize": "62.94 KB",
+          "sha256": "15495220486023903431282664218955416130",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Outputs_ISM_90000RF.xlsx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/3_CRSS_Data_Analysis/Outputs_ISM_90000RF.xlsx",
+          "contentSize": "65.264 KB",
+          "sha256": "160031289562838918927093557449119477898",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "CRSS_DIR.zip",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/CRSS_DIR.zip",
+          "contentSize": "105595.712 KB",
+          "sha256": "146503372033491669126129537915427295065",
+          "encodingFormat": "application/zip"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Impacts_of_Alternative_Hydrological_and_Demand_Scenarios_in_the_Upper_Colorado_River_Basin_on_Lake_Powell_Storage.docx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/Impacts_of_Alternative_Hydrological_and_Demand_Scenarios_in_the_Upper_Colorado_River_Basin_on_Lake_Powell_Storage.docx",
+          "contentSize": "3702.361 KB",
+          "sha256": "86535468264210706343175109337460296356",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Impacts_of_Alternative_Hydrological_and_Demand_Scenarios_in_the_Upper_Colorado_River_Basin_on_Lake_Powell_Storage.pdf",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/Impacts_of_Alternative_Hydrological_and_Demand_Scenarios_in_the_Upper_Colorado_River_Basin_on_Lake_Powell_Storage.pdf",
+          "contentSize": "2590.916 KB",
+          "sha256": "7200261529735548689050387756261512296",
+          "encodingFormat": "application/pdf"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Instructions.docx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/Instructions.docx",
+          "contentSize": "1000.926 KB",
+          "sha256": "148926100827386320046176742340448316081",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "Project_initial_presentation.pptx",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/Project_initial_presentation.pptx",
+          "contentSize": "22996.192 KB",
+          "sha256": "108733308799315814975184005720451295436",
+          "encodingFormat": "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        },
+        {
+          "@type": "DataDownload",
+          "name": "readme.txt",
+          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/readme.txt",
+          "contentSize": "1.399 KB",
+          "sha256": "303206557729671310455069921009918952786",
+          "encodingFormat": "text/plain"
+        }
+      ],
+      "citation": [
+        "Abualqumboz, M., B. R. Chamberlain (2022). Impacts of Alternative Hydrological and Demand Scenarios in the Upper Colorado River Basin on Lake Powell Storage, HydroShare, https://doi.org/10.4211/hs.773626e9b84248bc8d431da795ee1a16"
+      ],
+      "includedInDataCatalog": null,
+      "additionalProperty": null,
+      "sourceOrganization": null,
+      "sharing_status": null,
+      "additional_metadata": {},
+      "_s3_filepath": "hydroshare-discoverable-resource-metadata/773626e9b84248bc8d431da795ee1a16/dataset_metadata.json",
+      "resource_id": "773626e9b84248bc8d431da795ee1a16",
+      "first_creator": {
+        "type": "Person",
+        "email": "mabualqumboz@gmail.com",
+        "identifier": null,
+        "affiliation": {
+          "type": "Organization",
+          "url": null,
+          "address": null,
+          "name": "Utah State University"
+        },
+        "name": "Abualqumboz, Motasem"
+      },
+      "content_types": []
+    }
+  ]
 }
