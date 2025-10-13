@@ -555,6 +555,34 @@
         </div>
 
         <div
+          v-if="
+            data.relation?.length
+          "
+          class="mb-8 field"
+          id="relatedGeospatial"
+        >
+          <div v-bind="headingAttr">Related Geospatial Features</div>
+          <v-divider class="mb-2"></v-divider>
+          <v-card variant="outlined" border="grey thin">
+            <v-table>
+              <template v-slot:default>
+                <tbody>
+                  <tr
+                    v-for="(relation, index) in data.relation"
+                    :key="`hp-${index}`"
+                  >
+                    <td class="">Related Geospatial Feature</td>
+                    <td>
+                      <a :href="relation['@id']">{{ relation.name }}</a>
+                    </td>
+                  </tr>
+                </tbody>
+              </template>
+            </v-table>
+          </v-card>
+        </div>
+
+        <div
           v-if="hasSpatialFeatures && $vuetify.display.mdAndDown"
           class="my-4 field text-body-1"
           id="coverage"
@@ -1171,6 +1199,11 @@ class LandingPage extends Vue {
         text: "Related Resources",
         to: "#related",
         // isShown: (data: any) => data.hasPart?.length || false,
+      },
+      {
+        text: "Related Geospatial Features",
+        to: "#relatedGeospatial",
+        // isShown: (data: any) => data.relation?.length || false,
       },
       {
         text: "Spatial Coverage",
