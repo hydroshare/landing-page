@@ -1,5 +1,5 @@
 <template>
-  <v-card variant="outlined" border="grey thin">
+  <v-card id="app-geoconnex" variant="outlined" border="grey thin">
     <p>
         <i>This HydroShare resource is linked to the following geospatial features</i>
         <span v-show="resMode=='Edit'" data-toggle="tooltip" data-placement="auto"
@@ -304,7 +304,7 @@
       <template v-slot:default>
         <tbody>
           <tr
-            v-for="(relation, index) in data.relation"
+            v-for="(relation, index) in jsonData.relation"
             :key="`hp-${index}`"
           >
             <td class="">Related Geospatial Feature</td>
@@ -327,10 +327,94 @@ import { Component, Vue, toNative, Prop } from "vue-facing-decorator";
 })
 class GeoConnex extends Vue {
   @Prop({ type: Object, required: true, default: () => ({}) })
-  data!: any;
+  jsonData!: any;
 
   @Prop({ type: String, required: false, default: "View" })
   resMode!: string;
+
+  isLoading = false
+  
+  ////// Geoconnex collection and feature data structures + configuration //////
+  collections = null
+  features = []
+  collectionsSelectedToSearch = []
+  selectedReferenceFeatures = []
+  ignoredCollections = []
+  // collection = features that will not be mapped or allowed for list selection
+  ignoredFeatures = {
+    nat_aq: ["N9999OTHER"],
+    principal_aq: [999],
+  }
+  featureNameMap = {}
+
+  ////// Resource-level data //////
+  resShortId = SHORT_ID
+  metadataRelations = GEOSPATIAL_RELATIONS
+  resSpatialType = null
+
+  ////// Fetching and cacheing //////
+  geoCache = null
+  cacheName = "geoconnexCache"
+  cacheDuration = 0
+  enforceCacheDuration = false
+  geoconnexUrl = "https://reference.geoconnex.us/collections"
+  limitNumberOfFeaturesPerRequest = limitNumberOfFeaturesPerRequest
+
+  ////// Mapping //////
+  showingMap = true
+  map = null
+  spatialExtentGroup = null
+  searchFeatureGroup = null
+  selectedFeatureGroup = null
+  searchLayerGroupDictionary = {} // dictionary of {collection.id, layerGroup} for layerGroups in searchFeatureGroup
+  selectedLayerDictionary = {} // dictionary of {feature.uri, leafletLayer.id} for layers in selectedFeatureGroup
+  layerControl = null // Leaflet layerControl
+  largeExtentWarningThreshold = 5e11 // square meter area above which warning is provided
+  fitBoundsMaxZoom = 9
+  expandLayerControlOnAdd = false
+  shouldFitMapAfterAddingLayers = false
+  onlyZoomInNotOutAfterLayerAddition = true
+  pointLat = 0
+  pointLong = 0
+  northLat = null
+  eastLong = null
+  southLat = null
+  westLong = null
+  bBox = null
+  resSpatialExtentArea = null
+  abortController = {}
+
+  ////// Messages and logging //////
+  searchingDescription = ""
+  searchResultString = ""
+  appMessages = [] // notifications displayed at top of App
+  collectionMessages = [] // notifications displayed below "Collection" autoselect
+  error = console.error.bind(
+    window.console,
+    "%cGeoconnex error:",
+    "color: white; background:blue;"
+  )
+
+  ////// State //////
+  loadingRelations = true
+  loadingCollections = true
+  lockCollectionsInput = false
+  limitToSingleCollection = true
+  hasSearches = false
+
+  ////// VUE utility //////
+  collectionTypeahead = null
+  itemTypeahead = null
+  featureRules = null
+
+  ////// UI "theme" //////
+  stringLengthLimit = 40 // after which ellipse...
+  featureMessageColor = "orange"
+  collectionColor = "orange"
+  mappedPointFillColor = "rgba(255, 165, 0, 0.32)"
+  collectionSearchColor = "orange"
+  featureSelectColor = "rgba(0,0,0,.87)"
+  spatialExtentColor = "rgb(51, 136, 255)"
 
   mounted() {
     console.log("GeoConnex component mounted");
