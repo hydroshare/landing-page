@@ -322,6 +322,7 @@ const limitNumberOfFeaturesPerRequest = 1000;
 const geoconnexAppVerbose = false; // set true to increase console verbosity
 const geoconnexBaseURLQueryParam = `items?f=json&limit=${limitNumberOfFeaturesPerRequest}`;
 import { Component, Vue, toNative, Prop, Watch } from "vue-facing-decorator";
+import L from "leaflet";
 
 @Component({
   name: "geoconnex",
