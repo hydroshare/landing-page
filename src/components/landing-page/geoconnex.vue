@@ -77,7 +77,6 @@
                   :item-text="item => `${item.description} (${item.id})`"
                   :hide-no-data="!collectionTypeahead"
                   multiple
-                  :loading="isLoading"
                   placeholder="Type to narrow down options or select from the list"
                   :label="limitToSingleCollection ? '1. Choose a collection to search...' : '1. Choose collections to search...'"
                   :disabled="loadingCollections || searchingDescription !==''"
@@ -182,7 +181,6 @@
                   outlined
                   hide-selected
                   :hide-no-data="!itemTypeahead"
-                  :loading="isLoading"
                   label="2. Select related features to add to resource metadata"
                   placeholder="Type to narrow down options or select on the map"
                   :disabled="searchingDescription !==''"
