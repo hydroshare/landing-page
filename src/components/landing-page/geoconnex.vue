@@ -95,7 +95,7 @@
                           </template>
                           <template v-else>
                               <v-list-item-content>
-                                  <v-list-item-title v-html="`{{data.item.description}} ({{data.item.id}})`"></v-list-item-title>
+                                  <v-list-item-title v-html="`${data.item.description} (${data.item.id})`"></v-list-item-title>
                               </v-list-item-content>
                           </template>
                       </template>
@@ -126,7 +126,7 @@
                             mode="out-in"
                           >
                             <span
-                              :key="`icon-{{hasSearches}}`"
+                              :key="`icon-${hasSearches}`"
                               v-show="!loadingCollections && searchingDescription==''"
                               @click="clearMapOfSearches" class="glyphicon glyphicon-remove-circle text-muted"
                             ></span>
@@ -137,7 +137,7 @@
               <div v-if="!isLoading" class="small text-muted mt-2 my-4">
                   <div v-show="hasSearchesWithouIssues">
                       <span data-toggle="tooltip" data-placement="auto"
-                      :title="`Feature options for step #2 have been limited to the collection {{  collectionsSelectedToSearch.length > 1 ? 's' : '' }} you selected here.`"
+                      :title="`Feature options for step #2 have been limited to the collection ${  collectionsSelectedToSearch.length > 1 ? 's' : '' } you selected here.`"
                       class="glyphicon glyphicon-info-sign text-muted">
                       </span>
                       Feature options for step #2 have been limited to the collection {{ collectionsSelectedToSearch.length > 1 ? "s" : "" }} you selected here
@@ -223,11 +223,11 @@
                       </v-chip>
                   </template>
                   <template v-slot:message="rulesMessage">
-                      <div :style="`color: {{featureMessageColor}}; margin-left: -12px;`">
+                      <div :style="`color: ${featureMessageColor}; margin-left: -12px;`">
                           <span data-toggle="tooltip" data-placement="auto"
                               :title="rulesMessage.message"
                               class="glyphicon glyphicon-info-sign"
-                              :style="`color: {{featureMessageColor}}`">
+                              :style="`color: ${featureMessageColor}`">
                           </span>
                           {{ rulesMessage.message }}
                       </div>
