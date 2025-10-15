@@ -434,7 +434,7 @@ class GeoConnex extends Vue {
         newValue.every((s) => s.id !== obj.id)
       );
 
-      geoconnexComponent.ajaxRemoveFeatureFromResMetadata(remove);
+      geoconnexComponent.removeFeatureFromResMetadata(remove);
       if (!this.isGeoconnexUrl(remove[0].value)) return;
 
       try {
@@ -623,7 +623,7 @@ class GeoConnex extends Vue {
   addSelectedFeatureToResMetadata(feature) {
     const geoconnexApp = this;
     geoconnexApp.addSelectedFeatureToMap(feature);
-    geoconnexApp.ajaxSaveFeatureToResMetadata(feature);
+    geoconnexApp.saveFeatureToResMetadata(feature);
 
     // disable so that it can't be duplicated
     geoconnexApp.features.forEach((it) => {
@@ -647,7 +647,7 @@ class GeoConnex extends Vue {
       group: geoconnexApp.selectedFeatureGroup,
     });
   }
-  ajaxSaveFeatureToResMetadata(feature) {
+  saveFeatureToResMetadata(feature) {
     const geoconnexApp = this;
     const url = `/hsapi/_internal/${geoconnexApp.resShortId}/geospatialrelation/add-metadata/`;
     const data = {
@@ -655,57 +655,77 @@ class GeoConnex extends Vue {
       value: feature.uri ? feature.uri : feature,
       type: "relation",
     };
-    let ajaxResult;
-    $.ajax({
-      type: "POST",
-      url: url,
-      data: data,
-      success: function (result) {
-        // hsapi returns 200 even if the metadata creation fails
-        ajaxResult = result;
+
+    fetch(url, {
+      method: "POST",
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded', // or 'application/json' depending on your API
       },
-      complete: function (jqXHR, status) {
-        const statusObj = JSON.parse(jqXHR.responseText);
-        if (statusObj.status === "error") {
-          const message = "Error while attempting to save related feature";
-          geoconnexApp.error(message, statusObj.message);
-          geoconnexApp.generateAppMessage(`${message}: ${statusObj.message}`);
-        } else {
-          geoconnexApp.log(
-            `Added ${
-              feature.text ? feature.text : feature
-            } to resource metadata`
-          );
-          geoconnexApp.selectedReferenceFeatures.push({
-            id: ajaxResult.element_id,
-            value: feature.uri ? feature.uri : feature,
-            text: feature.text ? feature.text : feature,
-          });
-        }
-      },
+      body: new URLSearchParams(data) // or JSON.stringify(data) if using application/json
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(result => {
+      // Check if the API returned an error status despite HTTP 200
+      if (result.status === "error") {
+        const message = "Error while attempting to save related feature";
+        geoconnexApp.error(message, result.message);
+        geoconnexApp.generateAppMessage(`${message}: ${result.message}`);
+      } else {
+        geoconnexApp.log(
+          `Added ${
+            feature.text ? feature.text : feature
+          } to resource metadata`
+        );
+        geoconnexApp.selectedReferenceFeatures.push({
+          id: result.element_id,
+          value: feature.uri ? feature.uri : feature,
+          text: feature.text ? feature.text : feature,
+        });
+      }
+    })
+    .catch(error => {
+      const message = "Error while attempting to save related feature";
+      geoconnexApp.error(message, error.message);
+      geoconnexApp.generateAppMessage(`${message}: ${error.message}`);
     });
   }
-  ajaxRemoveFeatureFromResMetadata(relations) {
+  removeFeatureFromResMetadata(relations) {
     const geoconnexApp = this;
+    
     for (const relation of relations) {
       if (relation.id) {
         const url = `/hsapi/_internal/${geoconnexApp.resShortId}/geospatialrelation/${relation.id}/delete-metadata/`;
-        $.ajax({
-          type: "POST",
-          url: url,
-          success: function (result) {
-            geoconnexApp.log(
-              `Removed ${
-                relation.text ? relation.text : relation
-              } from resource metadata`
-            );
+        
+        fetch(url, {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
           },
-          error: function (request, status, error) {
-            const message =
-              "Error while attempting to remove related feature";
-            geoconnexApp.error(message, error);
-            geoconnexApp.generateAppMessage(`${message}: ${error}`);
-          },
+          // Add empty body or any required data
+          body: new URLSearchParams({}) // or omit body if not needed
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(result => {
+          geoconnexApp.log(
+            `Removed ${
+              relation.text ? relation.text : relation
+            } from resource metadata`
+          );
+        })
+        .catch(error => {
+          const message = "Error while attempting to remove related feature";
+          geoconnexApp.error(message, error.message);
+          geoconnexApp.generateAppMessage(`${message}: ${error.message}`);
         });
       }
     }
