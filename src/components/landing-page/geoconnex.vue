@@ -475,7 +475,6 @@ class GeoConnex extends Vue {
   ////// Resource-level data //////
   resShortId = SHORT_ID
   metadataRelations = GEOSPATIAL_RELATIONS
-  resSpatialType = null
 
   ////// Fetching and cacheing //////
   geoCache = null
@@ -499,12 +498,6 @@ class GeoConnex extends Vue {
   expandLayerControlOnAdd = false
   shouldFitMapAfterAddingLayers = false
   onlyZoomInNotOutAfterLayerAddition = true
-  pointLat = 0
-  pointLong = 0
-  northLat = null
-  eastLong = null
-  southLat = null
-  westLong = null
   bBox = null
   resSpatialExtentArea = null
   abortController = {}
@@ -540,6 +533,43 @@ class GeoConnex extends Vue {
   collectionSearchColor = "orange"
   featureSelectColor = "rgba(0,0,0,.87)"
   spatialExtentColor = "rgb(51, 136, 255)"
+
+  get resSpatialType() {
+    // resSpatialType can be GeoShape or GeoCoordinates
+    // https://schema.org/Place
+    const GeoConnex = this;
+      return (
+        GeoConnex.jsonData.spatialCoverage &&
+        GeoConnex.jsonData.spatialCoverage.geo &&
+        GeoConnex.jsonData.spatialCoverage.geo.type
+      );
+  }
+
+  get pointLat() {
+    return this.jsonData.spatialCoverage.geo.latitude || null;
+  }
+  get pointLong() {
+    return this.jsonData.spatialCoverage.geo.longitude || null;
+  }
+
+  // https://schema.org/box
+  // The first point is the lower corner, the second point is the upper corner. A box is expressed as two points separated by a space character.
+  get northLat() {
+    const box = this.jsonData.spatialCoverage.geo.box;
+    return box ? parseFloat(box.split(" ")[2]) : null;
+  }
+  get eastLong() {
+    const box = this.jsonData.spatialCoverage.geo.box;
+    return box ? parseFloat(box.split(" ")[3]) : null;
+  }
+  get southLat() {
+    const box = this.jsonData.spatialCoverage.geo.box;
+    return box ? parseFloat(box.split(" ")[0]) : null;
+  }
+  get westLong() {
+    const box = this.jsonData.spatialCoverage.geo.box;
+    return box ? parseFloat(box.split(" ")[1]) : null;
+  }
 
   get hasSearchesWithouIssues(): boolean {
     const GeoConnex = this;
@@ -1444,34 +1474,21 @@ class GeoConnex extends Vue {
     geoconnexApp.layerControl.collapse();
   }
   updateSpatialExtentType() {
-    const geoconnexApp = this;
-    geoconnexApp.resSpatialType = null;
-    const spatial_coverage_drawing = $("#coverageMap .leaflet-interactive");
-    if (spatial_coverage_drawing.size() > 0) {
-      const checked = $("#div_id_type input:checked").val();
-      geoconnexApp.resSpatialType = checked || spatial_coverage_type;
-    }
+    console.warn("updateSpatialExtentType not implemented");
+    // const geoconnexApp = this;
+    // geoconnexApp.resSpatialType = null;
+    // const spatial_coverage_drawing = $("#coverageMap .leaflet-interactive");
+    // if (spatial_coverage_drawing.size() > 0) {
+    //   const checked = $("#div_id_type input:checked").val();
+    //   geoconnexApp.resSpatialType = checked || spatial_coverage_type;
+    // }
   }
   updateAppWithResSpatialExtent() {
     const geoconnexApp = this;
     geoconnexApp.updateSpatialExtentType();
     geoconnexApp.spatialExtentGroup.clearLayers();
-    if (geoconnexApp.resSpatialType == "point") {
+    if (geoconnexApp.resSpatialType == "GeoCoordinates") {
       geoconnexApp.log("Setting point spatial extent");
-      geoconnexApp.pointLat =
-        parseFloat($("#id_north").val()) ||
-        parseFloat(
-          $("#cov_north")
-            .text()
-            .replace(/[^\d.-]/g, "")
-        );
-      geoconnexApp.pointLong =
-        parseFloat($("#id_east").val()) ||
-        parseFloat(
-          $("#cov_east")
-            .text()
-            .replace(/[^\d.-]/g, "")
-        );
 
       // Geoconnex API only acccepts bounding box
       // if point, just make it a small bounding box
@@ -1482,36 +1499,8 @@ class GeoConnex extends Vue {
         geoconnexApp.pointLat + 1e-12,
       ];
       geoconnexApp.showSpatialExtent({ bbox: null, fromPoint: true });
-    } else if (geoconnexApp.resSpatialType == "box") {
+    } else if (geoconnexApp.resSpatialType == "GeoShape") {
       geoconnexApp.log("Setting box spatial extent");
-      geoconnexApp.northLat =
-        $("#id_northlimit").val() ||
-        parseFloat(
-          $("#cov_northlimit")
-            .text()
-            .replace(/[^\d.-]/g, "")
-        );
-      geoconnexApp.eastLong =
-        $("#id_eastlimit").val() ||
-        parseFloat(
-          $("#cov_eastlimit")
-            .text()
-            .replace(/[^\d.-]/g, "")
-        );
-      geoconnexApp.southLat =
-        $("#id_southlimit").val() ||
-        parseFloat(
-          $("#cov_southlimit")
-            .text()
-            .replace(/[^\d.-]/g, "")
-        );
-      geoconnexApp.westLong =
-        $("#id_westlimit").val() ||
-        parseFloat(
-          $("#cov_westlimit")
-            .text()
-            .replace(/[^\d.-]/g, "")
-        );
 
       geoconnexApp.bBox = [
         geoconnexApp.eastLong,
