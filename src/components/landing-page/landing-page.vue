@@ -1,68 +1,19 @@
 <template>
   <v-container>
-    <div class="d-flex gap-1">
-      <v-spacer></v-spacer>
-      <template v-if="!isLoadingFiles && !isFetchingMetadata">
-        <v-menu width="500" :close-on-content-click="false">
-          <template v-slot:activator="{ props }">
-            <v-btn
-              size="small"
-              v-bind="props"
-              color="primary"
-              prepend-icon="mdi-cog"
-              variant="plain"
-              >Settings</v-btn
-            >
-          </template>
-          <v-card>
-            <v-card-title
-              class="bg-grey-lighten-3 text-body-1 text-medium-emphasis"
-              >Settings</v-card-title
-            >
-            <v-divider></v-divider>
-            <v-card-text flat>
-              <s3-form
-                :prefix="s3Info.prefix"
-                :bucket="s3Info.bucket"
-                :s3-host="s3Host"
-                :hydroshare-host="hydroshareHost"
-                :accessKey="accessKey"
-                :secret-key="secretKey"
-                @apply-changes="onS3FormUpdate"
-                @restore-defaults="onRestoreDefaults"
-              ></s3-form>
-            </v-card-text>
-          </v-card>
-        </v-menu>
-
-        <v-btn
-          size="small"
-          color="primary"
-          prepend-icon="mdi-pen"
-          variant="outlined"
-          @click="$router.push({ name: 'edit-dataset' })"
-          >Edit</v-btn
-        >
-      </template>
-    </div>
-
     <v-skeleton-loader
       v-if="isFetchingMetadata"
       type="card"
     ></v-skeleton-loader>
 
     <template v-if="!isFetchingMetadata && wasLoaded">
-      <h4 id="overview" class="text-h6 font-weight-medium">
+      <h4 id="overview" class="text-h6 font-weight-medium mb-2">
         {{ data.name }}
       </h4>
 
       <div
         class="d-flex justify-space-between mb-2 flex-column flex-sm-row align-normal align-sm-end"
       >
-        <div
-          v-if="data.creativeWorkStatus || data.dateModified"
-          class="order-2 order-sm-1"
-        >
+        <div v-if="data.creativeWorkStatus || data.dateModified">
           <v-chip
             v-if="data.creativeWorkStatus"
             size="small"
@@ -86,32 +37,52 @@
           </template>
         </div>
 
-        <!-- TODO: disabled until dataset endpoint returns current user permissions -->
-        <!-- <div class="order-1 order-sm-2">
-            <v-btn
-              v-if="data.submission_type !== 'HYDROSHARE'"
-              class="order-1 order-sm-2 mb-sm-0 mb-4 mt-sm-0 mt-2"
-              @click="
-                router.push({
-                  name: 'dataset-edit',
-                  params: { id: data._id },
-                })
-              "
-              rounded
-            >
-              <v-icon>mdi-text-box-edit</v-icon><span class="ml-1">Edit</span>
-            </v-btn>
+        <v-spacer></v-spacer>
+        <div class="d-flex gap-1">
+          <v-spacer></v-spacer>
+          <template v-if="!isLoadingFiles && !isFetchingMetadata">
+            <v-menu width="500" :close-on-content-click="false">
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  size="small"
+                  v-bind="props"
+                  color="primary"
+                  prepend-icon="mdi-cog"
+                  variant="plain"
+                  >Settings</v-btn
+                >
+              </template>
+              <v-card>
+                <v-card-title
+                  class="bg-grey-lighten-3 text-body-1 text-medium-emphasis"
+                  >Settings</v-card-title
+                >
+                <v-divider></v-divider>
+                <v-card-text flat>
+                  <s3-form
+                    :prefix="s3Info.prefix"
+                    :bucket="s3Info.bucket"
+                    :s3-host="s3Host"
+                    :hydroshare-host="hydroshareHost"
+                    :accessKey="accessKey"
+                    :secret-key="secretKey"
+                    @apply-changes="onS3FormUpdate"
+                    @restore-defaults="onRestoreDefaults"
+                  ></s3-form>
+                </v-card-text>
+              </v-card>
+            </v-menu>
 
             <v-btn
-              v-if="data.repository_identifier"
-              :href="data.repository_identifier"
-              target="_blank"
-              color="blue-grey lighten-4"
-              rounded
+              size="small"
+              color="primary"
+              prepend-icon="mdi-pen"
+              variant="outlined"
+              @click="$router.push({ name: 'edit-dataset' })"
+              >Edit</v-btn
             >
-              <v-icon class="mr-1">mdi-open-in-new</v-icon> View in repository
-            </v-btn>
-          </div> -->
+          </template>
+        </div>
       </div>
       <v-divider class="my-4"></v-divider>
 
