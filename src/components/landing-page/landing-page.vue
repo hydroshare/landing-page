@@ -608,10 +608,7 @@
             <v-row>
               <v-col cols="12" sm="8">
                 <v-card variant="outlined" border="grey thin">
-                  <cd-spatial-coverage-map
-                    :feature="data.spatialCoverage"
-                    :flat="true"
-                  />
+                  <cd-spatial-coverage-map :feature="data.spatialCoverage" />
                   <v-divider></v-divider>
                   <v-card-text
                     v-if="data.spatialCoverage.geo['type'] == 'GeoShape'"
@@ -712,7 +709,7 @@
         </v-container>
 
         <div v-if="!$vuetify.display.mdAndDown" class="sidebar pr-8 break-word">
-          <div class="sidebar--content">
+          <div>
             <v-card
               v-if="hasSpatialFeatures"
               variant="outlined"
@@ -722,7 +719,7 @@
                 Spatial Coverage
               </v-card-title>
               <v-divider></v-divider>
-              <v-card-text flat>
+              <v-card-text flat class="pa-0">
                 <cd-spatial-coverage-map :feature="data.spatialCoverage" />
               </v-card-text>
               <v-divider></v-divider>
