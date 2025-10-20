@@ -294,88 +294,13 @@
                 </div>
               </template>
 
-              <template v-if="data.submission_type === 'HYDROSHARE'">
-                <div v-bind="infoLabelAttr">Host Repository:</div>
-                <div v-bind="infoValueAttr">
-                  <v-card variant="outlined" border="grey thin">
-                    <v-card-title class="text-overline"
-                      >HydroShare</v-card-title
-                    >
-                    <v-divider></v-divider>
-                    <v-card-text>
-                      <v-img
-                        max-width="200"
-                        contain
-                        class="mt-2"
-                        alt="HydroShare logo"
-                        src="/img/hydroshare.png"
-                      ></v-img>
-                    </v-card-text>
-                  </v-card>
-                </div>
-              </template>
+              <div v-bind="infoLabelAttr">Views:</div>
+              <div v-bind="infoValueAttr">3784</div>
 
-              <template v-if="data.submission_type === 'S3'">
-                <div v-bind="infoLabelAttr">Host Repository:</div>
-                <div>
-                  <v-card variant="outlined" border="grey thin">
-                    <v-card-title class="text-overline">Amazon S3</v-card-title>
-                    <v-divider></v-divider>
-                    <v-card-text>
-                      <v-img
-                        max-width="200"
-                        max-height="30"
-                        contain
-                        class="mt-2"
-                        alt="Amazon S3 logo"
-                        src="/img/amazon-s3.svg"
-                      ></v-img>
-                    </v-card-text>
-                    <v-divider></v-divider>
-
-                    <v-expansion-panels accordion flat>
-                      <v-expansion-panel>
-                        <v-expansion-panel-title color="text-overline">
-                          Bucket Information
-                        </v-expansion-panel-title>
-
-                        <v-expansion-panel-text>
-                          <v-table variant="elevated" density="compact">
-                            <tbody>
-                              <tr>
-                                <th>Path:</th>
-                                <td>{{ data.s3_path.path }}</td>
-                              </tr>
-                              <tr>
-                                <th>Bucket:</th>
-                                <td>{{ data.s3_path.bucket }}</td>
-                              </tr>
-                              <tr>
-                                <th>Endpoint URL:</th>
-                                <td>
-                                  <a :href="data.s3_path.endpoint_url">{{
-                                    data.s3_path.endpoint_url
-                                  }}</a>
-                                </td>
-                              </tr>
-                            </tbody>
-                          </v-table>
-                        </v-expansion-panel-text>
-                      </v-expansion-panel>
-                    </v-expansion-panels>
-                  </v-card>
-                </div>
-              </template>
+              <div v-bind="infoLabelAttr">Downloads:</div>
+              <div v-bind="infoValueAttr">46</div>
             </v-col>
           </v-row>
-
-          <div class="mb-8 field" id="url">
-            <div v-bind="headingAttr">URL</div>
-            <v-divider class="mb-2"></v-divider>
-            <p class="text-body-1">
-              <a :href="data.url" class="break-word">{{ data.url }}</a>
-            </p>
-          </div>
 
           <div class="mb-8 field" id="description">
             <div v-bind="headingAttr">Abstract</div>
@@ -491,6 +416,10 @@
           >
             <div v-bind="headingAttr">Funding</div>
             <v-divider class="mb-2"></v-divider>
+            <p class="text-body-2 text-medium-emphasis mb-2">
+              This resource was created using funding from the following
+              sources:
+            </p>
             <v-expansion-panels multiple>
               <v-expansion-panel
                 v-for="(funding, index) of data.funding"
@@ -528,7 +457,9 @@
                   <template v-if="!!funding.funder">
                     <div class="d-flex align-center text-body-1 mt-4 mb-2">
                       <v-icon class="mr-2"> mdi-domain </v-icon>
-                      <div>Funding Organization:</div>
+                      <div class="text-body-2 text-medium-emphasis">
+                        Funding Organization:
+                      </div>
                     </div>
                     <div class="text-body-2">
                       <div class="text-body-1">
@@ -848,15 +779,18 @@
             </v-card>
 
             <v-card
-              v-if="data.citation && data.citation.length"
+              v-if="
+                data.document[0].citation && data.document[0].citation.length
+              "
               class="mt-8"
               variant="flat"
+              id="citation"
             >
               <v-card-title class="pa-0 pb-2">How to cite</v-card-title>
               <v-card-text
-                v-for="(citation, index) of data.citation"
+                v-for="(citation, index) of data.document[0].citation"
                 :key="index"
-                class="pa-0"
+                class="pa-0 text-body-2 text-medium-emphasis"
               >
                 <div class="d-flex align-center justify-space-between gap-1">
                   <div class="citation-text">
@@ -890,7 +824,11 @@
 
 <script lang="ts">
 import { Component, Vue, toNative, Ref } from "vue-facing-decorator";
-import { CzForm, CzFileExplorer } from "@cznethub/cznet-vue-core";
+import {
+  CzForm,
+  CzFileExplorer,
+  Notifications,
+} from "@cznethub/cznet-vue-core";
 import type { IFolder } from "@cznethub/cznet-vue-core/dist/types";
 import { S3Client, _Object } from "@aws-sdk/client-s3";
 import { stringify } from "@/utils";
@@ -1006,7 +944,7 @@ class LandingPage extends Vue {
   showMetadata = false;
 
   infoValueAttr = {
-    class: "text-body-2 mb-2",
+    class: "text-body-2 mb-2 text-medium-emphasis",
   };
   headingAttr = {
     class: "text-teal-lighten-2 font-weight-medium text-h6 mb-2",
@@ -1020,6 +958,11 @@ class LandingPage extends Vue {
   onShowMetadata(item: any) {
     this.selectedMetadata = item;
     this.showMetadata = true;
+  }
+
+  onCopy(text: string) {
+    navigator.clipboard.writeText(text);
+    Notifications.toast({ message: "Copied to clipboard", type: "info" });
   }
 
   async loadReadmeFile() {
@@ -1231,10 +1174,6 @@ class LandingPage extends Vue {
     this.isLoadingFiles = false;
     User.$state.toc = [
       { text: "Overview", to: "#overview" },
-      {
-        text: "Url",
-        to: "#url",
-      },
       {
         text: "Abstract",
         to: "#description",
