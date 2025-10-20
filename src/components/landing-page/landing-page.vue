@@ -880,8 +880,8 @@ class LandingPage extends Vue {
   data: Record<string, any> = {};
   stringify = stringify;
 
-  accessKey = localStorage.getItem("s3AccessKey") || "minioadmin";
-  secretKey = localStorage.getItem("s3SecretKey") || "minioadmin";
+  accessKey = localStorage.getItem("s3AccessKey") || "cuahsi";
+  secretKey = localStorage.getItem("s3SecretKey") || "devpassword";
 
   isLoadingFiles: boolean = true;
   currentPath: string = "";
@@ -1042,8 +1042,8 @@ class LandingPage extends Vue {
     }
 
     if (!this.accessKey || !this.secretKey) {
-      this.accessKey = prompt("Enter your S3 Access Key:") || "minioadmin";
-      this.secretKey = prompt("Enter your S3 Secret Key:") || "minioadmin";
+      this.accessKey = prompt("Enter your S3 Access Key:") || "cuahsi";
+      this.secretKey = prompt("Enter your S3 Secret Key:") || "devpassword";
 
       if (this.accessKey && this.secretKey) {
         localStorage.setItem("s3AccessKey", this.accessKey);
