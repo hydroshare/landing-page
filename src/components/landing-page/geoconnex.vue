@@ -1229,7 +1229,9 @@ class GeoConnex extends Vue {
     // USA
     // geoconnexApp.map.setView([41.850033, -87.6500523], 3);
     geoconnexApp.map.setView([30, 0], 1);
-    geoconnexApp.setMapEvents();
+
+    // TODO: implement non jquery map events
+    // geoconnexApp.setMapEvents();
   }
   async addSearchFeaturesToMap(features, collectionOverride = null) {
     const geoconnexApp = this;
@@ -1519,6 +1521,7 @@ class GeoConnex extends Vue {
     geoconnexApp.pointLat = lat;
     geoconnexApp.pointLong = long;
   }
+  /* --------------------------------------------------
   setMapEvents() {
     const geoconnexApp = this;
     var popup = L.popup({ maxWidth: 400 });
@@ -1534,6 +1537,7 @@ class GeoConnex extends Vue {
 
     if (geoconnexApp.resMode === "Edit") {
       geoconnexApp.map.on("click", onMapClick);
+      // TODO: remove jquery
 
       $("#geoconnex-map-wrapper").on(
         "click",
@@ -1599,6 +1603,7 @@ class GeoConnex extends Vue {
         geoconnexApp.updateAppWithResSpatialExtent();
       });
   }
+  -------------------------------------------------- */
   toggleMapVisibility() {
     const geoconnexApp = this;
     geoconnexApp.showingMap = !geoconnexApp.showingMap;
