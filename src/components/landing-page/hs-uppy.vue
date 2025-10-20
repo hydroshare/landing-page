@@ -37,10 +37,10 @@ class HsUppy extends Vue {
   @Prop({ type: String, required: false, default: "http://localhost:9000" })
   s3Host!: string;
 
-  @Prop({ type: String, required: false, default: "minioadmin" })
+  @Prop({ type: String, required: false, default: "cuahsi" })
   accessKey!: string;
 
-  @Prop({ type: String, required: false, default: "minioadmin" })
+  @Prop({ type: String, required: false, default: "devpassword" })
   secretKey!: string;
 
   @Prop({ type: String, required: false, default: "" })
