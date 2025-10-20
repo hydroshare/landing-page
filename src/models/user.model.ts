@@ -45,7 +45,7 @@ export default class User extends Model {
   private static _cachedS3Credentials: { access_key: string; secret_key: string } | null = null;
 
   // Base URL for HydroShare API - can be configured for different environments
-  private static readonly hydroshareHost = "http://localhost";
+  private static readonly hydroshareHost = "https://beta.hydroshare.org";
 
   static fields() {
     return {};
@@ -138,7 +138,7 @@ export default class User extends Model {
     }
   }
 
-  static async getResourceS3prefix(res_id: string) : Promise<{ bucket: string; prefix: string } | null> {
+  static async getResourceS3prefix(res_id: string): Promise<{ bucket: string; prefix: string } | null> {
     try {
       const response = await axios.get(`${this.hydroshareHost}/hsapi/resource/s3/${res_id}/`, {
         withCredentials: true, // Ensure cookies are sent for authentication
