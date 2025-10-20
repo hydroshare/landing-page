@@ -129,7 +129,7 @@ export default defineConfig(({ mode }) => {
 
     server: {
       host: true,
-      port: 5004,
+      port: 8080,
       // strictPort: true,
       // proxy: {
       //   "/sockjs-node": {
@@ -143,7 +143,7 @@ export default defineConfig(({ mode }) => {
       //   clientPort: 443,
       // },
       allowedHosts: ["host.docker.internal"],
-      origin: `${base}`,
+      // origin: `${base}`,
     },
   };
 });

@@ -5,20 +5,23 @@
 
 <script lang="ts">
 import { Component, Vue, toNative, Prop, Watch } from "vue-facing-decorator";
-import {
-  CzFileExplorer,
-} from "@cznethub/cznet-vue-core";
-import Uppy from '@uppy/core';
-import GoldenRetriever from '@uppy/golden-retriever';
-import GoogleDrivePicker from '@uppy/google-drive-picker';
-import Dashboard from '@uppy/dashboard';
-import AwsS3 from '@uppy/aws-s3';
+import { CzFileExplorer } from "@cznethub/cznet-vue-core";
+import Uppy from "@uppy/core";
+import GoldenRetriever from "@uppy/golden-retriever";
+import GoogleDrivePicker from "@uppy/google-drive-picker";
+import Dashboard from "@uppy/dashboard";
+import AwsS3 from "@uppy/aws-s3";
 import { SignatureV4 } from "@aws-sdk/signature-v4";
 import { Sha256 } from "@aws-crypto/sha256-js";
-import { COMPANION_URL, GOOGLE_PICKER_CLIENT_ID, GOOGLE_PICKER_API_KEY, GOOGLE_PICKER_APP_ID } from "@/constants";
+import {
+  COMPANION_URL,
+  GOOGLE_PICKER_CLIENT_ID,
+  GOOGLE_PICKER_API_KEY,
+  GOOGLE_PICKER_APP_ID,
+} from "@/constants";
 
-import '@uppy/core/css/style.min.css';
-import '@uppy/dashboard/css/style.min.css';
+import "@uppy/core/css/style.min.css";
+import "@uppy/dashboard/css/style.min.css";
 
 let uppyInstance = {} as Uppy | null;
 
@@ -28,13 +31,20 @@ let uppyInstance = {} as Uppy | null;
   expose: ["getUppyInstance", "addFile", "upload"],
 })
 class HsUppy extends Vue {
-  @Prop({required: false, default: () => ({
-    "prefix": "d7b526e24f7e449098b428ae9363f514/data/contents/",
-    "bucket": "asdf",
-  }) })
+  @Prop({
+    required: false,
+    default: () => ({
+      prefix: "d7b526e24f7e449098b428ae9363f514/data/contents/",
+      bucket: "asdf",
+    }),
+  })
   s3Info!: { prefix: string; bucket: string };
 
-  @Prop({ type: String, required: false, default: "http://localhost:9000" })
+  @Prop({
+    type: String,
+    required: false,
+    default: "https://s3.beta.hydroshare.org",
+  })
   s3Host!: string;
 
   @Prop({ type: String, required: false, default: "minioadmin" })
@@ -49,7 +59,7 @@ class HsUppy extends Vue {
   @Prop({ type: CzFileExplorer, required: false, default: false })
   fileExplorer!: InstanceType<typeof CzFileExplorer>;
 
-  @Watch('fileExplorer.selected')
+  @Watch("fileExplorer.selected")
   onFileSelect() {
     // if the selected is a folder, set selectedFolder
     let selected = this.fileExplorer.selected;
@@ -66,8 +76,7 @@ class HsUppy extends Vue {
     const isFolder = this.fileExplorer.isFolder(selected);
     if (isFolder) {
       this.selectedFolder = this.fileExplorer.getPathString(selected);
-    }
-    else {
+    } else {
       this.selectedFolder = null;
     }
     console.log("selectedFolder set to:", this.selectedFolder);
@@ -102,11 +111,11 @@ class HsUppy extends Vue {
   }
 
   // Watch for credential changes and recreate Uppy instance
-  @Watch('accessKey')
-  @Watch('secretKey')
-  @Watch('sessionToken')
+  @Watch("accessKey")
+  @Watch("secretKey")
+  @Watch("sessionToken")
   onCredentialsChange() {
-    console.log('Credentials changed, recreating Uppy instance');
+    console.log("Credentials changed, recreating Uppy instance");
     this.initializeUppy();
   }
 
@@ -118,8 +127,8 @@ class HsUppy extends Vue {
   getSigner(): SignatureV4 {
     if (!this.signatureV4) {
       this.signatureV4 = new SignatureV4({
-        service: 's3',
-        region: 'us-east-1',
+        service: "s3",
+        region: "us-east-1",
         credentials: {
           accessKeyId: this.accessKey,
           secretAccessKey: this.secretKey,
@@ -135,11 +144,9 @@ class HsUppy extends Vue {
       try {
         uppyInstance.destroy();
         uppyInstance = null;
-        
       } catch (error) {
         console.error("Error destroying current Uppy instance:", error);
       }
-      
     }
     const uppyComponent = this;
     const headers = {
@@ -154,75 +161,89 @@ class HsUppy extends Vue {
       autoProceed: true,
       onBeforeUpload: (files) => {
         Object.keys(files).forEach((fileId) => {
-          const file = files[fileId]
+          const file = files[fileId];
           console.log("adding metadata for", file.name);
           console.log("s3Info:", uppyComponent.s3Info);
           if (that.selectedFolder) {
-            console.log(`selectedFolder is set, using it as prefix: ${that.selectedFolder}`);
-            file.meta.dynamic_key = file.meta.dynamic_key ? file.meta.dynamic_key : `${uppyComponent.s3Info.prefix}${that.selectedFolder}/${file.name}`;
+            console.log(
+              `selectedFolder is set, using it as prefix: ${that.selectedFolder}`,
+            );
+            file.meta.dynamic_key = file.meta.dynamic_key
+              ? file.meta.dynamic_key
+              : `${uppyComponent.s3Info.prefix}${that.selectedFolder}/${file.name}`;
             console.log("file.meta.dynamic_key set to:", file.meta.dynamic_key);
           }
           if (file.meta.existing_path_in_resource) {
-            console.log("existing_path_in_resource is set, using it as prefix:", file.meta.existing_path_in_resource);
-            file.meta.dynamic_key = file.meta.dynamic_key ? file.meta.dynamic_key : `${uppyComponent.s3Info.prefix}${file.meta.existing_path_in_resource}/${file.name}`;
+            console.log(
+              "existing_path_in_resource is set, using it as prefix:",
+              file.meta.existing_path_in_resource,
+            );
+            file.meta.dynamic_key = file.meta.dynamic_key
+              ? file.meta.dynamic_key
+              : `${uppyComponent.s3Info.prefix}${file.meta.existing_path_in_resource}/${file.name}`;
             console.log("file.meta.dynamic_key set to:", file.meta.dynamic_key);
           }
-          file.meta.bucket_name = file?.meta?.bucket_name || uppyComponent.s3Info.bucket;
-          file.meta.dynamic_key = file?.meta?.dynamic_key ? file.meta.dynamic_key : `${uppyComponent.s3Info.prefix}${file.name}`;
+          file.meta.bucket_name =
+            file?.meta?.bucket_name || uppyComponent.s3Info.bucket;
+          file.meta.dynamic_key = file?.meta?.dynamic_key
+            ? file.meta.dynamic_key
+            : `${uppyComponent.s3Info.prefix}${file.name}`;
         });
         return files;
       },
-    })
-    .use(Dashboard, {
+    }).use(Dashboard, {
       inline: false,
       fileManagerSelectionType: "both",
       target: "#uppy",
       showProgressDetails: true,
       trigger: "#uppy-button",
       note: `TODO: quota?`,
-    })
-
-    uppyInstance.use(AwsS3, {
-      headers: headers,
-      allowedMetaFields: true,
-      endpoint: COMPANION_URL,
-    })
-    .on('dashboard:modal-open', () => {
-      // this is a hack to set the folder when the modal is opened
-      // because the selectedFolder will change when the user clicks in the dashboard
-      if (that.selectedFolder) {
-        uppyInstance.setMeta({existing_path_in_resource: that.selectedFolder});
-        console.log("Set dashboard folder state to:", that.selectedFolder);
-      }
-    })
-    .on("error", (errorMessage) => {
-      console.error("Uppy error:", errorMessage);
-      let errorMsg = "";
-      if (typeof errorMessage === "object") {
-        for (const [key, value] of Object.entries(errorMessage)) {
-          errorMsg += `${key}: ${value}`;
-        }
-      } else {
-        errorMsg = JSON.stringify(errorMessage);
-      }
-      try {
-        let errorMessageJSON = JSON.parse(errorMessage.message);
-        if (errorMessageJSON.hasOwnProperty("validation_error")) {
-          errorMsg = errorMessageJSON.validation_error;
-        } else if (errorMessageJSON.hasOwnProperty("file_size_error")) {
-          errorMsg = errorMessageJSON.file_size_error;
-        }
-      } catch (e) {}
-    })
-    .use(GoldenRetriever)
-    .use(GoogleDrivePicker, {
-      target: Dashboard,
-      companionUrl: COMPANION_URL,
-      clientId: GOOGLE_PICKER_CLIENT_ID,
-      apiKey: GOOGLE_PICKER_API_KEY,
-      appId: GOOGLE_PICKER_APP_ID,
-      companionHeaders: headers,
     });
+
+    uppyInstance
+      .use(AwsS3, {
+        headers: headers,
+        allowedMetaFields: true,
+        endpoint: COMPANION_URL,
+      })
+      .on("dashboard:modal-open", () => {
+        // this is a hack to set the folder when the modal is opened
+        // because the selectedFolder will change when the user clicks in the dashboard
+        if (that.selectedFolder) {
+          uppyInstance.setMeta({
+            existing_path_in_resource: that.selectedFolder,
+          });
+          console.log("Set dashboard folder state to:", that.selectedFolder);
+        }
+      })
+      .on("error", (errorMessage) => {
+        console.error("Uppy error:", errorMessage);
+        let errorMsg = "";
+        if (typeof errorMessage === "object") {
+          for (const [key, value] of Object.entries(errorMessage)) {
+            errorMsg += `${key}: ${value}`;
+          }
+        } else {
+          errorMsg = JSON.stringify(errorMessage);
+        }
+        try {
+          let errorMessageJSON = JSON.parse(errorMessage.message);
+          if (errorMessageJSON.hasOwnProperty("validation_error")) {
+            errorMsg = errorMessageJSON.validation_error;
+          } else if (errorMessageJSON.hasOwnProperty("file_size_error")) {
+            errorMsg = errorMessageJSON.file_size_error;
+          }
+        } catch (e) {}
+      })
+      .use(GoldenRetriever)
+      .use(GoogleDrivePicker, {
+        target: Dashboard,
+        companionUrl: COMPANION_URL,
+        clientId: GOOGLE_PICKER_CLIENT_ID,
+        apiKey: GOOGLE_PICKER_API_KEY,
+        appId: GOOGLE_PICKER_APP_ID,
+        companionHeaders: headers,
+      });
   }
 }
 export default toNative(HsUppy);

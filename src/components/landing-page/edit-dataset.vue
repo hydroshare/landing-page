@@ -60,7 +60,15 @@
           <span />
         </template>
       </cz-file-explorer>
-      <HsUppy v-if="wasLoaded" ref="hsUppyRef" :s3Info="s3Info" :s3Host="s3Host" :accessKey="accessKey" :secretKey="secretKey" :fileExplorer="fileExplorer" />
+      <HsUppy
+        v-if="wasLoaded"
+        ref="hsUppyRef"
+        :s3Info="s3Info"
+        :s3Host="s3Host"
+        :accessKey="accessKey"
+        :secretKey="secretKey"
+        :fileExplorer="fileExplorer"
+      />
       <v-skeleton-loader class="mb-12" v-else type="card"></v-skeleton-loader>
 
       <v-skeleton-loader
@@ -206,8 +214,8 @@ class App extends Vue {
   wasLoaded = true;
 
   s3Client!: S3Client;
-  s3Host: string = "http://localhost:9000";
-  hydroshareHost: string = "http://localhost";
+  s3Host: string = "https://s3.beta.hydroshare.org";
+  hydroshareHost: string = "https://beta.hydroshare.org";
   s3Info = {
     bucket: "",
     prefix: "",
@@ -274,7 +282,7 @@ class App extends Vue {
       const { access_key, secret_key } = await User.getOrCreateS3Credentials();
       this.accessKey = access_key;
       this.secretKey = secret_key;
-    }
+    };
 
     if (this.isLoggedIn) {
       console.log("user is already logged in, fetching S3 credentials");
@@ -375,13 +383,15 @@ class App extends Vue {
   async onRestoreDefaults() {
     this.isFetchingMetadata = true;
     this.isLoadingFiles = true;
-    this.s3Host = "http://localhost:9000";
-    this.hydroshareHost = "http://localhost";
-    const s3info = await User.getResourceS3prefix(this.resourceId);
-    this.s3Info = s3info;
-    this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
-    this.startS3Client();
-    this.loadResource();
+    this.s3Host = "https://s3.beta.hydroshare.org";
+    this.hydroshareHost = "https://beta.hydroshare.org";
+    const s3Info = await User.getResourceS3prefix(this.resourceId);
+    if (s3Info) {
+      this.s3Info = s3Info;
+      this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
+      this.startS3Client();
+      this.loadResource();
+    }
   }
 
   async submit() {
@@ -531,28 +541,28 @@ class App extends Vue {
           return new Promise<boolean>((resolve) => {
             const successHandler = (successFileId: string, response: any) => {
               if (successFileId === fileId) {
-                uppy.off('upload-success', successHandler);
-                uppy.off('upload-error', errorHandler);
+                uppy.off("upload-success", successHandler);
+                uppy.off("upload-error", errorHandler);
                 resolve(true);
               }
             };
-            
+
             const errorHandler = (errorFileId: string, error: any) => {
               if (errorFileId === fileId) {
-                uppy.off('upload-success', successHandler);
-                uppy.off('upload-error', errorHandler);
+                uppy.off("upload-success", successHandler);
+                uppy.off("upload-error", errorHandler);
                 console.error("Upload error for file:", file.name, error);
                 resolve(false);
               }
             };
 
-            uppy.on('upload-success', successHandler);
-            uppy.on('upload-error', errorHandler);
+            uppy.on("upload-success", successHandler);
+            uppy.on("upload-error", errorHandler);
 
             // Add timeout as fallback
             setTimeout(() => {
-              uppy.off('upload-success', successHandler);
-              uppy.off('upload-error', errorHandler);
+              uppy.off("upload-success", successHandler);
+              uppy.off("upload-error", errorHandler);
               console.warn("Upload timeout for file:", file.name);
               resolve(false);
             }, 300000); // 5 minute timeout
@@ -578,9 +588,7 @@ class App extends Vue {
         });
       }
 
-      return results.map((r) => 
-        r.status === "fulfilled" ? r.value : false
-      );
+      return results.map((r) => (r.status === "fulfilled" ? r.value : false));
     }
 
     return responses;
