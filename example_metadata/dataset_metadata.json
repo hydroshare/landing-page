@@ -592,8 +592,8 @@
         },
         {
           "@type": "DataDownload",
-          "name": "readme.txt",
-          "contentUrl": "https://hydroshare.org/resource/773626e9b84248bc8d431da795ee1a16/data/contents/readme.txt",
+          "name": "README.md",
+          "contentUrl": "https://raw.githubusercontent.com/hydroshare/hydroshare/refs/heads/6016/landing-page-squash-rebase/README.md",
           "contentSize": "1.399 KB",
           "sha256": "303206557729671310455069921009918952786",
           "encodingFormat": "text/plain"

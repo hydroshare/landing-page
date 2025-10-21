@@ -86,7 +86,7 @@
       </div>
       <v-divider class="my-4"></v-divider>
 
-      <div class="d-flex">
+      <div class="d-flex gap-2">
         <v-container
           class="page-content"
           :class="{ 'is-sm': $vuetify.display.mdAndDown }"
@@ -117,7 +117,7 @@
                       </div>
                     </span>
                   </template>
-                  <v-card v-if="creator['type'] == 'Person'">
+                  <v-card v-if="creator['type'] == 'Person'" width="auto">
                     <v-card-title class="text-body-1">
                       <v-icon class="mr-2">mdi-account-outline</v-icon>
                       {{ creator.name }}
@@ -129,14 +129,19 @@
                       class="d-flex flex-column gap-1"
                     >
                       <div v-if="creator.email">
-                        <v-icon
-                          class="mr-1"
-                          small
-                          color="secondary"
-                          title="Email address"
-                          icon="mdi-email-outline"
-                        />
-                        {{ creator.email }}
+                        <div class="d-flex align-center mb-1">
+                          <v-icon
+                            class="mr-1"
+                            small
+                            color="secondary"
+                            title="Email address"
+                            icon="mdi-email-outline"
+                          />
+                          <div class="d-flex align-center gap-1">
+                            <span class="text-medium-emphasis">Email:</span>
+                            {{ creator.email }}
+                          </div>
+                        </div>
                       </div>
                       <div
                         v-if="creator.identifier"
@@ -151,7 +156,7 @@
                       </div>
 
                       <div v-if="creator.affiliation">
-                        <div class="d-flex align-center">
+                        <div class="d-flex align-center mb-1">
                           <v-icon
                             small
                             color="secondary"
@@ -160,22 +165,22 @@
                           >
                             mdi-domain
                           </v-icon>
-                          Affiliation:
-                        </div>
-                        <v-divider class="my-2"></v-divider>
-                        <div
-                          v-if="creator.affiliation.name"
-                          class="font-weight-bold mb-2"
-                        >
-                          <span
-                            v-if="creator.affiliation.url"
-                            class="d-inline-flex align-baseline"
-                          >
-                            <a :href="creator.affiliation.url">{{
-                              creator.affiliation.name
-                            }}</a>
-                          </span>
-                          <span v-else>{{ creator.affiliation.name }}</span>
+                          <div class="d-flex align-center gap-1">
+                            <span class="text-medium-emphasis"
+                              >Affiliation:</span
+                            >
+                            <div v-if="creator.affiliation.name">
+                              <span
+                                v-if="creator.affiliation.url"
+                                class="d-inline-flex align-baseline"
+                              >
+                                <a :href="creator.affiliation.url">{{
+                                  creator.affiliation.name
+                                }}</a>
+                              </span>
+                              <span v-else>{{ creator.affiliation.name }}</span>
+                            </div>
+                          </div>
                         </div>
 
                         <div v-if="creator.affiliation.address">
@@ -242,17 +247,6 @@
             </v-col>
 
             <v-col cols="12" sm="6" class="dataset-info">
-              <!-- <div v-bind="infoLabelAttr">URL:</div>
-            <div
-              v-bind="infoValueAttr"
-              class="d-flex align-baseline text-body-1"
-            >
-              <a :href="data.url" target="_blank" class="break-word">{{
-                data.url
-              }}</a>
-              <v-icon class="ml-2" small>mdi-open-in-new</v-icon>
-            </div> -->
-
               <div v-bind="infoLabelAttr">Created:</div>
               <div v-bind="infoValueAttr">
                 {{ parseDate(data.dateCreated) }}
@@ -358,7 +352,13 @@
               variant="outlined"
               border="grey thin"
             >
-              <v-card-title class="text-overline">README</v-card-title>
+              <v-card-title class="text-overline d-flex gap-2"
+                ><div>README</div>
+                <div class="text-caption text-medium-emphasis">
+                  {{ readMeFileName }}
+                </div></v-card-title
+              >
+
               <v-divider></v-divider>
               <v-card-text>
                 <div class="text-center py-4" v-if="isLoadingMD">
@@ -373,7 +373,7 @@
                   v-html="readmeMd"
                   class="markdown-body px-4"
                 ></div>
-                <pre class="px-4" style="white-space: pre-wrap">{{
+                <pre v-else class="px-4" style="white-space: pre-wrap">{{
                   readmeMd
                 }}</pre>
               </v-card-text>
@@ -387,19 +387,19 @@
           >
             <div v-bind="headingAttr">Funding</div>
             <v-divider class="mb-2"></v-divider>
-            <p class="text-body-2 text-medium-emphasis mb-2">
+            <p class="text-body-2 text-medium-emphasis mb-4">
               This resource was created using funding from the following
               sources:
             </p>
-            <v-expansion-panels multiple>
+            <v-expansion-panels multiple elevation="1">
               <v-expansion-panel
                 v-for="(funding, index) of data.funding"
                 :key="index"
                 :readonly="!(funding.description || funding.funder)"
               >
-                <v-expansion-panel-title>
+                <v-expansion-panel-title class="bg-grey-lighten-5">
                   <div>
-                    <div class="text-body-1">{{ funding.name }}</div>
+                    <div class="text-body-2">{{ funding.name }}</div>
 
                     <div
                       v-if="funding.identifier"
@@ -415,6 +415,7 @@
                     ><span></span
                   ></template>
                 </v-expansion-panel-title>
+                <v-divider></v-divider>
 
                 <v-expansion-panel-text
                   v-if="funding.description || !!funding.funder"
@@ -433,7 +434,7 @@
                       </div>
                     </div>
                     <div class="text-body-2">
-                      <div class="text-body-1">
+                      <div>
                         {{ funding.funder.name }}
                       </div>
                       <div>{{ funding.funder.address }}</div>
@@ -610,7 +611,7 @@
           </div>
         </v-container>
 
-        <div v-if="!$vuetify.display.mdAndDown" class="sidebar pr-8 break-word">
+        <div v-if="!$vuetify.display.mdAndDown" class="sidebar break-word">
           <div>
             <v-card
               v-if="hasSpatialFeatures"
@@ -838,6 +839,7 @@ class LandingPage extends Vue {
 
   showDescription = false;
   readmeMd = "";
+  readMeFileName = "";
   hasTxtReadme = false;
   isLoadingMD = false;
 
@@ -945,6 +947,7 @@ class LandingPage extends Vue {
     );
 
     if (readmeFile?.contentUrl) {
+      this.readMeFileName = readmeFile.name;
       if (readmeFile.name.toLowerCase() === "readme.txt") {
         this.hasTxtReadme = true;
       }
@@ -1298,6 +1301,7 @@ export default toNative(LandingPage);
 .readme-container {
   .v-card-text {
     min-height: 5rem;
+    height: 20rem;
     overflow: auto;
     resize: vertical;
   }
