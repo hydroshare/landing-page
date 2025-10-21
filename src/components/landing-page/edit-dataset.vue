@@ -61,7 +61,7 @@
         </template>
       </cz-file-explorer>
       <HsUppy
-        v-if="wasLoaded"
+        v-if="wasLoaded && !isLoadingFiles"
         ref="hsUppyRef"
         :s3Info="s3Info"
         :s3Host="s3Host"
@@ -85,6 +85,7 @@
         v-model:is-valid="isValid"
         :config="config"
         ref="form"
+        class="mt-14"
       />
 
       <div v-if="!isFetchingMetadata" class="d-flex gap-1">
@@ -312,11 +313,26 @@ class App extends Vue {
       }
     }
 
+    // if (!this.s3Info.bucket || !this.s3Info.prefix) {
+    //   User.getResourceS3prefix(this.resourceId).then((s3info) => {
+    //     this.s3Info = s3info;
+    //     this.s3Info.prefix = `${this.resourceId}/data/contents/`; // TODO: overriding wrong api response value
+    //   });
+    // }
+
+    // this.startS3Client();
+
     if (!this.s3Info.bucket || !this.s3Info.prefix) {
-      User.getResourceS3prefix(this.resourceId).then((s3info) => {
-        this.s3Info = s3info;
-        this.s3Info.prefix = `${this.resourceId}/data/contents/`; // TODO: overriding wrong api response value
-      });
+      try {
+        const s3info = await User.getResourceS3prefix(this.resourceId);
+        if (s3info) {
+          this.s3Info = s3info;
+          this.s3Info.prefix = `${this.resourceId}/data/contents/`; // TODO: overriding wrong api response value
+        }
+      } catch (e) {
+        this.isLoadingFiles = false;
+        this.isFetchingMetadata = false;
+      }
     }
 
     this.startS3Client();
@@ -459,7 +475,7 @@ class App extends Vue {
       Object.prototype.hasOwnProperty.call(i, "children"),
     ) as IFolder[];
 
-    const basePrefix = `${this.resourceId}/data/contents/${this.currentPath}`;
+    // const basePrefix = `${this.resourceId}/data/contents/${this.currentPath}`;
 
     // compute folder paths
     let folderPaths = foldersToUpload
