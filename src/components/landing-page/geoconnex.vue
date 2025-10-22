@@ -194,8 +194,8 @@
                       </template>
                       <template v-else>
                           <v-list-item-content>
-                              <v-list-item-title v-html="data.item.NAME">
-                                  <div style="display:none;">{{ data.item.relative_id }}</div>
+                              <v-list-item-title>
+                                  <div style="display:none;">{{ data.item.NAME }}</div>
                                   <!-- Could add data.item.properties to make them searchable -->
                               </v-list-item-title>
                               <v-list-item-subtitle v-html="data.item.relative_id"></v-list-item-subtitle>
@@ -473,10 +473,6 @@ class GeoConnex extends Vue {
   }
   featureNameMap = {}
 
-  ////// Resource-level data //////
-  resShortId = SHORT_ID
-  metadataRelations = GEOSPATIAL_RELATIONS
-
   ////// Fetching and cacheing //////
   geoCache = null
   cacheName = "geoconnexCache"
@@ -591,7 +587,7 @@ class GeoConnex extends Vue {
     geoconnexApp.configureLogging();
     if (
       geoconnexApp.resMode == "Edit" ||
-      geoconnexApp.metadataRelations.length > 0
+      geoconnexApp.jsonData.relation.length > 0
     ) {
       geoconnexApp.geoCache = await caches.open(geoconnexApp.cacheName);
       geoconnexApp.initializeLeafletMap();
@@ -619,7 +615,7 @@ class GeoConnex extends Vue {
     const geoconnexApp = this;
     try {
       const promises = [];
-      for (const relation of geoconnexApp.metadataRelations) {
+      for (const relation of geoconnexApp.jsonData.relation) {
         if (this.isGeoconnexUrl(relation.value)) {
           promises.push(geoconnexApp.fetchSingleFeature(relation));
         } else {
@@ -680,7 +676,7 @@ class GeoConnex extends Vue {
   }
   saveFeatureToResMetadata(feature) {
     const geoconnexApp = this;
-    const url = `/hsapi/_internal/${geoconnexApp.resShortId}/geospatialrelation/add-metadata/`;
+    const url = `/hsapi/_internal/${geoconnexApp.jsonData._id}/geospatialrelation/add-metadata/`;
     const data = {
       text: feature.text || feature,
       value: feature.uri ? feature.uri : feature,
@@ -730,7 +726,7 @@ class GeoConnex extends Vue {
     
     for (const relation of relations) {
       if (relation.id) {
-        const url = `/hsapi/_internal/${geoconnexApp.resShortId}/geospatialrelation/${relation.id}/delete-metadata/`;
+        const url = `/hsapi/_internal/${geoconnexApp.jsonData._id}/geospatialrelation/${relation.id}/delete-metadata/`;
         
         fetch(url, {
           method: "POST",
