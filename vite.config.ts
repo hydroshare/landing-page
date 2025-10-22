@@ -143,7 +143,7 @@ export default defineConfig(({ mode }) => {
       //   clientPort: 443,
       // },
       allowedHosts: ["host.docker.internal"],
-      origin: `${base}`,
+      // origin: `${base}`,
     },
   };
 });

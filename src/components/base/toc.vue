@@ -1,7 +1,16 @@
 <template>
-  <v-navigation-drawer id="app-toc" location="left" width="256" floating sticky>
+  <v-navigation-drawer
+    id="app-toc"
+    location="left"
+    width="256"
+    floating
+    sticky
+    class="mt-4 ml-4"
+  >
     <template #prepend>
-      <div class="mt-4 mb-2 ms-4">Table of contents</div>
+      <div class="mt-4 mb-2 ms-4 text-body-2 text-medium-emphasis">
+        Table of contents
+      </div>
     </template>
 
     <ul class="ms-5">

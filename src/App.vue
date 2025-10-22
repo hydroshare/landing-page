@@ -187,7 +187,7 @@ import { APP_NAME } from "./constants";
 import { CzNotifications, Notifications } from "@cznethub/cznet-vue-core";
 import User from "@/models/user.model";
 import { addRouteTags } from "./modules/router";
-import { useRoute, RouteLocationRaw } from "vue-router";
+import { useRoute } from "vue-router";
 import { useRouter } from "vue-router";
 
 @Component({
