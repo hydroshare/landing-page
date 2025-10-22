@@ -74,59 +74,66 @@
                   :readonly="lockCollectionsInput"
                   v-model="collectionsSelectedToSearch"
                   :items="collections"
-                  :item-text="item => `${item.description} (${item.id})`"
+                  :item-title="item => `${item.description} (${item.id})`"
                   :hide-no-data="!collectionTypeahead"
                   multiple
                   placeholder="Type to narrow down options or select from the list"
                   :label="limitToSingleCollection ? '1. Choose a collection to search...' : '1. Choose collections to search...'"
                   :disabled="loadingCollections || searchingDescription !==''"
                   :loading="loadingCollections || searchingDescription !==''"
-                  outlined
+                  variant="outlined"
                   hide-details
                   :color="collectionColor"
                   :item-color="collectionColor"
-                  :search-input.sync="collectionTypeahead"
+                  @update:search="collectionTypeahead = $event"
                   :error="searchResultString !==''"
-                  return-object="true">
-                      <template v-slot:item="data">
-                          <template v-if="typeof data.item !== 'object'">
-                              {{ data.item }}
-                          </template>
-                          <template v-else>
-                                  <v-list-item-title v-html="`${data.item.description} (${data.item.id})`"></v-list-item-title>
-                          </template>
-                      </template>
-                      <template v-slot:no-data>
-                          <v-list-item>
-                                  <v-list-item-title>
-                                      No collections matching "<strong>{{ collectionTypeahead }}</strong>".
-                                  </v-list-item-title>
-                          </v-list-item>
-                      </template>
-                      <template v-slot:selection="{ attrs, item, parent, selected }">
-                          <div 
-                              v-if="limitToSingleCollection"
-                              v-bind="attrs" :input-value="selected">
-                                  {{ item.description }} ({{ item.id }})
-                          </div>
-                          <v-chip v-else v-bind="attrs" :input-value="selected" label outlined large>
-                              <span class="text-truncate">
-                                  {{ item.description }} ({{ item.id }})
-                              </span>
-                          <span v-show="!loadingCollections && searchingDescription==''" @click.stop="parent.selectItem(item)" class="glyphicon glyphicon-remove-circle"></span>
-                          </v-chip>
-                      </template>
-                      <template v-if="limitToSingleCollection && hasSearches" v-slot:append>
-                          <v-slide-x-reverse-transition
-                            mode="out-in"
-                          >
-                            <span
-                              :key="`icon-${hasSearches}`"
-                              v-show="!loadingCollections && searchingDescription==''"
-                              @click="clearMapOfSearches" class="glyphicon glyphicon-remove-circle text-muted"
-                            ></span>
-                          </v-slide-x-reverse-transition>
-                        </template>
+                  :return-object="true"
+                >
+                  <template v-slot:item="{ props, item }">
+                    <template v-if="typeof item.raw !== 'object'">
+                      {{ item.raw }}
+                    </template>
+                    <template v-else>
+                      <v-list-item-title v-html="`${item.raw.description} (${item.raw.id})`"></v-list-item-title>
+                    </template>
+                  </template>
+                  
+                  <template v-slot:no-data>
+                    <v-list-item>
+                      <v-list-item-title>
+                        No collections matching "<strong>{{ collectionTypeahead }}</strong>".
+                      </v-list-item-title>
+                    </v-list-item>
+                  </template>
+                  
+                  <template v-slot:selection="{ item, parent }">
+                    <div 
+                      v-if="limitToSingleCollection"
+                    >
+                      {{ item.raw.description }} ({{ item.raw.id }})
+                    </div>
+                    <v-chip v-else label variant="outlined" size="large">
+                      <span class="text-truncate">
+                        {{ item.raw.description }} ({{ item.raw.id }})
+                      </span>
+                      <span 
+                        v-show="!loadingCollections && searchingDescription==''" 
+                        @click.stop="parent.selectItem(item)" 
+                        class="mdi mdi-close-circle"
+                      ></span>
+                    </v-chip>
+                  </template>
+                  
+                  <template v-if="limitToSingleCollection && hasSearches" v-slot:append-inner>
+                    <v-slide-x-reverse-transition mode="out-in">
+                      <span
+                        :key="`icon-${hasSearches}`"
+                        v-show="!loadingCollections && searchingDescription==''"
+                        @click="clearMapOfSearches" 
+                        class="mdi mdi-close-circle text-muted"
+                      ></span>
+                    </v-slide-x-reverse-transition>
+                  </template>
               </v-autocomplete>
 
               <div v-if="!isLoading" class="small text-muted mt-2 my-4">

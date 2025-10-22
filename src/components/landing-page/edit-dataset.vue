@@ -88,6 +88,8 @@
         class="mt-14"
       />
 
+      <geoconnex :jsonData="data" resMode="Edit" />
+
       <div v-if="!isFetchingMetadata" class="d-flex gap-1">
         <v-spacer></v-spacer>
         <v-btn
@@ -171,6 +173,7 @@ import { stringify } from "@/utils";
 import { fetchResource, onFileDownload, readRootFolder } from "./shared";
 import HsUppy from "./hs-uppy.vue";
 import User from "@/models/user.model";
+import Geoconnex from "@/components/geoconnex.vue";
 
 interface FormError {
   title: string;

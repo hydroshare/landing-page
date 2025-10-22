@@ -1,4 +1,22 @@
 {
     "name": "a title",
-    "description": "an abstract"
+    "description": "an abstract",
+    "relation": [
+        {
+        "@context": {
+            "@vocab": "https://schema.org/",
+            "gsp": "http://www.opengis.net/ont/geosparql#",
+            "hyf": "https://www.opengis.net/def/schema/hy_features/hyf/",
+            "gnis_url": {
+                "_id": "subjectOf",
+                "@type": "@id"
+            }
+        },
+        "@id": "https://geoconnex.us/ref/hu04/1909",
+        "@type": "Place",
+        "name": "Lower Yukon River",
+        "hyf:containingCatchment": {"@id": "https://geoconnex.us/ref/hu02/19"},
+        "value": "https://geoconnex.us/ref/hu04/1909"
+        }
+    ]
 }
