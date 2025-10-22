@@ -814,7 +814,6 @@ import { EnumCreativeWorkStatus } from "@/types";
 import markdownit from "markdown-it";
 
 import CdSpatialCoverageMap from "@/components/search-results/cd.spatial-coverage-map.vue";
-import mockResource from "@/../example_metadata/dataset_metadata.json";
 
 const md = markdownit({
   linkify: true,
@@ -1136,7 +1135,6 @@ class LandingPage extends Vue {
       // this.data = resource.data;
       this.data = {
         ...this.data,
-        ...mockResource,
       };
       // @ts-expect-error The key property is generated when the component is initialized
       this.rootDirectory.children = resource.initialStructure || [];
