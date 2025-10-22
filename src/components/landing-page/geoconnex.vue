@@ -311,10 +311,11 @@
 <script lang="ts">
 // Recommend subscribing to notifications for PRs to https://github.com/internetofwater/geoconnex.us/
 const limitNumberOfFeaturesPerRequest = 1000;
-const geoconnexAppVerbose = false; // set true to increase console verbosity
+const geoconnexAppVerbose = true; // set true to increase console verbosity
 const geoconnexBaseURLQueryParam = `items?f=json&limit=${limitNumberOfFeaturesPerRequest}`;
 import { Component, Vue, toNative, Prop, Watch } from "vue-facing-decorator";
 import L from "leaflet";
+import "leaflet.fullscreen";
 
 @Component({
   name: "geoconnex",
@@ -1106,6 +1107,12 @@ class GeoConnex extends Vue {
       zoomControl: false,
       maxBounds: bounds,
       maxBoundsViscosity: 1.0,
+      // @ts-ignore added by 'leaflet.fullscreen'
+      fullscreenControl: true,
+      fullscreenControlOptions: {
+        position: "bottomright",
+        content: `<i class="fa-solid fa-expand" aria-hidden="true"></i>`,
+      },
     });
 
     const terrain = L.tileLayer(
@@ -1164,16 +1171,6 @@ class GeoConnex extends Vue {
     });
     geoconnexApp.layerControl.addTo(geoconnexApp.map);
 
-    L.control
-      .fullscreen({
-        position: "bottomright",
-        title: {
-          false: "Enter fullscreen",
-          true: "Exit Fullscreen",
-        },
-      })
-      .addTo(geoconnexApp.map);
-
     L.Control.GeoconnexRecenterButton = L.Control.extend({
       onAdd: function (map) {
         const recenterButton = L.DomUtil.create(
@@ -1182,7 +1179,11 @@ class GeoConnex extends Vue {
         );
         recenterButton.setAttribute("title", "Resize to features");
 
-        recenterButton.innerHTML = `<a role="button"><i class="fa fa-dot-circle-o fa-2x" style="padding-top:3px"></i></a>`;
+        recenterButton.innerHTML = `
+          <a role="button">
+            <i class="fa-regular fa-circle-dot" style="padding-top:3px"></i>
+          </a>
+        `;
 
         L.DomEvent.on(recenterButton, "click", (e) => {
           e.stopPropagation();
