@@ -69,11 +69,12 @@
     </div>
     <div class="row">
           <div v-if="resMode === 'Edit'" class="col-xs-12" :class="{'col-lg-4': showingMap}" id="geoconnex-controls-wrapper">
+            // TODO: :items="collections" -- need to populate collections
               <v-autocomplete
                   :menu-props="{closeOnClick: true, closeOnContentClick: true}"
                   :readonly="lockCollectionsInput"
                   v-model="collectionsSelectedToSearch"
-                  :items="collections"
+                  :items="collections || []"
                   :item-title="item => `${item.description} (${item.id})`"
                   :hide-no-data="!collectionTypeahead"
                   multiple
@@ -581,12 +582,14 @@ class GeoConnex extends Vue {
       await geoconnexApp.loadResourceMetadataRelations();
 
       if (geoconnexApp.resMode == "Edit") {
+        // TODO: make sure we get the spatial coverage correctly
         // wait for spatial coverage map to load before getting extent
-        await geoconnexApp
-          .until((_) => coverageMap)
-          .then(() => {
-            geoconnexApp.updateAppWithResSpatialExtent();
-          });
+        // await geoconnexApp
+        //  .until((_) => coverageMap)
+        //  .then(() => {
+        //    geoconnexApp.updateAppWithResSpatialExtent();
+        //  });
+        geoconnexApp.updateAppWithResSpatialExtent();
       }
       geoconnexApp.fitMapToFeatures({ group: null, overrideShouldFit: true });
     }
@@ -600,6 +603,8 @@ class GeoConnex extends Vue {
     const geoconnexApp = this;
     try {
       const promises = [];
+      console.log(geoconnexApp.jsonData)
+      alert("issue is that we are attempting to load metadata relations before the jsondata prop is set");
       for (const relation of geoconnexApp.jsonData.relation) {
         if (this.isGeoconnexUrl(relation.value)) {
           promises.push(geoconnexApp.fetchSingleFeature(relation));
@@ -904,8 +909,8 @@ class GeoConnex extends Vue {
     return geoconnexObj;
   }
   async fetchSingleFeature(relation) {
+    const geoconnexApp = this;
     try {
-      const geoconnexApp = this;
       const uri = relation.value;
       geoconnexApp.searchingDescription = uri;
       const relative_id = uri.split("ref/").pop();
@@ -1603,6 +1608,7 @@ class GeoConnex extends Vue {
     };
   }
   generateAppMessage(message, level = "danger") {
+    const geoconnexApp = this;
     if (level === "danger")
       message += " -- If this issue persists, please notify help@cuahsi.org.";
     if (!geoconnexApp.appMessages.some((m) => m.message === message)) {
@@ -1696,6 +1702,7 @@ class GeoConnex extends Vue {
     return this.isUrl(stringToTest) && stringToTest.indexOf("geoconnex") > -1;
   }
   trimString(longString, append = "") {
+    const geoconnexApp = this;
     return longString.length + append.length > geoconnexApp.stringLengthLimit
       ? `${longString.substring(
           0,
@@ -1704,6 +1711,7 @@ class GeoConnex extends Vue {
       : longString;
   }
   until(conditionFunction) {
+    const geoconnexApp = this;
     geoconnexApp.log(`Waiting for [ ${conditionFunction} ] to resolve...`);
     const poll = (resolve) => {
       if (conditionFunction()) {

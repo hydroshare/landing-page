@@ -369,6 +369,7 @@ class App extends Vue {
 
     if (resource) {
       this.data = resource.data;
+      alert("now the json data are loaded")
       // @ts-expect-error The key property is generated when the component is initialized
       this.rootDirectory.children = resource.initialStructure;
     } else {
