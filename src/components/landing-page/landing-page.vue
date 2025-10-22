@@ -1130,12 +1130,8 @@ class LandingPage extends Vue {
       `${this.s3Info.prefix}dataset_metadata.json`,
     );
 
-    // TODO: bypassing to use mock resource
-    if (resource || true) {
-      // this.data = resource.data;
-      this.data = {
-        ...this.data,
-      };
+    if (resource) {
+      this.data = resource.data;
       // @ts-expect-error The key property is generated when the component is initialized
       this.rootDirectory.children = resource.initialStructure || [];
       this.loadReadmeFile();
