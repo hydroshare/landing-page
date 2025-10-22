@@ -126,7 +126,8 @@
       "@id": "https://geoconnex.us/ref/hu04/1909",
       "@type": "Place",
       "name": "Lower Yukon River",
-      "hyf:containingCatchment": {"@id": "https://geoconnex.us/ref/hu02/19"}
+      "hyf:containingCatchment": {"@id": "https://geoconnex.us/ref/hu02/19"},
+      "value": "https://geoconnex.us/ref/hu04/1909"
     }
   ],
   "score": 0.0,
