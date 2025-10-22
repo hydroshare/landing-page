@@ -90,21 +90,17 @@
                   return-object="true">
                       <template v-slot:item="data">
                           <template v-if="typeof data.item !== 'object'">
-                              <v-list-tile-content v-text="data.item"></v-list-tile-content>
+                              {{ data.item }}
                           </template>
                           <template v-else>
-                              <v-list-item-content>
                                   <v-list-item-title v-html="`${data.item.description} (${data.item.id})`"></v-list-item-title>
-                              </v-list-item-content>
                           </template>
                       </template>
                       <template v-slot:no-data>
                           <v-list-item>
-                              <v-list-item-content>
                                   <v-list-item-title>
                                       No collections matching "<strong>{{ collectionTypeahead }}</strong>".
                                   </v-list-item-title>
-                              </v-list-item-content>
                           </v-list-item>
                       </template>
                       <template v-slot:selection="{ attrs, item, parent, selected }">
@@ -190,26 +186,22 @@
                   return-object="true">
                   <template v-slot:item="data">
                       <template v-if="typeof data.item !== 'object'">
-                          <v-list-tile-content v-text="data.item"></v-list-tile-content>
+                          {{ data.item }}
                       </template>
                       <template v-else>
-                          <v-list-item-content>
-                              <v-list-item-title>
-                                  <div style="display:none;">{{ data.item.NAME }}</div>
-                                  <!-- Could add data.item.properties to make them searchable -->
-                              </v-list-item-title>
-                              <v-list-item-subtitle v-html="data.item.relative_id"></v-list-item-subtitle>
-                          </v-list-item-content>
+                          <v-list-item-title>
+                              <div style="display:none;">{{ data.item.NAME }}</div>
+                              <!-- Could add data.item.properties to make them searchable -->
+                          </v-list-item-title>
+                          <v-list-item-subtitle v-html="data.item.relative_id"></v-list-item-subtitle>
                       </template>
                   </template>
                   <template v-slot:no-data>
                       <v-list-item>
-                          <v-list-item-content>
-                              <v-list-item-title>
-                                  No results matching "<strong>{{ itemTypeahead }}</strong>". 
-                                  Press <kbd>enter</kbd> to add <v-chip outlined><strong>{{ itemTypeahead }}</strong></v-chip> as a custom item.
-                              </v-list-item-title>
-                          </v-list-item-content>
+                          <v-list-item-title>
+                              No results matching "<strong>{{ itemTypeahead }}</strong>". 
+                              Press <kbd>enter</kbd> to add <v-chip outlined><strong>{{ itemTypeahead }}</strong></v-chip> as a custom item.
+                          </v-list-item-title>
                       </v-list-item>
                   </template>
                   <template v-slot:selection="{ attrs, item, parent, selected }">
