@@ -290,21 +290,6 @@
           </div>
       </div>
     </div>
-    <v-table>
-      <template v-slot:default>
-        <tbody>
-          <tr
-            v-for="(relation, index) in jsonData.relation"
-            :key="`hp-${index}`"
-          >
-            <td class="">Related Geospatial Feature</td>
-            <td>
-              <a :href="relation['@id']">{{ relation.name }}</a>
-            </td>
-          </tr>
-        </tbody>
-      </template>
-    </v-table>
   </v-card>
 </template>
 
