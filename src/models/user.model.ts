@@ -45,7 +45,7 @@ export default class User extends Model {
   private static _cachedS3Credentials: { access_key: string; secret_key: string } | null = null;
 
   // Base URL for HydroShare API - can be configured for different environments
-  private static readonly hydroshareHost = "https://beta.hydroshare.org";
+  private static readonly hydroshareHost = "http://localhost";
 
   static fields() {
     return {};
