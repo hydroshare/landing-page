@@ -88,7 +88,7 @@
         class="mt-14"
       />
 
-      <geoconnex :jsonData="data" resMode="Edit" />
+      <geoconnex v-if="wasLoaded" :jsonData="data" resMode="Edit" />
 
       <div v-if="!isFetchingMetadata" class="d-flex gap-1">
         <v-spacer></v-spacer>
@@ -215,7 +215,7 @@ class App extends Vue {
   currentPath: string = "";
   folderNameRegex = /^[-()\w\s]*$/;
   isFetchingMetadata = true;
-  wasLoaded = true;
+  wasLoaded = false;
 
   s3Client!: S3Client;
   s3Host: string = "https://s3.beta.hydroshare.org";
@@ -358,7 +358,6 @@ class App extends Vue {
   async loadResource() {
     this.isFetchingMetadata = true;
     this.isLoadingFiles = true;
-    this.wasLoaded = true;
 
     const resource = await fetchResource(
       this.resourceId,
@@ -369,9 +368,9 @@ class App extends Vue {
 
     if (resource) {
       this.data = resource.data;
-      alert("now the json data are loaded")
       // @ts-expect-error The key property is generated when the component is initialized
       this.rootDirectory.children = resource.initialStructure;
+      this.wasLoaded = true;
     } else {
       this.wasLoaded = false;
     }

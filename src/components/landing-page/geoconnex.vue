@@ -603,8 +603,6 @@ class GeoConnex extends Vue {
     const geoconnexApp = this;
     try {
       const promises = [];
-      console.log(geoconnexApp.jsonData)
-      alert("issue is that we are attempting to load metadata relations before the jsondata prop is set");
       for (const relation of geoconnexApp.jsonData.relation) {
         if (this.isGeoconnexUrl(relation.value)) {
           promises.push(geoconnexApp.fetchSingleFeature(relation));
