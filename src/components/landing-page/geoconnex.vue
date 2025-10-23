@@ -90,12 +90,12 @@
                   :return-object="true"
                 >
                   <template v-slot:item="{ props, item }">
-                    <template v-if="typeof item.raw !== 'object'">
-                      {{ item.raw }}
-                    </template>
-                    <template v-else>
-                      <v-list-item-title v-html="`${item.raw.description} (${item.raw.id})`"></v-list-item-title>
-                    </template>
+                    <v-list-item v-bind="props">
+                      <template>
+                        <v-list-item-title >{{ item }}</v-list-item-title>
+                        <v-list-item-subtitle>{{ item.raw.id }}</v-list-item-subtitle>
+                      </template>
+                    </v-list-item>
                   </template>
                   
                   <template v-slot:no-data>
