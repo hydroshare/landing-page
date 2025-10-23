@@ -92,7 +92,7 @@
                   <template v-slot:item="{ props, item }">
                     <v-list-item v-bind="props">
                       <template>
-                        <v-list-item-title >{{ item }}</v-list-item-title>
+                        <v-list-item-title>{{ item }}</v-list-item-title>
                         <v-list-item-subtitle>{{ item.raw.id }}</v-list-item-subtitle>
                       </template>
                     </v-list-item>
@@ -176,12 +176,13 @@
                       'opaque': !hasSearches && selectedReferenceFeatures.length === 0
                   }" 
                   :items="features"
+                  :item-title="item => item.NAME"
                   hide-no-data
                   allow-overflow="false"
                   chips
-                  deletable-chips
+                  closable-chips
                   multiple
-                  outlined
+                  variant="outlined"
                   hide-selected
                   :hide-no-data="!itemTypeahead"
                   label="2. Select related features to add to resource metadata"
@@ -191,17 +192,10 @@
                   :search-input.sync="itemTypeahead"
                   :rules="featureRules"
                   :return-object="true">
-                  <template v-slot:item="data">
-                      <template v-if="typeof data.item !== 'object'">
-                          {{ data.item }}
-                      </template>
-                      <template v-else>
-                          <v-list-item-title>
-                              <div style="display:none;">{{ data.item.NAME }}</div>
-                              <!-- Could add data.item.properties to make them searchable -->
-                          </v-list-item-title>
-                          <v-list-item-subtitle v-html="data.item.relative_id"></v-list-item-subtitle>
-                      </template>
+                  <template v-slot:item="{ props, item }">
+                    <v-list-item v-bind="props">
+                        <v-list-item-subtitle>{{ item.raw.relative_id }}</v-list-item-subtitle>
+                    </v-list-item>
                   </template>
                   <template v-slot:no-data>
                       <v-list-item>
@@ -211,13 +205,16 @@
                           </v-list-item-title>
                       </v-list-item>
                   </template>
-                  <template v-slot:selection="{ attrs, item, parent, selected }">
-                      <v-chip v-bind="attrs" :input-value="selected" outlined>
-                          <span class="text-truncate" :title="item.text.length > stringLengthLimit ? item.text : ''">
-                              {{ item.text }}
-                          </span>
-                          <span @click.stop="parent.selectItem(item)" class="glyphicon glyphicon-remove-circle"></span>
-                      </v-chip>
+                  <template v-slot:chip="{ props, item }">
+                    <v-chip
+                      v-bind="props"
+                    >
+                      <span class="text-truncate" :title="item.raw.text.length > stringLengthLimit ? item.raw.text : ''">
+                        {{ item.raw.text }}
+                      </span>
+                      <!-- TODO handle chip removal? -->
+                      <!-- <span @click.stop="parent.selectItem(item)" class="glyphicon glyphicon-remove-circle"></span> -->
+                  </v-chip>
                   </template>
                   <template v-slot:message="rulesMessage">
                       <div :style="`color: ${featureMessageColor}; margin-left: -12px;`">
