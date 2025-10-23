@@ -672,6 +672,7 @@ class GeoConnex extends Vue {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded', // or 'application/json' depending on your API
       },
+      credentials: 'include',
       body: new URLSearchParams(data) // or JSON.stringify(data) if using application/json
     })
     .then(response => {
@@ -717,6 +718,7 @@ class GeoConnex extends Vue {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
+          credentials: 'include',
           // Add empty body or any required data
           body: new URLSearchParams({}) // or omit body if not needed
         })
