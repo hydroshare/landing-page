@@ -69,12 +69,11 @@
     </div>
     <div class="row">
           <div v-if="resMode === 'Edit'" class="col-xs-12" :class="{'col-lg-4': showingMap}" id="geoconnex-controls-wrapper">
-            // TODO: :items="collections" -- need to populate collections
               <v-autocomplete
                   :menu-props="{closeOnClick: true, closeOnContentClick: true}"
                   :readonly="lockCollectionsInput"
                   v-model="collectionsSelectedToSearch"
-                  :items="collections || []"
+                  :items="collections"
                   :item-title="item => `${item.description} (${item.id})`"
                   :hide-no-data="!collectionTypeahead"
                   multiple
@@ -191,7 +190,7 @@
                   :loading="loadingRelations"
                   :search-input.sync="itemTypeahead"
                   :rules="featureRules"
-                  return-object="true">
+                  :return-object="true">
                   <template v-slot:item="data">
                       <template v-if="typeof data.item !== 'object'">
                           {{ data.item }}
@@ -447,7 +446,7 @@ class GeoConnex extends Vue {
   isLoading = false
   
   ////// Geoconnex collection and feature data structures + configuration //////
-  collections = null
+  collections = []
   features = []
   collectionsSelectedToSearch = []
   selectedReferenceFeatures = []
