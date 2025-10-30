@@ -1068,7 +1068,8 @@ class LandingPage extends Vue {
         const s3info = await User.getResourceS3prefix(this.resourceId);
         if (s3info) {
           this.s3Info = s3info;
-          this.s3Info.prefix = `${this.resourceId}/.hsmetadata/`; // TODO: overriding wrong api response value
+          // TODO: HSAPI needs update to return correct prefix
+          this.s3Info.prefix = `${this.resourceId}/.hsjsonld/`;
         }
       } catch (e) {
         this.isLoadingFiles = false;

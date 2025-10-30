@@ -313,21 +313,13 @@ class App extends Vue {
       }
     }
 
-    // if (!this.s3Info.bucket || !this.s3Info.prefix) {
-    //   User.getResourceS3prefix(this.resourceId).then((s3info) => {
-    //     this.s3Info = s3info;
-    //     this.s3Info.prefix = `${this.resourceId}/data/contents/`; // TODO: overriding wrong api response value
-    //   });
-    // }
-
-    // this.startS3Client();
-
     if (!this.s3Info.bucket || !this.s3Info.prefix) {
       try {
         const s3info = await User.getResourceS3prefix(this.resourceId);
         if (s3info) {
           this.s3Info = s3info;
-          this.s3Info.prefix = `${this.resourceId}/data/contents/`; // TODO: overriding wrong api response value
+          // TODO: hs endpoint is returning wrong prefix, overriding for now
+          this.s3Info.prefix = `${this.resourceId}/.hsmetadata/`;
         }
       } catch (e) {
         this.isLoadingFiles = false;
