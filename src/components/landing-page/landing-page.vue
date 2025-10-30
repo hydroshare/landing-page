@@ -814,7 +814,6 @@ import { EnumCreativeWorkStatus } from "@/types";
 import markdownit from "markdown-it";
 
 import CdSpatialCoverageMap from "@/components/search-results/cd.spatial-coverage-map.vue";
-import mockResource from "@/../example_metadata/dataset_metadata.json";
 
 const md = markdownit({
   linkify: true,
@@ -859,8 +858,8 @@ class LandingPage extends Vue {
   wasLoaded = true;
 
   s3Client!: S3Client;
-  s3Host: string = "https://s3.beta.hydroshare.org";
-  hydroshareHost: string = "https://beta.hydroshare.org";
+  s3Host: string = "http://localhost:9000";
+  hydroshareHost: string = "http://localhost";
 
   s3Info = {
     bucket: "",
@@ -1069,7 +1068,8 @@ class LandingPage extends Vue {
         const s3info = await User.getResourceS3prefix(this.resourceId);
         if (s3info) {
           this.s3Info = s3info;
-          this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
+          // TODO: HSAPI needs update to return correct prefix
+          this.s3Info.prefix = `${this.resourceId}/.hsjsonld/`;
         }
       } catch (e) {
         this.isLoadingFiles = false;
@@ -1131,13 +1131,8 @@ class LandingPage extends Vue {
       `${this.s3Info.prefix}dataset_metadata.json`,
     );
 
-    // TODO: bypassing to use mock resource
-    if (resource || true) {
-      // this.data = resource.data;
-      this.data = {
-        ...this.data,
-        ...mockResource,
-      };
+    if (resource) {
+      this.data = resource.data;
       // @ts-expect-error The key property is generated when the component is initialized
       this.rootDirectory.children = resource.initialStructure || [];
       this.loadReadmeFile();
@@ -1225,14 +1220,14 @@ class LandingPage extends Vue {
   async onRestoreDefaults() {
     this.isFetchingMetadata = true;
     this.isLoadingFiles = true;
-    this.s3Host = "https://s3.beta.hydroshare.org";
-    this.hydroshareHost = "https://beta.hydroshare.org";
+    this.s3Host = "http://localhost:9000";
+    this.hydroshareHost = "http://localhost";
 
     try {
       User.getResourceS3prefix(this.resourceId).then((s3info) => {
         if (s3info) {
           this.s3Info = s3info;
-          this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
+          this.s3Info.prefix = `${this.resourceId}/.hsmetadata/`; // TODO: overriding wrong api response value
         }
       });
       this.startS3Client();

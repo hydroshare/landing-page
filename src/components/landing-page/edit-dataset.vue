@@ -215,8 +215,8 @@ class App extends Vue {
   wasLoaded = true;
 
   s3Client!: S3Client;
-  s3Host: string = "https://s3.beta.hydroshare.org";
-  hydroshareHost: string = "https://beta.hydroshare.org";
+  s3Host: string = "http://localhost:9000";
+  hydroshareHost: string = "http://localhost";
   s3Info = {
     bucket: "",
     prefix: "",
@@ -313,21 +313,13 @@ class App extends Vue {
       }
     }
 
-    // if (!this.s3Info.bucket || !this.s3Info.prefix) {
-    //   User.getResourceS3prefix(this.resourceId).then((s3info) => {
-    //     this.s3Info = s3info;
-    //     this.s3Info.prefix = `${this.resourceId}/data/contents/`; // TODO: overriding wrong api response value
-    //   });
-    // }
-
-    // this.startS3Client();
-
     if (!this.s3Info.bucket || !this.s3Info.prefix) {
       try {
         const s3info = await User.getResourceS3prefix(this.resourceId);
         if (s3info) {
           this.s3Info = s3info;
-          this.s3Info.prefix = `${this.resourceId}/data/contents/`; // TODO: overriding wrong api response value
+          // TODO: hs endpoint is returning wrong prefix, overriding for now
+          this.s3Info.prefix = `${this.resourceId}/.hsmetadata/`;
         }
       } catch (e) {
         this.isLoadingFiles = false;
@@ -361,7 +353,7 @@ class App extends Vue {
       this.resourceId,
       this.s3Client,
       this.s3Info.bucket,
-      `${this.s3Info.prefix}hs_user_meta.json`,
+      `${this.s3Info.prefix}user_metadata.json`,
     );
 
     if (resource) {
@@ -399,12 +391,12 @@ class App extends Vue {
   async onRestoreDefaults() {
     this.isFetchingMetadata = true;
     this.isLoadingFiles = true;
-    this.s3Host = "https://s3.beta.hydroshare.org";
-    this.hydroshareHost = "https://beta.hydroshare.org";
+    this.s3Host = "http://localhost:9000";
+    this.hydroshareHost = "http://localhost";
     const s3Info = await User.getResourceS3prefix(this.resourceId);
     if (s3Info) {
       this.s3Info = s3Info;
-      this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
+      this.s3Info.prefix = `${this.resourceId}/.hsmetadata/`; // TODO: overriding wrong api response value
       this.startS3Client();
       this.loadResource();
     }
@@ -413,7 +405,7 @@ class App extends Vue {
   async submit() {
     try {
       const resourceId = this.resourceId;
-      const key = `${resourceId}/data/contents/hs_user_meta.json`;
+      const key = `${resourceId}/.hsmetadata/user_metadata.json`;
 
       const content = JSON.stringify(
         { name: this.data.name, description: this.data.description },

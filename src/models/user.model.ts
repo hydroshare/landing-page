@@ -45,7 +45,7 @@ export default class User extends Model {
   private static _cachedS3Credentials: { access_key: string; secret_key: string } | null = null;
 
   // Base URL for HydroShare API - can be configured for different environments
-  private static readonly hydroshareHost = "https://beta.hydroshare.org";
+  private static readonly hydroshareHost = "http://localhost";
 
   static fields() {
     return {};
@@ -148,7 +148,10 @@ export default class User extends Model {
         console.log("getResourceS3prefix response:", response.data);
         return {
           bucket: response.data.bucket,
-          prefix: response.data.prefix,
+          // prefix: response.data.prefix,
+          // TODO: HS needs update to return correct prefix
+          // currently it returns data/contents it should be resource_id/.hsjsonld/
+          prefix: `${res_id}/.hsjsonld/`,
         };
       }
     } catch (e: any) {

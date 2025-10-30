@@ -92,6 +92,10 @@ export default defineConfig(({ mode }) => {
             },
           ],
         },
+        workbox: {
+          maximumFileSizeToCacheInBytes: 4000000,
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        }
       }),
 
       // https://github.com/feat-agency/vite-plugin-webfont-dl
