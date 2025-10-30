@@ -43,7 +43,7 @@ class HsUppy extends Vue {
   @Prop({
     type: String,
     required: false,
-    default: "https://s3.beta.hydroshare.org",
+    default: "http://localhost:9000",
   })
   s3Host!: string;
 

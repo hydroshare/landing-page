@@ -25,6 +25,6 @@ export BUCKET=asdf
 
 mc alias set local-hydroshare http://localhost:9000 cuahsi devpassword
 docker exec -u hydro-service hydroshare python manage.py create_buckets asdf
-mc cp example_metadata/dataset_metadata.json local-hydroshare/$BUCKET/md/$DEFAULT_RESOURCE_ID/
-mc cp example_metadata/hs_user_meta.json local-hydroshare/$BUCKET/$DEFAULT_RESOURCE_ID/data/contents/
+mc cp example_metadata/dataset_metadata.json local-hydroshare/$BUCKET/$DEFAULT_RESOURCE_ID/.hsjsonld/
+mc cp example_metadata/user_metadata.json local-hydroshare/$BUCKET/$DEFAULT_RESOURCE_ID/.hsmetadata/
 ```
