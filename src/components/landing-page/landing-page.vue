@@ -311,8 +311,8 @@
 
           <div
             v-if="
-              data.document[0].associatedMedia &&
-              data.document[0].associatedMedia.length
+              data.associatedMedia &&
+              data.associatedMedia.length
             "
             class="mb-8 field"
             id="content"
@@ -752,7 +752,7 @@
 
             <v-card
               v-if="
-                data.document[0].citation && data.document[0].citation.length
+                data.citation && data.citation.length
               "
               class="mt-8"
               variant="flat"
@@ -760,7 +760,7 @@
             >
               <v-card-title class="pa-0 pb-2">How to cite</v-card-title>
               <v-card-text
-                v-for="(citation, index) of data.document[0].citation"
+                v-for="(citation, index) of data.citation"
                 :key="index"
                 class="pa-0 text-body-2 text-medium-emphasis"
               >
@@ -939,7 +939,7 @@ class LandingPage extends Vue {
 
   async loadReadmeFile() {
     // TODO: get from files loaded
-    const readmeFile = this.data.document[0].associatedMedia?.find(
+    const readmeFile = this.data.associatedMedia?.find(
       (f: any) =>
         f.name.toLowerCase() === "readme.md" ||
         f.name.toLowerCase() === "readme.txt",
@@ -977,8 +977,8 @@ class LandingPage extends Vue {
   get contentSize() {
     let total = 0;
 
-    if (this.data.document[0].associatedMedia?.length) {
-      total = this.data.document[0].associatedMedia.reduce(
+    if (this.data.associatedMedia?.length) {
+      total = this.data.associatedMedia.reduce(
         (acc: number, m: any, _index: number) => {
           let size = 0;
 
