@@ -1,5 +1,5 @@
 import path from "node:path";
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig } from "vite";
 import Vue from "@vitejs/plugin-vue";
 import generateSitemap from "vite-ssg-sitemap";
 import Components from "unplugin-vue-components/vite";
@@ -10,8 +10,7 @@ import { VitePWA } from "vite-plugin-pwa";
 import vuetify from "vite-plugin-vuetify";
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd());
-  const base = env.VITE_APP_BASE || "/landing/";
+  const base = "./" // Use relative base for nested static deployment
   return {
     // root: "./src",
     base: base,
@@ -129,6 +128,16 @@ export default defineConfig(({ mode }) => {
 
     build: {
       outDir: "./dist",
+      rollupOptions: {
+        output: {
+          // Assets will use relative paths like assets/file.js
+          assetFileNames: 'assets/[name]-[hash][extname]',
+          chunkFileNames: 'assets/[name]-[hash].js',
+          entryFileNames: 'assets/[name]-[hash].js',
+        }
+      },
+      // Ensure assets use relative paths
+      assetsDir: 'assets',
     },
 
     server: {
