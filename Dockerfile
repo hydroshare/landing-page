@@ -1,7 +1,7 @@
 FROM node:24.3.0 as node_build
 
-# dockerfile builds will always set VITE_APP_BASE to /landing/
-ENV VITE_APP_BASE=/landing/
+ARG VITE_APP_BASE=/landing/
+ENV VITE_APP_BASE=${VITE_APP_BASE}
 
 WORKDIR /app
 COPY package.json .
