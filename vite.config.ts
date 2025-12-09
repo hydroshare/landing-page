@@ -11,7 +11,7 @@ import vuetify from "vite-plugin-vuetify";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
-  const base = env.VITE_APP_BASE || "/resource/";
+  const base = env.VITE_APP_BASE || "/landing/";
   return {
     // root: "./src",
     base: base,
