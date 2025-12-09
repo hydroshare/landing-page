@@ -4,12 +4,11 @@ ARG VITE_APP_API_URL
 ARG VITE_APP_NAME
 ARG VITE_APP_ORIGIN
 WORKDIR /app
-COPY . .
+COPY package*.json ./
 RUN npm install
+COPY . .
 RUN npm run build-prod
 
-FROM nginx:1.23.1 as production-stage
-RUN mkdir /app
-COPY --from=build-stage /app/dist /app
-COPY --from=build-stage /app/nginx.conf /etc/nginx/nginx.conf
-EXPOSE 5004
+FROM caddy:2-alpine
+COPY --from=build-stage /app/dist /usr/share/caddy
+COPY Caddyfile /etc/caddy/Caddyfile
