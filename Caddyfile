@@ -1,19 +1,10 @@
 :80 {
     root * /usr/share/caddy
-    encode gzip zstd
+    encode gzip
     
-    # Serve static files
+    # Try to serve static files
     file_server
     
-    # For Vue Router history mode
-    @notStatic {
-        file {
-            try_files {path} /index.html
-        }
-    }
-    
-    rewrite @notStatic /index.html
-    
-    # Handle /landing/GUID pattern
-    try_files {path} /landing/{path} /index.html
+    # Fallback to index.html for Vue Router
+    try_files {path} /index.html
 }
