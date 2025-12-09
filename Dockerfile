@@ -1,14 +1,24 @@
-FROM node:23 as build-stage
-ARG VITE_APP_BASE
-ARG VITE_APP_API_URL
-ARG VITE_APP_NAME
-ARG VITE_APP_ORIGIN
+FROM node:24.3.0 as node_build
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build-prod
+COPY package.json .
+COPY package-lock.json .
 
-FROM caddy:2-alpine
-COPY --from=build-stage /app/dist /usr/share/caddy
+RUN npm install
+ADD ./ ./
+RUN npm run build
+
+# Production layer
+FROM caddy:2.7.6-alpine as prod
+
+COPY docker-entrypoint.sh /usr/local/bin/
+
+# Copy config
 COPY Caddyfile /etc/caddy/Caddyfile
+
+# Copy source dist
+COPY --from=node_build /app/dist /srv/landing
+
+EXPOSE 80
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile"]
