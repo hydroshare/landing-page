@@ -6,13 +6,14 @@ import Components from "unplugin-vue-components/vite";
 import AutoImport from "unplugin-auto-import/vite";
 import VueMacros from "unplugin-vue-macros/vite";
 import { VitePWA } from "vite-plugin-pwa";
-// import WebfontDownload from "vite-plugin-webfont-dl";
 import vuetify from "vite-plugin-vuetify";
 
 export default defineConfig(({ mode }) => {
-  const base = "./" // Use relative base for nested static deployment
+  // Use a placeholder that will be replaced at runtime
+  const base = import.meta.env.VITE_APP_BASE || 'VITE_APP_BASE_PLACEHOLDER';
+  
   return {
-    // root: "./src",
+    // Placeholder that will be replaced at runtime
     base: base,
     envDir: "./",
     resolve: {

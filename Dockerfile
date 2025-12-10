@@ -1,6 +1,7 @@
 FROM node:24.3.0 as node_build
 
-ARG VITE_APP_BASE=/landing/
+# Build with the placeholder as the base
+ARG VITE_APP_BASE=VITE_APP_BASE_PLACEHOLDER
 ENV VITE_APP_BASE=${VITE_APP_BASE}
 
 WORKDIR /app
@@ -14,7 +15,10 @@ RUN npm run build
 # Production layer
 FROM caddy:2.7.6-alpine as prod
 
+RUN apk add --no-cache bash
+
 COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Copy config
 COPY Caddyfile /etc/caddy/Caddyfile
