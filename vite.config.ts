@@ -10,8 +10,13 @@ import vuetify from "vite-plugin-vuetify";
 
 export default defineConfig(({ mode }) => {
   // Use a placeholder that will be replaced at runtime
-  const base = '/VITE_APP_BASE_PLACEHOLDER/';
-  
+  let base = '/VITE_APP_BASE_PLACEHOLDER/';
+
+  // during development mode, we don't have the runtime replacement, so use a fixed base
+  if (mode === 'development') {
+    console.log("Using dev build base /landing/");
+    base = "/landing/";
+  }
   return {
     // Placeholder that will be replaced at runtime
     base: base,
