@@ -897,8 +897,8 @@ class LandingPage extends Vue {
   wasLoaded = true;
 
   s3Client!: S3Client;
-  s3Host: string = "http://localhost:9000";
-  hydroshareHost: string = "http://localhost";
+  s3Host: string = DEFAULT_S3_HOST;
+  hydroshareHost: string = DEFAULT_HYDROSHARE_HOST;
 
   s3Info = {
     bucket: "",
