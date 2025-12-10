@@ -20,8 +20,8 @@ RUN apk add --no-cache bash
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Copy config
-COPY Caddyfile /etc/caddy/Caddyfile
+# Copy config template
+COPY Caddyfile.template /etc/caddy/Caddyfile.template
 
 # Copy source dist
 COPY --from=node_build /app/dist /srv/landing
@@ -29,4 +29,4 @@ COPY --from=node_build /app/dist /srv/landing
 EXPOSE 80
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile"]
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]

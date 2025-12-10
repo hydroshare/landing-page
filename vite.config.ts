@@ -10,7 +10,7 @@ import vuetify from "vite-plugin-vuetify";
 
 export default defineConfig(({ mode }) => {
   // Use a placeholder that will be replaced at runtime
-  const base = import.meta.env.VITE_APP_BASE || 'VITE_APP_BASE_PLACEHOLDER';
+  const base = '/VITE_APP_BASE_PLACEHOLDER/';
   
   return {
     // Placeholder that will be replaced at runtime

@@ -1,6 +1,0 @@
-:80 {
-  handle {
-    root * /srv/landing
-    file_server
-  }
-}
