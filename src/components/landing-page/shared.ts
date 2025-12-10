@@ -1,8 +1,19 @@
-import { _Object, CommonPrefix, GetObjectCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
+import {
+  _Object,
+  CommonPrefix,
+  GetObjectCommand,
+  ListObjectsV2Command,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { Notifications } from "@cznethub/cznet-vue-core";
 import { IFile, IFolder } from "@cznethub/cznet-vue-core/dist/types";
 
-export const onFileDownload = async (items: (IFile | IFolder)[], resourceId: string, s3Client: S3Client, bucket: string) => {
+export const onFileDownload = async (
+  items: (IFile | IFolder)[],
+  resourceId: string,
+  s3Client: S3Client,
+  bucket: string,
+) => {
   try {
     for (let item of items) {
       const basePrefix = `${resourceId}/data/contents/`;
@@ -35,14 +46,20 @@ export const onFileDownload = async (items: (IFile | IFolder)[], resourceId: str
       type: "error",
     });
   }
-}
+};
 
-export const readRootFolder = async (path: string, S3Client: S3Client, bucket: string): Promise<Partial<IFile | IFolder>[]> => {
+export const readRootFolder = async (
+  path: string,
+  S3Client: S3Client,
+  bucket: string,
+): Promise<Partial<IFile | IFolder>[]> => {
   return _readFolderRecursive(path, S3Client, bucket);
-}
+};
 
 export const _readFolderRecursive = async (
-  path: string, s3Client: S3Client, bucket: string
+  path: string,
+  s3Client: S3Client,
+  bucket: string,
 ): Promise<Partial<IFile | IFolder>[]> => {
   try {
     const command = new ListObjectsV2Command({
@@ -58,8 +75,7 @@ export const _readFolderRecursive = async (
     // TODO: Parse out ignored files using new MIME type
     // FILES
     if (s3Response.Contents) {
-      files = s3Response.Contents
-        .filter(f => f.Key !== path)  // Filter out current directory file marker
+      files = s3Response.Contents.filter((f) => f.Key !== path) // Filter out current directory file marker
         .map((f: _Object, _index: number) => {
           return {
             name: f.Key?.replace(path, ""),
@@ -123,10 +139,15 @@ export const _readFolderRecursive = async (
   }
 
   return [];
-}
+};
 
-export const fetchResource = async (resourceId: string, s3Client: S3Client, bucket: string, key: string) => {
-  let data, initialStructure
+export const fetchResource = async (
+  resourceId: string,
+  s3Client: S3Client,
+  bucket: string,
+  key: string,
+) => {
+  let data, initialStructure;
 
   try {
     console.log(`Fetching metadata from S3: ${bucket}/${key}`);
@@ -137,11 +158,10 @@ export const fetchResource = async (resourceId: string, s3Client: S3Client, buck
 
     try {
       data = JSON.parse(bodyContents || "");
-      // this.data = parsed;
       console.log(`Form data loaded from ${bucket}/${key}`);
     } catch (error) {
       console.warn("JSON parse failed, loading defaults:", error);
-      return false
+      return false;
       // data = { ...this.defaults };
     }
 
@@ -157,9 +177,9 @@ export const fetchResource = async (resourceId: string, s3Client: S3Client, buck
         type: "error",
         location: "top center",
       });
-      return false
+      return false;
     }
-    return { data, initialStructure }
+    return { data, initialStructure };
   } catch (error) {
     console.error("S3 fetch failed:", error);
     // this.data = { ...this.defaults };
@@ -168,6 +188,6 @@ export const fetchResource = async (resourceId: string, s3Client: S3Client, buck
       message: "Failed to load metadata from S3.",
       type: "error",
     });
-    return false
+    return false;
   }
-}
+};

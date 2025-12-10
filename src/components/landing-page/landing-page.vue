@@ -1,18 +1,17 @@
 <template>
   <v-container>
-    <v-skeleton-loader
-      v-if="isFetchingMetadata"
-      type="card"
-    ></v-skeleton-loader>
+    <h4
+      v-if="!isFetchingMetadata && wasLoaded"
+      id="overview"
+      class="text-h6 font-weight-medium mb-2"
+    >
+      {{ data.name }}
+    </h4>
 
-    <template v-if="!isFetchingMetadata && wasLoaded">
-      <h4 id="overview" class="text-h6 font-weight-medium mb-2">
-        {{ data.name }}
-      </h4>
-
-      <div
-        class="d-flex justify-space-between mb-2 flex-column flex-sm-row align-normal align-sm-end"
-      >
+    <div
+      class="d-flex justify-space-between mb-2 flex-column flex-sm-row align-normal align-sm-end"
+    >
+      <template v-if="!isLoadingFiles && !isFetchingMetadata && wasLoaded">
         <div v-if="data.creativeWorkStatus || data.dateModified">
           <v-chip
             v-if="data.creativeWorkStatus"
@@ -36,54 +35,61 @@
             </span>
           </template>
         </div>
+      </template>
 
+      <v-spacer></v-spacer>
+      <div class="d-flex gap-1">
         <v-spacer></v-spacer>
-        <div class="d-flex gap-1">
-          <v-spacer></v-spacer>
-          <template v-if="!isLoadingFiles && !isFetchingMetadata">
-            <v-menu width="500" :close-on-content-click="false">
-              <template v-slot:activator="{ props }">
-                <v-btn
-                  size="small"
-                  v-bind="props"
-                  color="primary"
-                  prepend-icon="mdi-cog"
-                  variant="plain"
-                  >Settings</v-btn
-                >
-              </template>
-              <v-card>
-                <v-card-title
-                  class="bg-grey-lighten-3 text-body-1 text-medium-emphasis"
-                  >Settings</v-card-title
-                >
-                <v-divider></v-divider>
-                <v-card-text flat>
-                  <s3-form
-                    :prefix="s3Info.prefix"
-                    :bucket="s3Info.bucket"
-                    :s3-host="s3Host"
-                    :hydroshare-host="hydroshareHost"
-                    :accessKey="accessKey"
-                    :secret-key="secretKey"
-                    @apply-changes="onS3FormUpdate"
-                    @restore-defaults="onRestoreDefaults"
-                  ></s3-form>
-                </v-card-text>
-              </v-card>
-            </v-menu>
 
+        <v-menu width="500" :close-on-content-click="false">
+          <template v-slot:activator="{ props }">
             <v-btn
               size="small"
+              v-bind="props"
               color="primary"
-              prepend-icon="mdi-pen"
-              variant="outlined"
-              @click="$router.push({ name: 'edit-dataset' })"
-              >Edit</v-btn
+              prepend-icon="mdi-cog"
+              variant="plain"
+              >Settings</v-btn
             >
           </template>
-        </div>
+          <v-card>
+            <v-card-title
+              class="bg-grey-lighten-3 text-body-1 text-medium-emphasis"
+              >Settings</v-card-title
+            >
+            <v-divider></v-divider>
+            <v-card-text flat>
+              <s3-form
+                :prefix="s3Info.prefix"
+                :bucket="s3Info.bucket"
+                :s3-host="s3Host"
+                :hydroshare-host="hydroshareHost"
+                :accessKey="accessKey"
+                :secret-key="secretKey"
+                @apply-changes="onS3FormUpdate"
+                @restore-defaults="onRestoreDefaults"
+              ></s3-form>
+            </v-card-text>
+          </v-card>
+        </v-menu>
+
+        <v-btn
+          size="small"
+          color="primary"
+          prepend-icon="mdi-pen"
+          variant="outlined"
+          @click="$router.push({ name: 'edit-dataset' })"
+          >Edit</v-btn
+        >
       </div>
+    </div>
+
+    <v-skeleton-loader
+      v-if="isFetchingMetadata"
+      type="card"
+    ></v-skeleton-loader>
+
+    <template v-if="!isFetchingMetadata && wasLoaded">
       <v-divider class="my-4"></v-divider>
 
       <div class="d-flex gap-2">
@@ -117,10 +123,16 @@
                       </div>
                     </span>
                   </template>
-                  <v-card v-if="creator['type'] == 'Person'" width="auto">
-                    <v-card-title class="text-body-1">
-                      <v-icon class="mr-2">mdi-account-outline</v-icon>
-                      {{ creator.name }}
+                  <v-card
+                    v-if="creator['type'] == 'Person'"
+                    width="auto"
+                    min-width="300"
+                  >
+                    <v-card-title
+                      class="text-body-1 d-flex align-center bg-grey-lighten-5"
+                    >
+                      <v-icon class="mr-1">mdi-account-outline</v-icon>
+                      <span>{{ creator.name }}</span>
                     </v-card-title>
                     <v-divider></v-divider>
 
@@ -137,11 +149,9 @@
                             title="Email address"
                             icon="mdi-email-outline"
                           />
-                          <div class="d-flex align-center gap-1">
-                            <span class="text-medium-emphasis">Email:</span>
-                            {{ creator.email }}
-                          </div>
+                          <div class="text-medium-emphasis">Email</div>
                         </div>
+                        <div>{{ creator.email }}</div>
                       </div>
                       <div
                         v-if="creator.identifier"
@@ -166,21 +176,20 @@
                             mdi-domain
                           </v-icon>
                           <div class="d-flex align-center gap-1">
-                            <span class="text-medium-emphasis"
-                              >Affiliation:</span
-                            >
-                            <div v-if="creator.affiliation.name">
-                              <span
-                                v-if="creator.affiliation.url"
-                                class="d-inline-flex align-baseline"
-                              >
-                                <a :href="creator.affiliation.url">{{
-                                  creator.affiliation.name
-                                }}</a>
-                              </span>
-                              <span v-else>{{ creator.affiliation.name }}</span>
-                            </div>
+                            <div class="text-medium-emphasis">Affiliation</div>
                           </div>
+                        </div>
+
+                        <div v-if="creator.affiliation.name">
+                          <span
+                            v-if="creator.affiliation.url"
+                            class="d-inline-flex align-baseline"
+                          >
+                            <a :href="creator.affiliation.url">{{
+                              creator.affiliation.name
+                            }}</a>
+                          </span>
+                          <span v-else>{{ creator.affiliation.name }}</span>
                         </div>
 
                         <div v-if="creator.affiliation.address">
@@ -215,7 +224,11 @@
               </template>
 
               <div v-bind="infoLabelAttr">Resource Type:</div>
-              <div v-bind="infoValueAttr">{{ data["@type"] }}</div>
+              <div v-bind="infoValueAttr">
+                {{
+                  resourceTypeLabels[data.additionalType] || data.additionalType
+                }}
+              </div>
 
               <template v-if="contentSize">
                 <div v-bind="infoLabelAttr">Resource Size:</div>
@@ -267,10 +280,9 @@
             </v-col>
           </v-row>
 
-          <div class="mb-8 field" id="description">
+          <div class="mb-8 field" id="abstract">
             <div v-bind="headingAttr">Abstract</div>
             <v-divider class="mb-2"></v-divider>
-            <!-- <p class="text-body-1 text-medium-emphasis">{{ data.description }}</p> -->
             <v-banner
               :text="data.description"
               :lines="showDescription ? undefined : 'three'"
@@ -310,10 +322,7 @@
           </div>
 
           <div
-            v-if="
-              data.associatedMedia &&
-              data.associatedMedia.length
-            "
+            v-if="data.associatedMedia && data.associatedMedia.length"
             class="mb-8 field"
             id="content"
           >
@@ -378,6 +387,32 @@
                 }}</pre>
               </v-card-text>
             </v-card>
+          </div>
+
+          <div
+            v-if="data.additional_metadata"
+            class="mb-8 field"
+            id="additionalMetadata"
+          >
+            <div v-bind="headingAttr">Additional Metadata</div>
+            <v-divider class="mb-2"></v-divider>
+            <v-table density="compact">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="key in Object.keys(data.additional_metadata)"
+                  :key="key"
+                >
+                  <td>{{ key }}</td>
+                  <td>{{ data.additional_metadata[key] }}</td>
+                </tr>
+              </tbody>
+            </v-table>
           </div>
 
           <div
@@ -751,9 +786,7 @@
             </v-card>
 
             <v-card
-              v-if="
-                data.citation && data.citation.length
-              "
+              v-if="data.citation && data.citation.length"
               class="mt-8"
               variant="flat"
               id="citation"
@@ -902,6 +935,9 @@ class LandingPage extends Vue {
   fileExplorerConfig = {
     isReadOnly: true, // Unused for now
     hasFolders: true,
+  };
+  resourceTypeLabels = {
+    CompositeResource: "Composite Resource",
   };
 
   startS3Client() {
@@ -1151,7 +1187,7 @@ class LandingPage extends Vue {
       { text: "Overview", to: "#overview" },
       {
         text: "Abstract",
-        to: "#description",
+        to: "#abstract",
         // isShown: (data: any) => !!data.description || false,
       },
       {
@@ -1175,6 +1211,11 @@ class LandingPage extends Vue {
         to: "#readme",
         level: 4,
         // isShown: (data: any) => data.associatedMedia?.length || false,
+      },
+      {
+        text: "Additional Metadata",
+        to: "#additionalMetadata",
+        // isShown: (data: any) => data.funding?.length || false,
       },
       {
         text: "Funding",
