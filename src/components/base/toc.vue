@@ -9,7 +9,7 @@
   >
     <template #prepend>
       <div class="mt-4 mb-2 ms-4 text-body-2 text-medium-emphasis">
-        Table of contents
+        Table of contents {{ activeItem }}
       </div>
     </template>
 
@@ -26,7 +26,7 @@
             :class="[
               'ps-3 text-medium-emphasis text-body-2 py-1 font-weight-regular',
               {
-                'text-primary router-link-active': '#' + activeItem === item.to,
+                'text-primary router-link-active': activeItem === item.to,
                 'ps-6': item.level === 3,
                 'ps-9': item.level === 4,
                 'ps-12': item.level === 5,
@@ -75,16 +75,27 @@ export default class Toc extends Vue {
   timeout = -1;
 
   created() {
+    if (this.$route.hash) {
+      this.internalScrolling = true;
+      this.activeItem = this.$route.hash;
+      setTimeout(() => {
+        this.internalScrolling = true;
+        const el = document.getElementById(
+          this.$route.hash.substr(1, this.$route.hash.length - 1),
+        );
+        el.scrollIntoView({ behavior: "smooth" });
+
+        this.internalScrolling = false;
+      }, 0);
+    }
     this.observer = new IntersectionObserver(
       (entries) => {
+        if (this.internalScrolling) return;
+        console.log("IntersectionObserver");
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            this.activeStack.push(entry.target.id);
-          } else if (this.activeStack.includes(entry.target.id)) {
-            this.activeStack.splice(
-              this.activeStack.indexOf(entry.target.id),
-              1,
-            );
+            console.log("#" + entry.target.id);
+            this.activeStack.push("#" + entry.target.id);
           }
         });
         this.activeItem =
@@ -101,21 +112,18 @@ export default class Toc extends Vue {
   @Watch("activeItem")
   async onActiveItemChange(val: string) {
     if (!val || this.internalScrolling) return;
+    console.log("onActiveItemChange");
 
     this.scrolling = true;
     const query = this.$route.query;
 
-    if (val === this.toc?.[0]?.to && this.$route.hash) {
-      this.$router.replace({ path: this.$route.path, query });
-    } else {
-      const item = this.toc?.find((v) => v.to === val);
-      if (item) {
-        await this.$router.replace({
-          path: this.$route.path,
-          hash: item.to,
-          query,
-        });
-      }
+    const item = this.toc?.find((v) => v.to === val);
+    if (item) {
+      await this.$router.replace({
+        path: this.$route.path,
+        hash: item.to,
+        query,
+      });
     }
     clearTimeout(this.timeout);
     this.timeout = window.setTimeout(() => {
@@ -145,6 +153,7 @@ export default class Toc extends Vue {
 
     this.internalScrolling = true;
     await this.$router.replace({ path: this.$route.path, hash });
+    this.activeItem = hash;
     setTimeout(() => {
       this.internalScrolling = false;
     }, 1000);
