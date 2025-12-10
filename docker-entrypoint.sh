@@ -31,6 +31,15 @@ find "$ROOT_DIR" -type f \( -name "*.js" -o -name "*.css" -o -name "*.html" -o -
         sed "s|${ESCAPED_PLACEHOLDER}|${ESCAPED_BASE}|g" "$file" > "${file}.tmp"
         mv "${file}.tmp" "$file"
     fi
+    
+    # Also check for the escaped version that might appear in JavaScript strings
+    # Vite might encode the slash as \/
+    ESCAPED_PLACEHOLDER_SLASH=$(escape_sed "VITE_APP_BASE_PLACEHOLDER/")
+    if grep -q "${ESCAPED_PLACEHOLDER_SLASH}" "$file" 2>/dev/null; then
+        echo "Processing escaped placeholder in $file ..."
+        sed "s|${ESCAPED_PLACEHOLDER_SLASH}|${ESCAPED_BASE}|g" "$file" > "${file}.tmp"
+        mv "${file}.tmp" "$file"
+    fi
 done
 
 # Also replace in index.html specifically (just in case)
