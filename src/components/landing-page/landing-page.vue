@@ -813,6 +813,12 @@ import { useGoTo } from "vuetify";
 import { EnumCreativeWorkStatus } from "@/types";
 import markdownit from "markdown-it";
 
+import {
+  DEFAULT_S3_HOST,
+  DEFAULT_HYDROSHARE_HOST,
+  DEFAULT_S3_REGION
+} from "@/constants";
+
 import CdSpatialCoverageMap from "@/components/search-results/cd.spatial-coverage-map.vue";
 
 const md = markdownit({
@@ -900,7 +906,7 @@ class LandingPage extends Vue {
 
   startS3Client() {
     this.s3Client = new S3Client({
-      region: "us-central-2",
+      region: DEFAULT_S3_REGION,
       endpoint: this.s3Host,
       forcePathStyle: true,
       credentials: {
@@ -1220,8 +1226,8 @@ class LandingPage extends Vue {
   async onRestoreDefaults() {
     this.isFetchingMetadata = true;
     this.isLoadingFiles = true;
-    this.s3Host = "http://localhost:9000";
-    this.hydroshareHost = "http://localhost";
+    this.s3Host = DEFAULT_S3_HOST;
+    this.hydroshareHost = DEFAULT_HYDROSHARE_HOST;
 
     try {
       User.getResourceS3prefix(this.resourceId).then((s3info) => {

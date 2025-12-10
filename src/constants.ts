@@ -10,6 +10,10 @@ export const GOOGLE_PICKER_APP_ID = import.meta.env.VITE_APP_GOOGLE_PICKER_APP_I
 export const SUPPORT_EMAIL = import.meta.env.VITE_APP_SUPPORT_EMAIL || "";
 export const DEFAULT_TOAST_DURATION = 3500;
 
+export const DEFAULT_S3_HOST = import.meta.env.VITE_APP_DEFAULT_S3_HOST || "http://localhost:9000";
+export const DEFAULT_HYDROSHARE_HOST = import.meta.env.VITE_APP_DEFAULT_HYDROSHARE_HOST || "http://localhost";
+export const DEFAULT_S3_REGION = import.meta.env.VITE_APP_S3_REGION || "us-central-2";
+
 export const sameRouteNavigationErrorHandler = (e) => {
   // Ignore the vuex err regarding  navigating to the page they are already on.
   if (

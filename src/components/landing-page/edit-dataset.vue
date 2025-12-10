@@ -172,6 +172,12 @@ import { fetchResource, onFileDownload, readRootFolder } from "./shared";
 import HsUppy from "./hs-uppy.vue";
 import User from "@/models/user.model";
 
+import {
+  DEFAULT_S3_HOST,
+  DEFAULT_HYDROSHARE_HOST,
+  DEFAULT_S3_REGION
+} from "@/constants";
+
 interface FormError {
   title: string;
   message: string;
@@ -215,8 +221,8 @@ class App extends Vue {
   wasLoaded = true;
 
   s3Client!: S3Client;
-  s3Host: string = "http://localhost:9000";
-  hydroshareHost: string = "http://localhost";
+  s3Host: string = DEFAULT_S3_HOST;
+  hydroshareHost: string = DEFAULT_HYDROSHARE_HOST;
   s3Info = {
     bucket: "",
     prefix: "",
@@ -257,7 +263,7 @@ class App extends Vue {
 
   startS3Client() {
     this.s3Client = new S3Client({
-      region: "us-central-2",
+      region: DEFAULT_S3_REGION,
       endpoint: `${this.s3Host}`,
       forcePathStyle: true,
       credentials: {
@@ -391,8 +397,8 @@ class App extends Vue {
   async onRestoreDefaults() {
     this.isFetchingMetadata = true;
     this.isLoadingFiles = true;
-    this.s3Host = "http://localhost:9000";
-    this.hydroshareHost = "http://localhost";
+    this.s3Host = DEFAULT_S3_HOST;
+    this.hydroshareHost = DEFAULT_HYDROSHARE_HOST;
     const s3Info = await User.getResourceS3prefix(this.resourceId);
     if (s3Info) {
       this.s3Info = s3Info;
