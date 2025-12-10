@@ -1,15 +1,32 @@
-FROM node:23 as build-stage
-ARG VITE_APP_BASE
-ARG VITE_APP_API_URL
-ARG VITE_APP_NAME
-ARG VITE_APP_ORIGIN
-WORKDIR /app
-COPY . .
-RUN npm install
-RUN npm run build-prod
+FROM node:24.3.0 as node_build
 
-FROM nginx:1.23.1 as production-stage
-RUN mkdir /app
-COPY --from=build-stage /app/dist /app
-COPY --from=build-stage /app/nginx.conf /etc/nginx/nginx.conf
-EXPOSE 5004
+# Build with the placeholder as the base
+ARG VITE_APP_BASE=VITE_APP_BASE_PLACEHOLDER
+ENV VITE_APP_BASE=${VITE_APP_BASE}
+
+WORKDIR /app
+COPY package.json .
+COPY package-lock.json .
+
+RUN npm install
+ADD ./ ./
+RUN npm run build
+
+# Production layer
+FROM caddy:2.7.6-alpine as prod
+
+RUN apk add --no-cache bash
+
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Copy config template
+COPY Caddyfile.template /etc/caddy/Caddyfile.template
+
+# Copy source dist
+COPY --from=node_build /app/dist /srv/landing
+
+EXPOSE 80
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
