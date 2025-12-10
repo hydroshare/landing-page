@@ -2,6 +2,7 @@ import type { RouteLocationRaw } from "vue-router";
 import { Notifications } from "@cznethub/cznet-vue-core";
 import { Model } from "@vuex-orm/core";
 import axios from "axios";
+import { DEFAULT_HYDROSHARE_HOST } from "@/constants";
 
 export interface ICzCurrentUserState {
   orcid: string;
@@ -45,7 +46,7 @@ export default class User extends Model {
   private static _cachedS3Credentials: { access_key: string; secret_key: string } | null = null;
 
   // Base URL for HydroShare API - can be configured for different environments
-  private static readonly hydroshareHost = "http://localhost";
+  private static readonly hydroshareHost = DEFAULT_HYDROSHARE_HOST;
 
   static fields() {
     return {};
