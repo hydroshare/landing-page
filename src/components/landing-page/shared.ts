@@ -159,7 +159,6 @@ export const fetchResource = async (
     try {
       data = JSON.parse(bodyContents || "");
       console.log(`Form data loaded from ${bucket}/${key}`);
-      console.log(data);
     } catch (error) {
       console.warn("JSON parse failed, loading defaults:", error);
       return false;

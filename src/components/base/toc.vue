@@ -91,10 +91,8 @@ export default class Toc extends Vue {
     this.observer = new IntersectionObserver(
       (entries) => {
         if (this.internalScrolling) return;
-        console.log("IntersectionObserver");
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            console.log("#" + entry.target.id);
             this.activeStack.push("#" + entry.target.id);
           }
         });
@@ -112,7 +110,6 @@ export default class Toc extends Vue {
   @Watch("activeItem")
   async onActiveItemChange(val: string) {
     if (!val || this.internalScrolling) return;
-    console.log("onActiveItemChange");
 
     this.scrolling = true;
     const query = this.$route.query;
