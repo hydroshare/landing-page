@@ -1283,7 +1283,7 @@ class LandingPage extends Vue {
       User.getResourceS3prefix(this.resourceId).then((s3info) => {
         if (s3info) {
           this.s3Info = s3info;
-          this.s3Info.prefix = `${this.resourceId}/.hsmetadata/`; // TODO: overriding wrong api response value
+          this.s3Info.prefix = `${this.resourceId}/.hsjsonld/`; // TODO: overriding wrong api response value
         }
       });
       this.startS3Client();
