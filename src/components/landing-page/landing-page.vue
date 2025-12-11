@@ -74,6 +74,7 @@
         </v-menu>
 
         <v-btn
+          v-if="!isFetchingMetadata && wasLoaded"
           size="small"
           color="primary"
           prepend-icon="mdi-pen"
@@ -1053,21 +1054,6 @@ class LandingPage extends Vue {
   }
 
   async created() {
-    if (!this.resourceId && this.$route?.params?.resourceId) {
-      this.resourceId = this.$route.params.resourceId as string;
-    }
-
-    // notify if the resourceId is not set
-    if (!this.resourceId) {
-      alert(
-        "No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.",
-      );
-      this.$router.push({
-        name: "landing",
-        params: { resourceId: "d7b526e24f7e449098b428ae9363f514" },
-      });
-    }
-
     // https://cuahsi.atlassian.net/browse/CAM-769
     // TODO: for now we store access and secret keys in localStorage
     // Replace when we update to Pinia
@@ -1090,6 +1076,24 @@ class LandingPage extends Vue {
           fetchCredentials();
         }
       });
+    }
+
+    if (!this.resourceId && this.$route?.params?.resourceId) {
+      this.resourceId = this.$route.params.resourceId as string;
+    }
+
+    // notify if the resourceId is not set
+    if (!this.resourceId) {
+      console.error("No resource ID provided in URL.");
+      this.isLoadingFiles = false;
+      this.isFetchingMetadata = false;
+      this.wasLoaded = false;
+      Notifications.toast({
+        title: "Error",
+        message: "No resource ID provided in URL.",
+        type: "error",
+      });
+      return;
     }
 
     if (!this.s3Info.bucket || !this.s3Info.prefix) {

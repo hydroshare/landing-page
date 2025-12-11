@@ -274,17 +274,6 @@ class App extends Vue {
   }
 
   async created() {
-    if (!this.resourceId && this.$route?.params?.resourceId) {
-      this.resourceId = this.$route.params.resourceId as string;
-    }
-
-    if (!this.resourceId) {
-      alert(
-        "No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.",
-      );
-      this.resourceId = "d7b526e24f7e449098b428ae9363f514";
-    }
-
     const fetchCredentials = async () => {
       const { access_key, secret_key } = await User.getOrCreateS3Credentials();
       this.accessKey = access_key;
@@ -303,6 +292,24 @@ class App extends Vue {
           fetchCredentials();
         }
       });
+    }
+
+    if (!this.resourceId && this.$route?.params?.resourceId) {
+      this.resourceId = this.$route.params.resourceId as string;
+    }
+
+    // notify if the resourceId is not set
+    if (!this.resourceId) {
+      console.error("No resource ID provided in URL.");
+      this.isLoadingFiles = false;
+      this.isFetchingMetadata = false;
+      this.wasLoaded = false;
+      Notifications.toast({
+        title: "Error",
+        message: "No resource ID provided in URL.",
+        type: "error",
+      });
+      return;
     }
 
     if (!this.s3Info.bucket || !this.s3Info.prefix) {
