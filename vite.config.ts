@@ -139,23 +139,15 @@ export default defineConfig(({ mode }) => {
       assetsDir: 'assets',
     },
 
-    server: {
-      host: true,
-      port: 5004,
-      // strictPort: true,
-      // proxy: {
-      //   "/sockjs-node": {
-      //     target: "ws://127.0.0.1:8081",
-      //     ws: true,
-      //   },
-      // },
-      // hmr: {
-      //   path: "/sockjs-node",
-      //   port: 8081,
-      //   clientPort: 443,
-      // },
-      allowedHosts: ["host.docker.internal"],
-      // origin: `${base}`,
-    },
+      server: {
+        host: '0.0.0.0',
+        port: 5004,
+        strictPort: true,
+        hmr: {
+          host: 'localhost',
+          port: 5004, // Same as dev server
+          clientPort: 80, // Browser connects through nginx on port 80
+        },
+      },
   };
 });
