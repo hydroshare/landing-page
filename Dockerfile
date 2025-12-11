@@ -1,8 +1,4 @@
-FROM node:24.3.0 as node_build
-
-# Build with the placeholder as the base
-ARG VITE_APP_BASE=VITE_APP_BASE_PLACEHOLDER
-ENV VITE_APP_BASE=${VITE_APP_BASE}
+FROM node:24.3.0 AS node_build
 
 WORKDIR /app
 COPY package.json .
@@ -10,10 +6,10 @@ COPY package-lock.json .
 
 RUN npm install
 ADD ./ ./
-RUN npm run build
+RUN npm run build-prod
 
 # Production layer
-FROM caddy:2.7.6-alpine as prod
+FROM caddy:2.7.6-alpine AS prod
 
 RUN apk add --no-cache bash
 

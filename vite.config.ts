@@ -1,5 +1,5 @@
 import path from "node:path";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import Vue from "@vitejs/plugin-vue";
 import generateSitemap from "vite-ssg-sitemap";
 import Components from "unplugin-vue-components/vite";
@@ -9,16 +9,9 @@ import { VitePWA } from "vite-plugin-pwa";
 import vuetify from "vite-plugin-vuetify";
 
 export default defineConfig(({ mode }) => {
-  // Use a placeholder that will be replaced at runtime
-  let base = '/VITE_APP_BASE_PLACEHOLDER/';
-
-  // during development mode, we don't have the runtime replacement, so use a fixed base
-  if (mode === 'development') {
-    console.log("Using dev build base /landing/");
-    base = "/landing/";
-  }
+  const env = loadEnv(mode, process.cwd());
+  const base = env.VITE_APP_BASE || "./";
   return {
-    // Placeholder that will be replaced at runtime
     base: base,
     envDir: "./",
     resolve: {

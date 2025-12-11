@@ -35,7 +35,6 @@ export const createApp = ViteSSG(
       } else if (savedPosition) return savedPosition
       else return { top: 0 }
     },
-    // Use the APP_BASE constant which will be replaced at runtime
     base: APP_BASE,
     // TODO: enable history mode and configure server to handle routes
     // history: createWebHistory(),

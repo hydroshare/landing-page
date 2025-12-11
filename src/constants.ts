@@ -1,18 +1,13 @@
-export const APP_BASE = import.meta.env.BASE_URL || "/landing/";
-export const APP_NAME = import.meta.env.VITE_APP_NAME || "";
-export const APP_URL = import.meta.env.VITE_APP_URL || "";
-export const LOGIN_URL = import.meta.env.VITE_APP_LOGIN_URL || "";
-export const CLIENT_ID = import.meta.env.VITE_APP_CLIENT_ID || "";
-export const COMPANION_URL = import.meta.env.VITE_APP_COMPANION_URL || "http://localhost/companion";
-export const GOOGLE_PICKER_CLIENT_ID = import.meta.env.VITE_APP_GOOGLE_PICKER_CLIENT_ID || "737951655407-p3d2b2bl2ln90g5plfj09e98bprk42da.apps.googleusercontent.com";
-export const GOOGLE_PICKER_API_KEY = import.meta.env.VITE_APP_GOOGLE_PICKER_API_KEY || "AIzaSyDEavRDQj6aB38b7RVL5qX1tEJPDuKH4Rc";
-export const GOOGLE_PICKER_APP_ID = import.meta.env.VITE_APP_GOOGLE_PICKER_APP_ID || "737951655407";
-export const SUPPORT_EMAIL = import.meta.env.VITE_APP_SUPPORT_EMAIL || "";
-export const DEFAULT_TOAST_DURATION = 3500;
-
-export const DEFAULT_S3_HOST = import.meta.env.VITE_APP_DEFAULT_S3_HOST || "http://localhost:9000";
-export const DEFAULT_HYDROSHARE_HOST = import.meta.env.VITE_APP_DEFAULT_HYDROSHARE_HOST || "http://localhost";
-export const DEFAULT_S3_REGION = import.meta.env.VITE_APP_S3_REGION || "us-central-2";
+export const APP_BASE = import.meta.env.VITE_APP_BASE;
+export const APP_NAME = import.meta.env.VITE_APP_NAME;
+export const APP_URL = import.meta.env.VITE_APP_URL;
+export const COMPANION_URL = import.meta.env.VITE_APP_COMPANION_URL;
+export const GOOGLE_PICKER_CLIENT_ID = import.meta.env.VITE_APP_GOOGLE_PICKER_CLIENT_ID;
+export const GOOGLE_PICKER_API_KEY = import.meta.env.VITE_APP_GOOGLE_PICKER_API_KEY;
+export const GOOGLE_PICKER_APP_ID = import.meta.env.VITE_APP_GOOGLE_PICKER_APP_ID;
+export const DEFAULT_S3_HOST = import.meta.env.VITE_APP_DEFAULT_S3_HOST;
+export const DEFAULT_HYDROSHARE_HOST = import.meta.env.VITE_APP_DEFAULT_HYDROSHARE_HOST;
+export const DEFAULT_S3_REGION = import.meta.env.VITE_APP_S3_REGION;
 
 export const sameRouteNavigationErrorHandler = (e) => {
   // Ignore the vuex err regarding  navigating to the page they are already on.
