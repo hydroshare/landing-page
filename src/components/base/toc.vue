@@ -9,7 +9,7 @@
   >
     <template #prepend>
       <div class="mt-4 mb-2 ms-4 text-body-2 text-medium-emphasis">
-        Table of contents {{ activeItem }}
+        Table of contents
       </div>
     </template>
 
@@ -83,7 +83,9 @@ export default class Toc extends Vue {
         const el = document.getElementById(
           this.$route.hash.substr(1, this.$route.hash.length - 1),
         );
-        el.scrollIntoView({ behavior: "smooth" });
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth" });
+        }
 
         this.internalScrolling = false;
       }, 0);

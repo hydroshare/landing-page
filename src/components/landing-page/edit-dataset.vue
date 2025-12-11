@@ -27,8 +27,8 @@
                 :bucket="s3Info.bucket"
                 :s3-host="s3Host"
                 :hydroshare-host="hydroshareHost"
-                :accessKey="accessKey"
-                :secret-key="secretKey"
+                :accessKey="credentials.accessKey"
+                :secret-key="credentials.secretKey"
                 @apply-changes="onS3FormUpdate"
                 @restore-defaults="onRestoreDefaults"
               ></s3-form>
@@ -65,8 +65,8 @@
         ref="hsUppyRef"
         :s3Info="s3Info"
         :s3Host="s3Host"
-        :accessKey="accessKey"
-        :secretKey="secretKey"
+        :accessKey="credentials.accessKey"
+        :secretKey="credentials.secretKey"
         :fileExplorer="fileExplorer"
       />
       <v-skeleton-loader class="mb-12" v-else type="card"></v-skeleton-loader>
@@ -175,7 +175,7 @@ import User from "@/models/user.model";
 import {
   DEFAULT_S3_HOST,
   DEFAULT_HYDROSHARE_HOST,
-  DEFAULT_S3_REGION
+  DEFAULT_S3_REGION,
 } from "@/constants";
 
 interface FormError {
@@ -209,9 +209,6 @@ class App extends Vue {
   errors: FormError[] = [];
   data: Record<string, any> = {};
   stringify = stringify;
-
-  accessKey = localStorage.getItem("s3AccessKey");
-  secretKey = localStorage.getItem("s3SecretKey");
 
   isLoadingFiles: boolean = true;
   isSubmitting: boolean = false;
@@ -261,35 +258,39 @@ class App extends Vue {
     hasFolders: true,
   };
 
+  get credentials() {
+    return User.$state.s3Credentials;
+  }
+
+  set credentials(cred) {
+    User.commit((state) => {
+      state.s3Credentials = cred;
+    });
+  }
+
   startS3Client() {
     this.s3Client = new S3Client({
       region: DEFAULT_S3_REGION,
-      endpoint: `${this.s3Host}`,
+      endpoint: this.s3Host,
       forcePathStyle: true,
       credentials: {
-        accessKeyId: this.accessKey,
-        secretAccessKey: this.secretKey,
+        accessKeyId: this.credentials.accessKey,
+        secretAccessKey: this.credentials.secretKey,
       },
     });
   }
 
   async created() {
-    const fetchCredentials = async () => {
-      const { access_key, secret_key } = await User.getOrCreateS3Credentials();
-      this.accessKey = access_key;
-      this.secretKey = secret_key;
-    };
-
     if (this.isLoggedIn) {
       console.log("user is already logged in, fetching S3 credentials");
-      fetchCredentials();
+      await User.getOrCreateS3Credentials();
     } else {
       console.log(
         "checking if we just returned from HydroShare login redirect",
       );
-      User.checkLoginStatus().then((loggedIn) => {
+      User.checkLoginStatus().then(async (loggedIn) => {
         if (loggedIn) {
-          fetchCredentials();
+          await User.getOrCreateS3Credentials();
         }
       });
     }
@@ -378,10 +379,10 @@ class App extends Vue {
     this.hydroshareHost = params.hydroshareHost;
     this.s3Host = params.s3Host;
 
-    this.secretKey = params.secretKey;
-    this.accessKey = params.accessKey;
-    localStorage.setItem("s3AccessKey", this.accessKey);
-    localStorage.setItem("s3SecretKey", this.secretKey);
+    this.credentials = {
+      accessKey: params.accessKey,
+      secretKey: params.secretKey,
+    };
 
     this.startS3Client();
     this.loadResource();
@@ -396,20 +397,13 @@ class App extends Vue {
     // reset S3 info
     this.s3Info.bucket = "";
     this.s3Info.prefix = "";
-    this.accessKey = "";
-    this.secretKey = "";
-    localStorage.removeItem("s3AccessKey");
-    localStorage.removeItem("s3SecretKey");
+    this.credentials = {
+      accessKey: "",
+      secretKey: "",
+    };
 
     // get new credentials
-    const creds = await User.getOrCreateS3Credentials();
-    if (creds) {
-      const { access_key, secret_key } = creds;
-      this.accessKey = access_key;
-      this.secretKey = secret_key;
-      localStorage.setItem("s3AccessKey", access_key);
-      localStorage.setItem("s3SecretKey", secret_key);
-    }
+    await User.getOrCreateS3Credentials();
 
     const s3Info = await User.getResourceS3prefix(this.resourceId);
     if (s3Info) {

@@ -64,8 +64,8 @@
                 :bucket="s3Info.bucket"
                 :s3-host="s3Host"
                 :hydroshare-host="hydroshareHost"
-                :accessKey="accessKey"
-                :secret-key="secretKey"
+                :accessKey="credentials.accessKey"
+                :secret-key="credentials.secretKey"
                 @apply-changes="onS3FormUpdate"
                 @restore-defaults="onRestoreDefaults"
               ></s3-form>
@@ -850,7 +850,7 @@ import markdownit from "markdown-it";
 import {
   DEFAULT_S3_HOST,
   DEFAULT_HYDROSHARE_HOST,
-  DEFAULT_S3_REGION
+  DEFAULT_S3_REGION,
 } from "@/constants";
 
 import CdSpatialCoverageMap from "@/components/search-results/cd.spatial-coverage-map.vue";
@@ -888,9 +888,6 @@ class LandingPage extends Vue {
 
   data: Record<string, any> = {};
   stringify = stringify;
-
-  accessKey = localStorage.getItem("s3AccessKey");
-  secretKey = localStorage.getItem("s3SecretKey");
 
   isLoadingFiles: boolean = true;
   currentPath: string = "";
@@ -947,8 +944,8 @@ class LandingPage extends Vue {
       endpoint: this.s3Host,
       forcePathStyle: true,
       credentials: {
-        accessKeyId: this.accessKey,
-        secretAccessKey: this.secretKey,
+        accessKeyId: this.credentials.accessKey,
+        secretAccessKey: this.credentials.secretKey,
       },
     });
   }
@@ -978,6 +975,16 @@ class LandingPage extends Vue {
   onCopy(text: string) {
     navigator.clipboard.writeText(text);
     Notifications.toast({ message: "Copied to clipboard", type: "info" });
+  }
+
+  get credentials() {
+    return User.$state.s3Credentials;
+  }
+
+  set credentials(cred) {
+    User.commit((state) => {
+      state.s3Credentials = cred;
+    });
   }
 
   async loadReadmeFile() {
@@ -1055,25 +1062,19 @@ class LandingPage extends Vue {
 
   async created() {
     // https://cuahsi.atlassian.net/browse/CAM-769
-    // TODO: for now we store access and secret keys in localStorage
+    // TODO: for now we store access and secret keys in User model
     // Replace when we update to Pinia
-
-    const fetchCredentials = async () => {
-      const { access_key, secret_key } = await User.getOrCreateS3Credentials();
-      this.accessKey = access_key;
-      this.secretKey = secret_key;
-    };
 
     if (this.isLoggedIn) {
       console.log("user is already logged in, fetching S3 credentials");
-      fetchCredentials();
+      await User.getOrCreateS3Credentials();
     } else {
       console.log(
         "checking if we just returned from HydroShare login redirect",
       );
-      User.checkLoginStatus().then((loggedIn) => {
+      User.checkLoginStatus().then(async (loggedIn) => {
         if (loggedIn) {
-          fetchCredentials();
+          await User.getOrCreateS3Credentials();
         }
       });
     }
@@ -1246,10 +1247,10 @@ class LandingPage extends Vue {
     this.hydroshareHost = params.hydroshareHost;
     this.s3Host = params.s3Host;
 
-    this.secretKey = params.secretKey;
-    this.accessKey = params.accessKey;
-    localStorage.setItem("s3AccessKey", this.accessKey);
-    localStorage.setItem("s3SecretKey", this.secretKey);
+    this.credentials = {
+      accessKey: params.accessKey,
+      secretKey: params.secretKey,
+    };
 
     this.startS3Client();
     this.loadResource();
@@ -1264,20 +1265,13 @@ class LandingPage extends Vue {
     // reset S3 info
     this.s3Info.bucket = "";
     this.s3Info.prefix = "";
-    this.accessKey = "";
-    this.secretKey = "";
-    localStorage.removeItem("s3AccessKey");
-    localStorage.removeItem("s3SecretKey");
+    this.credentials = {
+      accessKey: "",
+      secretKey: "",
+    };
 
     // get new credentials
-    const creds = await User.getOrCreateS3Credentials();
-    if (creds) {
-      const { access_key, secret_key } = creds;
-      this.accessKey = access_key;
-      this.secretKey = secret_key;
-      localStorage.setItem("s3AccessKey", access_key);
-      localStorage.setItem("s3SecretKey", secret_key);
-    }
+    await User.getOrCreateS3Credentials();
 
     try {
       User.getResourceS3prefix(this.resourceId).then((s3info) => {
