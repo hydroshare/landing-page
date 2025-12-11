@@ -210,8 +210,8 @@ class App extends Vue {
   data: Record<string, any> = {};
   stringify = stringify;
 
-  accessKey = localStorage.getItem("s3AccessKey") || "cuahsi";
-  secretKey = localStorage.getItem("s3SecretKey") || "devpassword";
+  accessKey = localStorage.getItem("s3AccessKey");
+  secretKey = localStorage.getItem("s3SecretKey");
 
   isLoadingFiles: boolean = true;
   isSubmitting: boolean = false;
@@ -305,20 +305,6 @@ class App extends Vue {
       });
     }
 
-    // temporary local storage for S3 keys (will move to Pinia later)
-    if (!this.accessKey || !this.secretKey) {
-      this.accessKey = prompt("Enter your S3 Access Key:") || "cuahsi";
-      this.secretKey = prompt("Enter your S3 Secret Key:") || "devpassword";
-
-      if (this.accessKey && this.secretKey) {
-        localStorage.setItem("s3AccessKey", this.accessKey);
-        localStorage.setItem("s3SecretKey", this.secretKey);
-      } else {
-        alert("Access key and secret key are required to proceed.");
-        return;
-      }
-    }
-
     if (!this.s3Info.bucket || !this.s3Info.prefix) {
       try {
         const s3info = await User.getResourceS3prefix(this.resourceId);
@@ -399,6 +385,25 @@ class App extends Vue {
     this.isLoadingFiles = true;
     this.s3Host = DEFAULT_S3_HOST;
     this.hydroshareHost = DEFAULT_HYDROSHARE_HOST;
+
+    // reset S3 info
+    this.s3Info.bucket = "";
+    this.s3Info.prefix = "";
+    this.accessKey = "";
+    this.secretKey = "";
+    localStorage.removeItem("s3AccessKey");
+    localStorage.removeItem("s3SecretKey");
+
+    // get new credentials
+    const creds = await User.getOrCreateS3Credentials();
+    if (creds) {
+      const { access_key, secret_key } = creds;
+      this.accessKey = access_key;
+      this.secretKey = secret_key;
+      localStorage.setItem("s3AccessKey", access_key);
+      localStorage.setItem("s3SecretKey", secret_key);
+    }
+
     const s3Info = await User.getResourceS3prefix(this.resourceId);
     if (s3Info) {
       this.s3Info = s3Info;
