@@ -1063,7 +1063,28 @@ class GeoConnex extends Vue {
         group: geoconnexApp.spatialExtentGroup,
         interactive: false,
       });
-      geoconnexApp.resSpatialExtentArea = L.GeometryUtil.geodesicArea(
+      
+      // Calculate area in square meters using spherical model
+      function calculateGeodesicArea(latLngs) {
+        let area = 0;
+        const len = latLngs.length;
+        
+        if (len < 3) return 0;
+        
+        for (let i = 0; i < len; i++) {
+          const p1 = latLngs[i];
+          const p2 = latLngs[(i + 1) % len];
+          
+          area += (L.Util.rad(p2.lng) - L.Util.rad(p1.lng)) * 
+                  (2 + Math.sin(L.Util.rad(p1.lat)) + 
+                  Math.sin(L.Util.rad(p2.lat)));
+        }
+        
+        area = area * 6378137 * 6378137 / 2;
+        return Math.abs(area);
+      }
+
+      geoconnexApp.resSpatialExtentArea = calculateGeodesicArea(
         rect.getLatLngs()[0]
       ); //sq meters
       if (fromPoint) {
@@ -1459,14 +1480,14 @@ class GeoConnex extends Vue {
     geoconnexApp.layerControl.collapse();
   }
   updateSpatialExtentType() {
-    console.warn("updateSpatialExtentType not implemented");
-    // const geoconnexApp = this;
-    // geoconnexApp.resSpatialType = null;
-    // const spatial_coverage_drawing = $("#coverageMap .leaflet-interactive");
-    // if (spatial_coverage_drawing.size() > 0) {
-    //   const checked = $("#div_id_type input:checked").val();
-    //   geoconnexApp.resSpatialType = checked || spatial_coverage_type;
-    // }
+    const geoconnexApp = this;
+    geoconnexApp.resSpatialType = null;
+    if (
+      !geoconnexApp.jsonData.spatialCoverage ||
+      !geoconnexApp.jsonData.spatialCoverage.type
+    )
+      return;
+    geoconnexApp.resSpatialType = geoconnexApp.jsonData.spatialCoverage.type;
   }
   updateAppWithResSpatialExtent() {
     const geoconnexApp = this;
