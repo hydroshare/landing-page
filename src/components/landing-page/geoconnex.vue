@@ -1198,8 +1198,7 @@ class GeoConnex extends Vue {
     // geoconnexApp.map.setView([41.850033, -87.6500523], 3);
     geoconnexApp.map.setView([30, 0], 1);
 
-    // TODO: implement non jquery map events!
-    // geoconnexApp.setMapEvents();
+    geoconnexApp.setMapEvents();
   }
   async addSearchFeaturesToMap(features, collectionOverride = null) {
     const geoconnexApp = this;
@@ -1495,6 +1494,67 @@ class GeoConnex extends Vue {
     geoconnexApp.pointLong = long;
   }
   /* --------------------------------------------------
+  Event Delegation Methods (Replaces jQuery)
+  -------------------------------------------------- */
+  setupEventDelegation() {
+    const geoconnexApp = this;
+    
+    // Get the map container
+    const mapContainer = document.getElementById('geoconnex-leaflet');
+    if (!mapContainer) return;
+    
+    // Single event listener for all dynamic buttons
+    mapContainer.addEventListener('click', function(e) {
+      // Handle Add Feature button clicks
+      const addButton = e.target.closest('.map-add-geoconnex');
+      if (addButton) {
+        e.stopPropagation();
+        e.preventDefault();
+        const data = JSON.parse(addButton.getAttribute('data'));
+        const alreadySelected = geoconnexApp.selectedReferenceFeatures.find(
+          (obj) => obj.value === data.uri
+        );
+        if (!alreadySelected) {
+          geoconnexApp.addSelectedFeatureToResMetadata(data);
+        }
+        geoconnexApp.map.closePopup();
+        return;
+      }
+      
+      // Handle Remove Feature button clicks
+      const removeButton = e.target.closest('.map-remove-geoconnex');
+      if (removeButton) {
+        e.stopPropagation();
+        e.preventDefault();
+        const data = JSON.parse(removeButton.getAttribute('data'));
+        geoconnexApp.selectedReferenceFeatures =
+          geoconnexApp.selectedReferenceFeatures.filter(
+            (s) => s.value !== data.uri
+          );
+        geoconnexApp.map.closePopup();
+        return;
+      }
+      
+      // Handle point search button clicks
+      const pointSearchButton = e.target.closest('.leaflet-point-search');
+      if (pointSearchButton) {
+        e.stopPropagation();
+        e.preventDefault();
+        const loc = JSON.parse(pointSearchButton.getAttribute('data'));
+        geoconnexApp.fillCoordinatesFromClickedCoordinates(
+          loc.lat,
+          loc.long
+        );
+        geoconnexApp.fetchGeoconnexFeaturesContainingPoint(
+          loc.lat,
+          loc.long,
+          geoconnexApp.collectionsSelectedToSearch
+        );
+        return;
+      }
+    });
+  }
+
   setMapEvents() {
     const geoconnexApp = this;
     var popup = L.popup({ maxWidth: 400 });
@@ -1510,73 +1570,12 @@ class GeoConnex extends Vue {
 
     if (geoconnexApp.resMode === "Edit") {
       geoconnexApp.map.on("click", onMapClick);
-      // TODO: remove jquery!
-
-      $("#geoconnex-map-wrapper").on(
-        "click",
-        "button.leaflet-point-search",
-        function (e) {
-          e.stopPropagation();
-          const loc = JSON.parse($(this).attr("data"));
-          geoconnexApp.fillCoordinatesFromClickedCoordinates(
-            loc.lat,
-            loc.long
-          );
-          geoconnexApp.fetchGeoconnexFeaturesContainingPoint(
-            loc.lat,
-            loc.long,
-            geoconnexApp.collectionsSelectedToSearch
-          );
-        }
-      );
-
-      $("#geoconnex-map-wrapper").on(
-        "click",
-        "button.map-add-geoconnex",
-        function (e) {
-          e.stopPropagation();
-          const data = JSON.parse($(this).attr("data"));
-          const alreadySelected = geoconnexApp.selectedReferenceFeatures.find(
-            (obj) => {
-              return obj.value === data.uri;
-            }
-          );
-          if (!alreadySelected) {
-            geoconnexApp.addSelectedFeatureToResMetadata(data);
-          }
-          geoconnexApp.map.closePopup();
-        }
-      );
-
-      $("#geoconnex-map-wrapper").on(
-        "click",
-        "button.map-remove-geoconnex",
-        function (e) {
-          e.stopPropagation();
-          const data = JSON.parse($(this).attr("data"));
-          geoconnexApp.selectedReferenceFeatures =
-            geoconnexApp.selectedReferenceFeatures.filter(
-              (s) => s.value !== data.uri
-            );
-          geoconnexApp.map.closePopup();
-        }
-      );
     }
-
-    // listen for spatial coverage  type change
-    $("#div_id_type input[type=radio]").change((e) => {
-      geoconnexApp.resSpatialType = e.target.value;
-    });
-
-    // listen for save after resource spatial change
-    $("#coverage-spatial")
-      .find(".btn-primary")
-      .not("#btn-update-resource-spatial-coverage")
-      .click(() => {
-        geoconnexApp.updateAppWithResSpatialExtent();
-      });
+    
+    // Setup event delegation for dynamic buttons
+    geoconnexApp.setupEventDelegation();
   }
-  -------------------------------------------------- */
+
   toggleMapVisibility() {
     const geoconnexApp = this;
     geoconnexApp.showingMap = !geoconnexApp.showingMap;
