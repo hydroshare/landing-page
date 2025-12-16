@@ -1,5 +1,5 @@
 {
-  "_id": "682242491f46daa46a9199a1",
+  "_id": "d7b526e24f7e449098b428ae9363f514",
   "name": "Impacts of Alternative Hydrological and Demand Scenarios in the Upper Colorado River Basin on Lake Powell Storage",
   "description": "Existing models fail to represent future drought-like hydrologic inflow conditions in the Upper Colorado River Basin (UCRB) based on intensifying basin aridification. Hence, this study uses the Colorado River Simulation System (CRSS) model to investigate the effects of intensifying drought and changes in conservation and consumption of the UCRB on Lake Powell storage. The study also investigated the impact of linking Lake Powell’s outflow to UCRB’s hydrology using a new rule. The intensifying drought-like conditions in the URCB were simulated using the natural inflow data taken during the (2000 - 2018) drought period. The data was decreased by 20%, 35%, and 50%, respectively, portraying future intensifying drought responses to climate change. Changes in demand scenarios were simulated by changing the amounts of flow diverted from Lake Powell (increased consumption) and to Lake Powell (increased conservation). Model results were also utilized to predict the amount of time until Lake Powell storage levels reach the power pool elevation of 3490 feet. The results clearly show that under the 2016 Upper and Lower Basins Demands, the intensifying drought would greatly decrease Lake Powell storage and shorten the time until storage levels drop below the power pool elevation of 3490 feet. Additionally, having the outflow linked to the basin’s hydrology would save storage from reaching alarming levels. Saving some water as low as 5 % would stabilize the elevation. The CRSS outcomes also showed that increasing consumption in the UCRB would reduce the amount of storage in Lake Powell, whereas increasing conservation would increase the storage of Lake Powell.\r\n\r\nSee readme file for instructions on how to use this resource.",
   "creator": [
@@ -110,6 +110,24 @@
       "name": "Not Found and name is required",
       "description": null,
       "url": "https://hydroshare.org/resource/extracted_metadata/4cda7a99dff04474867e336a9ccb7425/data/contents/hidrografia_madeira.shp.json"
+    }
+  ],
+  "relation": [
+    {
+      "@context": {
+          "@vocab": "https://schema.org/",
+          "gsp": "http://www.opengis.net/ont/geosparql#",
+          "hyf": "https://www.opengis.net/def/schema/hy_features/hyf/",
+          "gnis_url": {
+              "_id": "subjectOf",
+              "@type": "@id"
+          }
+      },
+      "@id": "https://geoconnex.us/ref/hu04/1909",
+      "@type": "Place",
+      "name": "Lower Yukon River",
+      "hyf:containingCatchment": {"@id": "https://geoconnex.us/ref/hu02/19"},
+      "value": "https://geoconnex.us/ref/hu04/1909"
     }
   ],
   "score": 0.0,

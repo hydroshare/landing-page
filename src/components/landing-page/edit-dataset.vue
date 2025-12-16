@@ -88,6 +88,8 @@
         class="mt-14"
       />
 
+      <geoconnex v-if="wasLoaded" :jsonData="data" resMode="Edit" />
+
       <div v-if="!isFetchingMetadata" class="d-flex gap-1">
         <v-spacer></v-spacer>
         <v-btn
@@ -171,6 +173,7 @@ import { stringify } from "@/utils";
 import { fetchResource, onFileDownload, readRootFolder } from "./shared";
 import HsUppy from "./hs-uppy.vue";
 import User from "@/models/user.model";
+import Geoconnex from "@/components/geoconnex.vue";
 
 import {
   DEFAULT_S3_HOST,
@@ -215,7 +218,7 @@ class App extends Vue {
   currentPath: string = "";
   folderNameRegex = /^[-()\w\s]*$/;
   isFetchingMetadata = true;
-  wasLoaded = true;
+  wasLoaded = false;
 
   s3Client!: S3Client;
   s3Host: string = DEFAULT_S3_HOST;
@@ -347,7 +350,6 @@ class App extends Vue {
   async loadResource() {
     this.isFetchingMetadata = true;
     this.isLoadingFiles = true;
-    this.wasLoaded = true;
 
     const resource = await fetchResource(
       this.resourceId,
@@ -360,6 +362,7 @@ class App extends Vue {
       this.data = resource.data;
       // @ts-expect-error The key property is generated when the component is initialized
       this.rootDirectory.children = resource.initialStructure;
+      this.wasLoaded = true;
     } else {
       this.wasLoaded = false;
     }
@@ -419,17 +422,24 @@ class App extends Vue {
       const resourceId = this.resourceId;
       const key = `${resourceId}/.hsmetadata/user_metadata.json`;
 
-      const content = JSON.stringify(
-        { name: this.data.name, description: this.data.description },
-        null,
-        2,
-      );
+      // Create the complete metadata object
+      const metadata = {
+        name: this.data.name,
+        description: this.data.description,
+        // Include ALL other metadata fields that should be saved
+        ...this.data
+      };
+      
+      // The geoconnex relations are already in this.data.relation
+      // because geoconnex.vue modifies the jsonData prop directly
+      const content = JSON.stringify(metadata, null, 2);
       const command = new PutObjectCommand({
         Bucket: this.s3Info.bucket,
         Key: key,
         Body: content,
         ContentType: "application/json",
       });
+      
       this.isSubmitting = true;
       await this.s3Client.send(command);
 

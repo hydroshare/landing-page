@@ -1,4 +1,33 @@
 {
+    "_id": "d7b526e24f7e449098b428ae9363f514",
     "name": "a title",
-    "description": "an abstract"
+    "description": "an abstract",
+    "spatialCoverage": {
+        "type": "Place",
+        "name": "Logan City",
+        "geo": {
+        "type": "GeoShape",
+        "box": "41.7491 -111.7758 41.7296 -111.84"
+        },
+        "additionalProperty": null,
+        "srs": null
+    },
+    "relation": [
+        {
+        "@context": {
+            "@vocab": "https://schema.org/",
+            "gsp": "http://www.opengis.net/ont/geosparql#",
+            "hyf": "https://www.opengis.net/def/schema/hy_features/hyf/",
+            "gnis_url": {
+                "_id": "subjectOf",
+                "@type": "@id"
+            }
+        },
+        "@id": "https://geoconnex.us/ref/hu04/1909",
+        "@type": "Place",
+        "name": "Lower Yukon River",
+        "hyf:containingCatchment": {"@id": "https://geoconnex.us/ref/hu02/19"},
+        "value": "https://geoconnex.us/ref/hu04/1909"
+        }
+    ]
 }

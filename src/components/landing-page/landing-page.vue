@@ -535,6 +535,18 @@
           </div>
 
           <div
+            v-if="
+              data.relation?.length
+            "
+            class="mb-8 field"
+            id="relatedGeospatial"
+          >
+            <div v-bind="headingAttr">Related Geospatial Features</div>
+            <v-divider class="mb-2"></v-divider>
+            <geoconnex :jsonData="data" resMode="View" />
+          </div>
+
+          <div
             v-if="hasSpatialFeatures && $vuetify.display.mdAndDown"
             class="my-4 field text-body-1"
             id="coverage"
@@ -854,6 +866,7 @@ import {
 } from "@/constants";
 
 import CdSpatialCoverageMap from "@/components/search-results/cd.spatial-coverage-map.vue";
+import Geoconnex from "@/components/geoconnex.vue";
 
 const md = markdownit({
   linkify: true,
@@ -1218,6 +1231,11 @@ class LandingPage extends Vue {
         text: "Related Resources",
         to: "#related",
         // isShown: (data: any) => data.hasPart?.length || false,
+      },
+      {
+        text: "Related Geospatial Features",
+        to: "#relatedGeospatial",
+        // isShown: (data: any) => data.relation?.length || false,
       },
       // {
       //   text: "Spatial Coverage",
