@@ -335,6 +335,7 @@ class GeoConnex extends Vue {
         GeoConnexComponent.hasSearches = true;
         const newCollection = newValue.at(-1);
         if (GeoConnexComponent.resSpatialType) {
+          GeoConnexComponent.updateAppWithResSpatialExtent();
           GeoConnexComponent.fetchGeoconnexFeaturesInBbox({
             bbox: GeoConnexComponent.bbox,
             collections: [newCollection],
@@ -478,7 +479,7 @@ class GeoConnex extends Vue {
   expandLayerControlOnAdd = false
   shouldFitMapAfterAddingLayers = false
   onlyZoomInNotOutAfterLayerAddition = true
-  bBox = null
+  bbox = null
   resSpatialExtentArea = null
   resSpatialType = null
   abortController = {}
@@ -516,29 +517,29 @@ class GeoConnex extends Vue {
   spatialExtentColor = "rgb(51, 136, 255)"
 
   get pointLat() {
-    return this.jsonData.spatialCoverage.geo.latitude || null;
+    return this.jsonData.spatialCoverage.geo.box[0] || null;
   }
   get pointLong() {
-    return this.jsonData.spatialCoverage.geo.longitude || null;
+    return this.jsonData.spatialCoverage.geo.box[1] || null;
   }
 
   // https://schema.org/box
   // The first point is the lower corner, the second point is the upper corner. A box is expressed as two points separated by a space character.
   get northLat() {
     const box = this.jsonData.spatialCoverage.geo.box;
-    return box ? parseFloat(box.split(" ")[2]) : null;
+    return box ? parseFloat(box.split(" ")[0]) : null
   }
   get eastLong() {
     const box = this.jsonData.spatialCoverage.geo.box;
-    return box ? parseFloat(box.split(" ")[3]) : null;
+    return box ? parseFloat(box.split(" ")[1]) : null;
   }
   get southLat() {
     const box = this.jsonData.spatialCoverage.geo.box;
-    return box ? parseFloat(box.split(" ")[0]) : null;
+    return box ? parseFloat(box.split(" ")[2]) : null;
   }
   get westLong() {
     const box = this.jsonData.spatialCoverage.geo.box;
-    return box ? parseFloat(box.split(" ")[1]) : null;
+    return box ? parseFloat(box.split(" ")[3]) : null;
   }
 
   get hasSearchesWithouIssues(): boolean {
@@ -784,7 +785,7 @@ class GeoConnex extends Vue {
   }
   async fetchGeoconnexFeaturesInBbox({ bbox = null, collections = null }) {
     const geoconnexApp = this;
-    if (!bbox) bbox = geoconnexApp.bBox;
+    if (!bbox) bbox = geoconnexApp.bbox;
     let features = [];
     geoconnexApp.map.closePopup();
     try {
@@ -1025,7 +1026,7 @@ class GeoConnex extends Vue {
   -------------------------------------------------- */
   showSpatialExtent({ bbox = null, fromPoint = false } = {}) {
     const geoconnexApp = this;
-    if (!bbox) bbox = geoconnexApp.bBox;
+    if (!bbox) bbox = geoconnexApp.bbox;
     try {
       const rect = L.rectangle(
         [
@@ -1456,7 +1457,7 @@ class GeoConnex extends Vue {
       !geoconnexApp.jsonData.spatialCoverage.type
     )
       return;
-    geoconnexApp.resSpatialType = geoconnexApp.jsonData.spatialCoverage.type;
+    geoconnexApp.resSpatialType = geoconnexApp.jsonData.spatialCoverage.geo.type;
   }
   updateAppWithResSpatialExtent() {
     const geoconnexApp = this;
@@ -1464,29 +1465,32 @@ class GeoConnex extends Vue {
     geoconnexApp.spatialExtentGroup.clearLayers();
     if (!geoconnexApp.resSpatialType) {
       geoconnexApp.log("Resource spatial extent isn't set");
+      geoconnexApp.bbox = null;
       return;
     }
-    if (geoconnexApp.resSpatialType == "Place") {
+    if (geoconnexApp.resSpatialType != "GeoShape") {
       geoconnexApp.log("Setting point spatial extent");
 
       // Geoconnex API only acccepts bounding box
       // if point, just make it a small bounding box
-      geoconnexApp.bBox = [
+      let bbox = [
         geoconnexApp.pointLong,
         geoconnexApp.pointLat,
         geoconnexApp.pointLong + 1e-12,
         geoconnexApp.pointLat + 1e-12,
       ];
+      geoconnexApp.bbox = bbox;
       geoconnexApp.showSpatialExtent({ bbox: null, fromPoint: true });
     } else {
       geoconnexApp.log("Setting box spatial extent");
 
-      geoconnexApp.bBox = [
+      const bbox = [
         geoconnexApp.eastLong,
         geoconnexApp.southLat,
         geoconnexApp.westLong,
         geoconnexApp.northLat,
       ];
+      geoconnexApp.bbox = bbox;
       geoconnexApp.showSpatialExtent();
     }
   }
