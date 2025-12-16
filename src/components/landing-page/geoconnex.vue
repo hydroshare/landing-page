@@ -643,88 +643,55 @@ class GeoConnex extends Vue {
   }
   saveFeatureToResMetadata(feature) {
     const geoconnexApp = this;
-    const url = `/hsapi/_internal/${geoconnexApp.jsonData._id}/geospatialrelation/add-metadata/`;
-    const data = {
+    
+    const newRelation = {
       text: feature.text || feature,
       value: feature.uri ? feature.uri : feature,
-      type: "relation",
+      type: "relation"
     };
-
-    fetch(url, {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded', // or 'application/json' depending on your API
-      },
-      credentials: 'include',
-      body: new URLSearchParams(data) // or JSON.stringify(data) if using application/json
-    })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then(result => {
-      // Check if the API returned an error status despite HTTP 200
-      if (result.status === "error") {
-        const message = "Error while attempting to save related feature";
-        geoconnexApp.error(message, result.message);
-        geoconnexApp.generateAppMessage(`${message}: ${result.message}`);
-      } else {
-        geoconnexApp.log(
-          `Added ${
-            feature.text ? feature.text : feature
-          } to resource metadata`
-        );
-        geoconnexApp.selectedReferenceFeatures.push({
-          id: result.element_id,
-          value: feature.uri ? feature.uri : feature,
-          text: feature.text ? feature.text : feature,
-        });
-      }
-    })
-    .catch(error => {
-      const message = "Error while attempting to save related feature";
-      geoconnexApp.error(message, error.message);
-      geoconnexApp.generateAppMessage(`${message}: ${error.message}`);
+    
+    // Update the local data object
+    if (!geoconnexApp.jsonData.relation) {
+      geoconnexApp.jsonData.relation = [];
+    }
+    
+    // Check if relation already exists
+    const existingIndex = geoconnexApp.jsonData.relation.findIndex(
+      rel => rel.value === newRelation.value
+    );
+    
+    if (existingIndex === -1) {
+      geoconnexApp.jsonData.relation.push(newRelation);
+    } else {
+      // Update existing relation
+      geoconnexApp.jsonData.relation[existingIndex] = newRelation;
+    }
+    
+    // Update the selected features UI
+    geoconnexApp.selectedReferenceFeatures.push({
+      id: Date.now().toString(), // Generate a temporary ID
+      value: feature.uri ? feature.uri : feature,
+      text: feature.text ? feature.text : feature,
     });
+    
+    geoconnexApp.log(`Added ${newRelation.text} to local metadata`);
   }
+
   removeFeatureFromResMetadata(relations) {
     const geoconnexApp = this;
     
+    // Remove each relation from the local data
     for (const relation of relations) {
-      if (relation.id) {
-        const url = `/hsapi/_internal/${geoconnexApp.jsonData._id}/geospatialrelation/${relation.id}/delete-metadata/`;
-        
-        fetch(url, {
-          method: "POST",
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          credentials: 'include',
-          // Add empty body or any required data
-          body: new URLSearchParams({}) // or omit body if not needed
-        })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(result => {
-          geoconnexApp.log(
-            `Removed ${
-              relation.text ? relation.text : relation
-            } from resource metadata`
-          );
-        })
-        .catch(error => {
-          const message = "Error while attempting to remove related feature";
-          geoconnexApp.error(message, error.message);
-          geoconnexApp.generateAppMessage(`${message}: ${error.message}`);
-        });
+      const relationIndex = geoconnexApp.jsonData.relation.findIndex(
+        rel => rel.value === relation.value
+      );
+      
+      if (relationIndex > -1) {
+        geoconnexApp.jsonData.relation.splice(relationIndex, 1);
       }
     }
+    
+    geoconnexApp.log(`Removed ${relations.length} feature(s) from local metadata`);
   }
   limitSelectableFeaturesToSearch() {
     const geoconnexApp = this;

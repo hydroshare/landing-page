@@ -422,17 +422,24 @@ class App extends Vue {
       const resourceId = this.resourceId;
       const key = `${resourceId}/.hsmetadata/user_metadata.json`;
 
-      const content = JSON.stringify(
-        { name: this.data.name, description: this.data.description },
-        null,
-        2,
-      );
+      // Create the complete metadata object
+      const metadata = {
+        name: this.data.name,
+        description: this.data.description,
+        // Include ALL other metadata fields that should be saved
+        ...this.data
+      };
+      
+      // The geoconnex relations are already in this.data.relation
+      // because geoconnex.vue modifies the jsonData prop directly
+      const content = JSON.stringify(metadata, null, 2);
       const command = new PutObjectCommand({
         Bucket: this.s3Info.bucket,
         Key: key,
         Body: content,
         ContentType: "application/json",
       });
+      
       this.isSubmitting = true;
       await this.s3Client.send(command);
 
