@@ -260,12 +260,13 @@
           <!-- Show Map button (when map is hidden) -->
           <div v-if="!showingMap">
             <v-btn 
-              :loading="searchingDescription" 
+              :loading="isInitializingMap"
               @click="toggleMapVisibility" 
               variant="outlined" 
               size="small"
               color="grey"
               prepend-icon="mdi-earth"
+              :disabled="isInitializingMap"
             >
               Select With Map
             </v-btn>
@@ -513,6 +514,7 @@ class GeoConnex extends Vue {
 
   ////// Mapping //////
   showingMap = true
+  isInitializingMap: boolean = false
   map = null
   spatialExtentGroup = null
   searchFeatureGroup = null
@@ -605,18 +607,27 @@ class GeoConnex extends Vue {
     geoconnexApp.abortController = new AbortController();
     geoconnexApp.isLoading = true;
     geoconnexApp.configureLogging();
+    
     if (
       geoconnexApp.resMode == "Edit" ||
       geoconnexApp.jsonData.relation.length > 0
     ) {
       geoconnexApp.geoCache = await caches.open(geoconnexApp.cacheName);
-      geoconnexApp.initializeLeafletMap();
-
+      
+      // Only initialize map immediately if showingMap is true
+      if (geoconnexApp.showingMap) {
+        geoconnexApp.initializeLeafletMap();
+      }
+      
       geoconnexApp.resMode == "Edit" && geoconnexApp.fetchCollections(false);
       await geoconnexApp.loadResourceMetadataRelations();
 
       geoconnexApp.updateAppWithResSpatialExtent();
-      geoconnexApp.fitMapToFeatures({ group: null, overrideShouldFit: true });
+      
+      // Only fit map if it's showing
+      if (geoconnexApp.showingMap && geoconnexApp.map) {
+        geoconnexApp.fitMapToFeatures({ group: null, overrideShouldFit: true });
+      }
     }
     geoconnexApp.isLoading = false;
   }
@@ -1212,6 +1223,7 @@ class GeoConnex extends Vue {
     geoconnexApp.map.setView([30, 0], 1);
 
     geoconnexApp.setMapEvents();
+    geoconnexApp.setupMapResizeHandler();
   }
   async addSearchFeaturesToMap(features, collectionOverride = null) {
     const geoconnexApp = this;
@@ -1567,6 +1579,25 @@ class GeoConnex extends Vue {
       }
     });
   }
+  setupMapResizeHandler() {
+    const geoconnexApp = this;
+    
+    // Handle window resize to fix map rendering
+    const handleResize = () => {
+      if (geoconnexApp.map) {
+        setTimeout(() => {
+          geoconnexApp.map.invalidateSize();
+        }, 100);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    // Clean up in beforeUnmount or unmounted lifecycle hook
+    geoconnexApp.cleanupResizeHandler = () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }
 
   setMapEvents() {
     const geoconnexApp = this;
@@ -1591,9 +1622,64 @@ class GeoConnex extends Vue {
 
   toggleMapVisibility() {
     const geoconnexApp = this;
-    geoconnexApp.showingMap = !geoconnexApp.showingMap;
-    if (geoconnexApp.showingMap && geoconnexApp.map == null) {
-      geoconnexApp.initializeLeafletMap();
+    
+    if (!geoconnexApp.showingMap) {
+      // Show map
+      geoconnexApp.showingMap = true;
+      geoconnexApp.isInitializingMap = true;
+      
+      // Use $nextTick to ensure DOM is updated before initializing map
+      geoconnexApp.$nextTick(() => {
+        if (geoconnexApp.map == null) {
+          geoconnexApp.initializeLeafletMap();
+        } else {
+          // If map already exists but was hidden, we need to properly reinitialize it
+          // First, clean up the old map completely
+          if (geoconnexApp.map) {
+            geoconnexApp.map.remove();
+            geoconnexApp.map = null;
+          }
+          
+          // Clear any existing leaflet container
+          const leafletContainer = document.getElementById('geoconnex-leaflet');
+          if (leafletContainer) {
+            leafletContainer.innerHTML = '';
+          }
+          
+          // Reinitialize the map
+          geoconnexApp.initializeLeafletMap();
+        }
+        
+        // Reset loading state after a short delay
+        setTimeout(() => {
+          geoconnexApp.isInitializingMap = false;
+        }, 800);
+      });
+    } else {
+      // Hide map
+      geoconnexApp.showingMap = false;
+      
+      // Clean up map resources when hiding
+      if (geoconnexApp.map) {
+        // Remove event listeners first
+        geoconnexApp.map.off();
+        
+        // Clean up layers
+        if (geoconnexApp.layerControl) {
+          geoconnexApp.layerControl.remove();
+          geoconnexApp.layerControl = null;
+        }
+        
+        // Clear the map container but keep the element
+        const leafletContainer = document.getElementById('geoconnex-leaflet');
+        if (leafletContainer) {
+          leafletContainer.innerHTML = '';
+        }
+        
+        // Don't remove the map object entirely, just clean up
+        geoconnexApp.map.remove();
+        geoconnexApp.map = null;
+      }
     }
   }
 
@@ -1778,6 +1864,17 @@ class GeoConnex extends Vue {
       );
     } else {
       geoconnexApp.log = function () {};
+    }
+  }
+  beforeUnmount() {
+    if (this.cleanupResizeHandler) {
+      this.cleanupResizeHandler();
+    }
+    
+    // Also clean up map to prevent memory leaks
+    if (this.map) {
+      this.map.remove();
+      this.map = null;
     }
   }
 }
