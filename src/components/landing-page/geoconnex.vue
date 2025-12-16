@@ -1099,14 +1099,11 @@ class GeoConnex extends Vue {
       },
     });
 
-    const terrain = L.tileLayer(
-      "https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg",
-      {
-        attribution:
-          'Map tiles by <a href="http://stamen.com" target="_blank">Stamen Design</a>, under <a href="http://creativecommons.org/licenses/by/3.0" target="_blank">CC BY 3.0</a>. Data by <a href="http://openstreetmap.org" target="_blank">OpenStreetMap</a>, under <a href="http://www.openstreetmap.org/copyright" target="_blank">ODbL</a>.',
-        maxZoom: 18,
-      }
-    );
+      let Esri_WorldImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+        noWrap: true,
+        variant: 'World_Imagery',
+        attribution: 'Esri'
+      })
 
     const streets = L.tileLayer(
       "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -1127,7 +1124,7 @@ class GeoConnex extends Vue {
 
     const baseMaps = {
       Streets: streets,
-      Terrain: terrain,
+      "ESRI Wolrd Imagery": Esri_WorldImagery,
       Satelite: googleSat,
     };
 
