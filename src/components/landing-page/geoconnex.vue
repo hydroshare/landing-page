@@ -1,297 +1,343 @@
 <template>
-  <v-card id="app-geoconnex" variant="outlined" border="grey thin">
-    <p>
-        <i>This HydroShare resource is linked to the following geospatial features</i>
-        <span v-show="resMode=='Edit'" data-toggle="tooltip" data-placement="auto"
-          title='Use this section to add persistent identifiers pointing at related geospatial features.'
-          class="glyphicon glyphicon-info-sign text-muted">
-        </span>
+  <v-card id="app-geoconnex" variant="outlined" border="grey thin" class="pa-4">
+    <p class="mb-4">
+      <i>This HydroShare resource is linked to the following geospatial features</i>
+      <v-tooltip v-if="resMode=='Edit'" location="top">
+        <template v-slot:activator="{ props }">
+          <v-icon v-bind="props" size="small" class="ml-1 text-grey">mdi-information-outline</v-icon>
+        </template>
+        <span>Use this section to add persistent identifiers pointing at related geospatial features.</span>
+      </v-tooltip>
     </p>
+    
     <div id="geoconnex-message-wrapper" v-if="resMode=='Edit'">
-      <div class="alert alert-info alert-dismissible" role="alert">
-          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-              <span aria-hidden="true">×</span>
-          </button>
-          <div class="flex">
-              <i class="glyphicon glyphicon-info-sign"></i>
-              <em style="padding-right:20px;">
-                  <strong><a href="https://geoconnex.internetofwater.dev/" target="_blank">Geoconnex</a>, through the <a href="https://internetofwater.org/" target="_blank">Internet of Water</a>:</strong>
-                  This field allows you to relate this resource to overlapping geospatial features
-                  in order to increase the <strong><a href="https://www.go-fair.org/fair-principles/" target="_blank">FAIR</a></strong>ness and discoverability of your data.
-                  Below, collections of reference features within the United States are provided.
-                  Search these collections to find features that overlap with your data, or provide a URL that resolves to a geospatial feature not yet in the Geoconnex collections.
-                  <br>
-                  <strong>
-                      <a target="_blank"
-                          href="https://help.hydroshare.org/publishing-in-hydroshare/metadata-best-practices/related-geospatial-features"
-                          >
-                          Learn more about Related Geospatial Features
-                      </a>
-                  </strong>
-              </em>
-          </div>
-      </div>
-      <div v-if="!isLoading && !resSpatialType && resMode=='Edit'" class="alert alert-warning alert-dismissible mb-1" role="alert">
-          <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span
-              aria-hidden="true">&times;</span></button>
-          <p>We highly recommend that you add Spatial Coverage to this resource before searching for related geospatial features. Otherwise query times can be excessive.</p>
-      </div>
-      <div v-if="resSpatialExtentArea > largeExtentWarningThreshold" class="alert alert-dismissible alert-warning" role="alert">
-          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-              <span aria-hidden="true">×</span>
-          </button>
-          <div class="flex">
-              <i class="glyphicon glyphicon-info-sign"></i>
-              <em style="padding-right:20px;">
-                  Please note: your resource spatial extent ({{(resSpatialExtentArea * 1e-6).toFixed(0)}} square kilometers) is larger than a big US state.
-                  You might experience reduced performance during your searches.
-              </em>
-          </div>
-      </div>
-      <div v-show="searchResultString" class="alert alert-warning" role="alert">
-          <div class="flex">
-              <em style="padding-right:20px;">
-                  {{ searchResultString }}
-              </em>
-          </div>
-      </div>
-      <div v-for="messageObj in appMessages" :class="'alert alert-dismissible alert-' + messageObj.level" role="alert">
-          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-              <span aria-hidden="true">×</span>
-          </button>
-          <div class="flex">
-              <i class="glyphicon glyphicon-info-sign"></i>
-              <em style="padding-right:20px;">
-                  {{ messageObj.message }}
-              </em>
-          </div>
-      </div>
+      <v-alert type="info" variant="tonal" dismissible class="mb-3">
+        <div class="d-flex align-center">
+          <em class="text-body-2">
+            <strong><a href="https://geoconnex.internetofwater.dev/" target="_blank" class="text-info">Geoconnex</a>, through the <a href="https://internetofwater.org/" target="_blank" class="text-info">Internet of Water</a>:</strong>
+            This field allows you to relate this resource to overlapping geospatial features
+            in order to increase the <strong><a href="https://www.go-fair.org/fair-principles/" target="_blank" class="text-info">FAIR</a></strong>ness and discoverability of your data.
+            Below, collections of reference features within the United States are provided.
+            Search these collections to find features that overlap with your data, or provide a URL that resolves to a geospatial feature not yet in the Geoconnex collections.
+            <br>
+            <strong>
+              <a target="_blank"
+                href="https://help.hydroshare.org/publishing-in-hydroshare/metadata-best-practices/related-geospatial-features"
+                class="text-info">
+                Learn more about Related Geospatial Features
+              </a>
+            </strong>
+          </em>
+        </div>
+      </v-alert>
+      
+      <v-alert v-if="!isLoading && !resSpatialType && resMode=='Edit'" type="warning" variant="tonal" dismissible class="mb-2">
+        <p class="mb-0">We highly recommend that you add Spatial Coverage to this resource before searching for related geospatial features. Otherwise query times can be excessive.</p>
+      </v-alert>
+      
+      <v-alert v-if="resSpatialExtentArea > largeExtentWarningThreshold" type="warning" variant="tonal" dismissible class="mb-2">
+        <div class="d-flex align-center">
+          <v-icon class="mr-2">mdi-information</v-icon>
+          <em class="text-body-2">
+            Please note: your resource spatial extent ({{(resSpatialExtentArea * 1e-6).toFixed(0)}} square kilometers) is larger than a big US state.
+            You might experience reduced performance during your searches.
+          </em>
+        </div>
+      </v-alert>
+      
+      <v-alert v-if="searchResultString" type="warning" variant="tonal" class="mb-2">
+        <em class="text-body-2">{{ searchResultString }}</em>
+      </v-alert>
+      
+      <v-alert v-for="messageObj in appMessages" :key="messageObj.message" :type="messageObj.level" variant="tonal" dismissible class="mb-2">
+        <div class="d-flex align-center">
+          <v-icon class="mr-2">mdi-information</v-icon>
+          <em class="text-body-2">{{ messageObj.message }}</em>
+        </div>
+      </v-alert>
     </div>
+    
     <div class="row">
-          <div v-if="resMode === 'Edit'" class="col-xs-12" :class="{'col-lg-4': showingMap}" id="geoconnex-controls-wrapper">
-              <v-autocomplete
-                  :menu-props="{closeOnClick: true, closeOnContentClick: true}"
-                  :readonly="lockCollectionsInput"
-                  v-model="collectionsSelectedToSearch"
-                  :items="collections"
-                  :item-title="item => `${item.description} (${item.id})`"
-                  :hide-no-data="!collectionTypeahead"
-                  multiple
-                  placeholder="Type to narrow down options or select from the list"
-                  :label="limitToSingleCollection ? '1. Choose a collection to search...' : '1. Choose collections to search...'"
-                  :disabled="loadingCollections || searchingDescription !==''"
-                  :loading="loadingCollections || searchingDescription !==''"
-                  variant="outlined"
-                  hide-details
-                  :color="collectionColor"
-                  :item-color="collectionColor"
-                  @update:search="collectionTypeahead = $event"
-                  :error="searchResultString !==''"
-                  :return-object="true"
-                >
-                  <template v-slot:item="{ props, item }">
-                    <v-list-item v-bind="props">
-                      <template>
-                        <v-list-item-title>{{ item }}</v-list-item-title>
-                        <v-list-item-subtitle>{{ item.raw.id }}</v-list-item-subtitle>
-                      </template>
-                    </v-list-item>
-                  </template>
-                  
-                  <template v-slot:no-data>
-                    <v-list-item>
-                      <v-list-item-title>
-                        No collections matching "<strong>{{ collectionTypeahead }}</strong>".
-                      </v-list-item-title>
-                    </v-list-item>
-                  </template>
-                  
-                  <template v-slot:selection="{ item, parent }">
-                    <div 
-                      v-if="limitToSingleCollection"
-                    >
-                      {{ item.raw.description }} ({{ item.raw.id }})
-                    </div>
-                    <v-chip v-else label variant="outlined" size="large">
-                      <span class="text-truncate">
-                        {{ item.raw.description }} ({{ item.raw.id }})
-                      </span>
-                      <span 
-                        v-show="!loadingCollections && searchingDescription==''" 
-                        @click.stop="parent.selectItem(item)" 
-                        class="mdi mdi-close-circle"
-                      ></span>
-                    </v-chip>
-                  </template>
-                  
-                  <template v-if="limitToSingleCollection && hasSearches" v-slot:append-inner>
-                    <v-slide-x-reverse-transition mode="out-in">
-                      <span
-                        :key="`icon-${hasSearches}`"
-                        v-show="!loadingCollections && searchingDescription==''"
-                        @click="clearMapOfSearches" 
-                        class="mdi mdi-close-circle text-muted"
-                      ></span>
-                    </v-slide-x-reverse-transition>
-                  </template>
-              </v-autocomplete>
+      <div v-if="resMode === 'Edit'" class="col-xs-12" :class="{'col-lg-4': showingMap}" id="geoconnex-controls-wrapper">
+        <v-autocomplete
+          :menu-props="{closeOnClick: true, closeOnContentClick: true}"
+          :readonly="lockCollectionsInput"
+          v-model="collectionsSelectedToSearch"
+          :items="collections"
+          :item-title="item => `${item.description} (${item.id})`"
+          :hide-no-data="!collectionTypeahead"
+          multiple
+          placeholder="Type to narrow down options or select from the list"
+          :label="limitToSingleCollection ? '1. Choose a collection to search...' : '1. Choose collections to search...'"
+          :disabled="loadingCollections || searchingDescription !==''"
+          :loading="loadingCollections || searchingDescription !==''"
+          variant="outlined"
+          hide-details
+          :color="collectionColor"
+          :item-color="collectionColor"
+          @update:search="collectionTypeahead = $event"
+          :error="searchResultString !==''"
+          :return-object="true"
+        >
+          <template v-slot:item="{ props, item }">
+            <v-list-item v-bind="props">
+              <template>
+                <v-list-item-title>{{ item }}</v-list-item-title>
+                <v-list-item-subtitle>{{ item.raw.id }}</v-list-item-subtitle>
+              </template>
+            </v-list-item>
+          </template>
+          
+          <template v-slot:no-data>
+            <v-list-item>
+              <v-list-item-title>
+                No collections matching "<strong>{{ collectionTypeahead }}</strong>".
+              </v-list-item-title>
+            </v-list-item>
+          </template>
+          
+          <template v-slot:selection="{ item, parent }">
+            <div v-if="limitToSingleCollection">
+              {{ item.raw.description }} ({{ item.raw.id }})
+            </div>
+            <v-chip v-else label variant="outlined" size="large">
+              <span class="text-truncate">
+                {{ item.raw.description }} ({{ item.raw.id }})
+              </span>
+              <v-icon 
+                v-show="!loadingCollections && searchingDescription==''" 
+                @click.stop="parent.selectItem(item)" 
+                size="small"
+                class="ml-1"
+              >mdi-close-circle</v-icon>
+            </v-chip>
+          </template>
+          
+          <template v-if="limitToSingleCollection && hasSearches" v-slot:append-inner>
+            <v-slide-x-reverse-transition mode="out-in">
+              <v-icon
+                :key="`icon-${hasSearches}`"
+                v-show="!loadingCollections && searchingDescription==''"
+                @click="clearMapOfSearches" 
+                class="mdi mdi-close-circle text-grey"
+                size="small"
+              ></v-icon>
+            </v-slide-x-reverse-transition>
+          </template>
+        </v-autocomplete>
 
-              <div v-if="!isLoading" class="small text-muted mt-2 my-4">
-                  <div v-show="hasSearchesWithouIssues">
-                      <span data-toggle="tooltip" data-placement="auto"
-                      :title="`Feature options for step #2 have been limited to the collection ${  collectionsSelectedToSearch.length > 1 ? 's' : '' } you selected here.`"
-                      class="glyphicon glyphicon-info-sign text-muted">
-                      </span>
-                      Feature options for step #2 have been limited to the collection {{ collectionsSelectedToSearch.length > 1 ? "s" : "" }} you selected here
-                  </div>
-                  <div v-show="loadingCollections">
-                      <span data-toggle="tooltip" data-placement="auto"
-                      title="Loading Geoconnex relations"
-                      class="glyphicon glyphicon-info-sign text-muted">
-                      </span>
-                      Loading Geoconnex relations...
-                  </div>
-                  <div v-show="searchingDescription">
-                      <span data-toggle="tooltip" data-placement="auto"
-                      title="Searching Geoconnex"
-                      class="glyphicon glyphicon-info-sign text-muted">
-                      </span>
-                      <b>Searching Geoconnex collection:</b> {{ searchingDescription }}
-                  </div>
-                  <div v-for="message in collectionMessages">
-                      <span data-toggle="tooltip" data-placement="auto"
-                          :title="message"
-                          class="glyphicon glyphicon-info-sign text-muted">
-                      </span>
-                      {{ message }}
-                  </div>
-              </div>
+        <div v-if="!isLoading" class="small text-muted mt-2 my-4">
+          <!-- Feature options limited message -->
+          <div v-if="hasSearchesWithouIssues" class="d-flex align-center mb-1">
+            <v-tooltip location="top">
+              <template v-slot:activator="{ props }">
+                <v-icon v-bind="props" size="small" class="mr-1 text-grey">mdi-information-outline</v-icon>
+              </template>
+              <span>Feature options for step #2 have been limited to the collection {{ collectionsSelectedToSearch.length > 1 ? 's' : '' }} you selected here.</span>
+            </v-tooltip>
+            <span class="text-caption">Feature options for step #2 have been limited to the collection {{ collectionsSelectedToSearch.length > 1 ? "s" : "" }} you selected here</span>
+          </div>
+          
+          <!-- Loading Geoconnex relations message -->
+          <div v-if="loadingCollections" class="d-flex align-center mb-1">
+            <v-tooltip location="top">
+              <template v-slot:activator="{ props }">
+                <v-icon v-bind="props" size="small" class="mr-1 text-grey">mdi-information-outline</v-icon>
+              </template>
+              <span>Loading Geoconnex relations</span>
+            </v-tooltip>
+            <span class="text-caption">Loading Geoconnex relations...</span>
+          </div>
+          
+          <!-- Searching Geoconnex message -->
+          <div v-if="searchingDescription" class="d-flex align-center mb-1">
+            <v-tooltip location="top">
+              <template v-slot:activator="{ props }">
+                <v-icon v-bind="props" size="small" class="mr-1 text-grey">mdi-information-outline</v-icon>
+              </template>
+              <span>Searching Geoconnex</span>
+            </v-tooltip>
+            <span class="text-caption"><b>Searching Geoconnex collection:</b> {{ searchingDescription }}</span>
+          </div>
+          
+          <!-- Collection messages -->
+          <div v-for="message in collectionMessages" :key="message" class="d-flex align-center mb-1">
+            <v-tooltip location="top">
+              <template v-slot:activator="{ props }">
+                <v-icon v-bind="props" size="small" class="mr-1 text-grey">mdi-information-outline</v-icon>
+              </template>
+              <span>{{ message }}</span>
+            </v-tooltip>
+            <span class="text-caption">{{ message }}</span>
+          </div>
+        </div>
 
-              <v-combobox
-                  v-model="selectedReferenceFeatures"
-                  class="mt-8"
-                  :class="{
-                      'col-xs-12 col-md-8': resMode === 'View', 
-                      'col-xs-12': resMode === 'Edit',
-                      'opaque': !hasSearches && selectedReferenceFeatures.length === 0
-                  }" 
-                  :items="features"
-                  :item-title="item => item.NAME"
-                  hide-no-data
-                  allow-overflow="false"
-                  chips
-                  closable-chips
-                  multiple
-                  variant="outlined"
-                  hide-selected
-                  :hide-no-data="!itemTypeahead"
-                  label="2. Select related features to add to resource metadata"
-                  placeholder="Type to narrow down options or select on the map"
-                  :disabled="searchingDescription !==''"
-                  :loading="loadingRelations"
-                  :search-input.sync="itemTypeahead"
-                  :rules="featureRules"
-                  :return-object="true">
-                  <template v-slot:item="{ props, item }">
-                    <v-list-item v-bind="props">
-                        <v-list-item-subtitle>{{ item.raw.relative_id }}</v-list-item-subtitle>
-                    </v-list-item>
-                  </template>
-                  <template v-slot:no-data>
-                      <v-list-item>
-                          <v-list-item-title>
-                              No results matching "<strong>{{ itemTypeahead }}</strong>". 
-                              Press <kbd>enter</kbd> to add <v-chip outlined><strong>{{ itemTypeahead }}</strong></v-chip> as a custom item.
-                          </v-list-item-title>
-                      </v-list-item>
-                  </template>
-                  <template v-slot:chip="{ props, item }">
-                    <v-chip
-                      v-bind="props"
-                    >
-                      <span class="text-truncate" :title="item.raw.text.length > stringLengthLimit ? item.raw.text : ''">
-                        {{ item.raw.text }}
-                      </span>
-                      <!-- TODO handle chip removal?! -->
-                      <!-- <span @click.stop="parent.selectItem(item)" class="glyphicon glyphicon-remove-circle"></span> -->
-                  </v-chip>
-                  </template>
-                  <template v-slot:message="rulesMessage">
-                      <div :style="`color: ${featureMessageColor}; margin-left: -12px;`">
-                          <span data-toggle="tooltip" data-placement="auto"
-                              :title="rulesMessage.message"
-                              class="glyphicon glyphicon-info-sign"
-                              :style="`color: ${featureMessageColor}`">
-                          </span>
-                          {{ rulesMessage.message }}
-                      </div>
-                  </template>
-              </v-combobox>
-          </div>
-          <div v-else class="col-xs-12 col-lg-4 info-table-wrapper" v-if="searchingDescription =='' && selectedReferenceFeatures.length > 0">
-              <table class="table hs-table info-table">
-                  <tr v-for="value in selectedReferenceFeatures" style="padding-bottom: 20px">
-                      <td v-if="isUrl(value.value)" class="dataset-details">
-                          <a target="_blank" :href="value.value"> {{value.text}}</a>
-                          <i class="fa fa-external-link"></i>
-                      </td>
-                      <td v-else class="dataset-details">{{value.text}}</td>
-                  </tr>
-              </table>
-          </div>
+        <v-combobox
+          v-model="selectedReferenceFeatures"
+          class="mt-8"
+          :class="{
+            'col-xs-12 col-md-8': resMode === 'View', 
+            'col-xs-12': resMode === 'Edit',
+            'opaque': !hasSearches && selectedReferenceFeatures.length === 0
+          }" 
+          :items="features"
+          :item-title="item => item.NAME"
+          hide-no-data
+          allow-overflow="false"
+          chips
+          closable-chips
+          multiple
+          variant="outlined"
+          hide-selected
+          :hide-no-data="!itemTypeahead"
+          label="2. Select related features to add to resource metadata"
+          placeholder="Type to narrow down options or select on the map"
+          :disabled="searchingDescription !==''"
+          :loading="loadingRelations"
+          :search-input.sync="itemTypeahead"
+          :rules="featureRules"
+          :return-object="true"
+        >
+          <template v-slot:item="{ props, item }">
+            <v-list-item v-bind="props">
+              <v-list-item-subtitle>{{ item.raw.relative_id }}</v-list-item-subtitle>
+            </v-list-item>
+          </template>
+          
+          <template v-slot:no-data>
+            <v-list-item>
+              <v-list-item-title>
+                No results matching "<strong>{{ itemTypeahead }}</strong>". 
+                Press <kbd>enter</kbd> to add <v-chip variant="outlined" size="small"><strong>{{ itemTypeahead }}</strong></v-chip> as a custom item.
+              </v-list-item-title>
+            </v-list-item>
+          </template>
+          
+          <template v-slot:chip="{ props, item }">
+            <v-chip v-bind="props">
+              <span class="text-truncate" :title="item.raw.text.length > stringLengthLimit ? item.raw.text : ''">
+                {{ item.raw.text }}
+              </span>
+            </v-chip>
+          </template>
+          
+          <template v-slot:message="rulesMessage">
+            <div v-if="rulesMessage.message" :style="`color: ${featureMessageColor}; margin-left: -12px;`" class="d-flex align-center mt-1">
+              <v-tooltip location="top">
+                <template v-slot:activator="{ props }">
+                  <v-icon v-bind="props" size="small" :color="featureMessageColor" class="mr-1">mdi-information-outline</v-icon>
+                </template>
+                <span>{{ rulesMessage.message }}</span>
+              </v-tooltip>
+              <span class="text-caption">{{ rulesMessage.message }}</span>
+            </div>
+          </template>
+        </v-combobox>
+      </div>
+      
+      <div v-else class="col-xs-12 col-lg-4 info-table-wrapper" v-if="searchingDescription =='' && selectedReferenceFeatures.length > 0">
+        <v-table class="info-table" density="compact">
+          <tbody>
+            <tr v-for="value in selectedReferenceFeatures" :key="value.id || value.value" style="padding-bottom: 20px">
+              <td v-if="isUrl(value.value)" class="dataset-details">
+                <a target="_blank" :href="value.value" class="text-decoration-none text-primary">{{value.text}}</a>
+                <v-icon size="small" class="ml-1">mdi-open-in-new</v-icon>
+              </td>
+              <td v-else class="dataset-details">{{value.text}}</td>
+            </tr>
+          </tbody>
+        </v-table>
+      </div>
 
       <div 
-          id="geoconnex-map-wrapper"
-          class="col-xs-12 col-lg-8"
-          :class="{
-              'opaque': !hasSearches && selectedReferenceFeatures.length === 0
-          }" >
-          <div v-if="resMode === 'Edit'" id="geoconnex-controls" class="flex mb-2">
-              <div v-show="!showingMap">
-                  <button :loading="searchingDescription" @click="toggleMapVisibility" class="btn btn-default" depressed small>
-                      <i class="fa fa-globe"></i>Select With Map
-                  </button>
-                  <span data-toggle="tooltip" data-placement="auto"
-                  title='Shows additional map that you can use to query and view related geospatial features'
-                  class="glyphicon glyphicon-info-sign text-muted">
-                  </span>
-              </div>
-              <div v-show="showingMap">
-                  <button @click="toggleMapVisibility" class="btn btn-default">
-                      <i class="fa fa-minus"></i>Hide Map
-                  </button>
-              </div>
-              <div v-show="showingMap && hasSearches && searchingDescription ==''">
-                  <button @click="searchForFeaturesUsingVisibleMapBounds" class="btn btn-info" depressed small>
-                      <i class="fa fa-search"></i>Search using visible map bounds
-                  </button>
-                  <span data-toggle="tooltip" data-placement="auto"
-                      title="Search within the visible boundaries of the map, instead of using spatial extent. Zooming in will reduce the search area."
-                      class="glyphicon glyphicon-info-sign text-muted"
-                  ></span>
-              </div>
-              <div v-show="!limitToSingleCollection && hasSearches && searchingDescription ==''">
-                  <button @click="clearMapOfSearches" class="btn btn-info" depressed small>
-                      <i class="fa fa-search-minus"></i>Clear Search
-                  </button>
-                  <span data-toggle="tooltip" data-placement="auto"
-                      title="Clear unselected spatial features"
-                      class="glyphicon glyphicon-info-sign text-muted"
-                  ></span>
-              </div>
+        id="geoconnex-map-wrapper"
+        class="col-xs-12 col-lg-8"
+        :class="{
+          'opaque': !hasSearches && selectedReferenceFeatures.length === 0
+        }"
+      >
+        <div v-if="resMode === 'Edit'" id="geoconnex-controls" class="d-flex flex-wrap gap-2 mb-2">
+          <!-- Show Map button (when map is hidden) -->
+          <div v-if="!showingMap">
+            <v-btn 
+              :loading="searchingDescription" 
+              @click="toggleMapVisibility" 
+              variant="outlined" 
+              size="small"
+              color="grey"
+              prepend-icon="mdi-earth"
+            >
+              Select With Map
+            </v-btn>
+            <v-tooltip location="top">
+              <template v-slot:activator="{ props }">
+                <v-icon v-bind="props" size="small" class="ml-1 text-grey">mdi-information-outline</v-icon>
+              </template>
+              <span>Shows additional map that you can use to query and view related geospatial features</span>
+            </v-tooltip>
           </div>
-          <v-progress-linear
-              v-show="showingMap"
-              :active="true"
-              v-if="searchingDescription !==''"
-              indeterminate
-              :color="collectionSearchColor"
-          ></v-progress-linear>
-          <div v-show="showingMap" id="geoconnex-leaflet"></div>
-          <div v-if="resMode === 'Edit' && showingMap" id="geoconnex-leaflet-info" class="small text-muted">
-              <p v-if="searchResultString">Click a point to search for features that overlap with that location.</p>
-              <p v-if="features.length > 0">Select a feature for more information.</p>
+          
+          <!-- Hide Map button (when map is showing) -->
+          <div v-if="showingMap">
+            <v-btn @click="toggleMapVisibility" variant="outlined" size="small" color="grey" prepend-icon="mdi-minus">
+              Hide Map
+            </v-btn>
           </div>
+          
+          <!-- Search using visible map bounds button -->
+          <div v-if="showingMap && hasSearches && searchingDescription ==''">
+            <v-btn 
+              @click="searchForFeaturesUsingVisibleMapBounds" 
+              variant="tonal" 
+              size="small"
+              color="info"
+              prepend-icon="mdi-magnify"
+            >
+              Search using visible map bounds
+            </v-btn>
+            <v-tooltip location="top">
+              <template v-slot:activator="{ props }">
+                <v-icon v-bind="props" size="small" class="ml-1 text-grey">mdi-information-outline</v-icon>
+              </template>
+              <span>Search within the visible boundaries of the map, instead of using spatial extent. Zooming in will reduce the search area.</span>
+            </v-tooltip>
+          </div>
+          
+          <!-- Clear Search button -->
+          <div v-if="!limitToSingleCollection && hasSearches && searchingDescription ==''">
+            <v-btn 
+              @click="clearMapOfSearches" 
+              variant="tonal" 
+              size="small"
+              color="info"
+              prepend-icon="mdi-magnify-minus"
+            >
+              Clear Search
+            </v-btn>
+            <v-tooltip location="top">
+              <template v-slot:activator="{ props }">
+                <v-icon v-bind="props" size="small" class="ml-1 text-grey">mdi-information-outline</v-icon>
+              </template>
+              <span>Clear unselected spatial features</span>
+            </v-tooltip>
+          </div>
+        </div>
+        
+        <v-progress-linear
+          v-show="showingMap"
+          :active="true"
+          v-if="searchingDescription !==''"
+          indeterminate
+          :color="collectionSearchColor"
+          class="mb-2"
+        ></v-progress-linear>
+        
+        <div v-if="showingMap" id="geoconnex-leaflet"></div>
+        
+        <div v-if="resMode === 'Edit' && showingMap" id="geoconnex-leaflet-info" class="text-caption text-grey mt-2">
+          <p v-if="searchResultString">Click a point to search for features that overlap with that location.</p>
+          <p v-if="features.length > 0">Select a feature for more information.</p>
+        </div>
       </div>
     </div>
   </v-card>
@@ -1738,9 +1784,12 @@ class GeoConnex extends Vue {
 export default toNative(GeoConnex);
 </script>
 <style scoped>
+#app-geoconnex {
+  padding: 1rem;
+}
+
 #app-geoconnex .flex {
   flex-direction: row;
-  /* justify-content: space-between; */
   gap: 2rem;
 }
 
@@ -1748,35 +1797,56 @@ export default toNative(GeoConnex);
   margin-bottom: 1rem;
 }
 
-#app-geoconnex .v-application--wrap {
-  min-height: 100px;
+/* Alert styling to match Vuetify */
+#app-geoconnex .alert {
+  border: none;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-#app-geoconnex .v-subheader {
+#app-geoconnex .alert-info {
+  background-color: #e3f2fd;
+  color: #0d47a1;
+  border-left: 4px solid #2196f3;
+}
+
+#app-geoconnex .alert-warning {
+  background-color: #fff3e0;
+  color: #e65100;
+  border-left: 4px solid #ff9800;
+}
+
+#app-geoconnex .alert-danger {
+  background-color: #ffebee;
+  color: #b71c1c;
+  border-left: 4px solid #f44336;
+}
+
+#app-geoconnex .alert .close {
+  opacity: 0.7;
+  color: inherit;
   font-size: 1.5rem;
-}
-
-#app-geoconnex .v-list-item__subtitle {
-  font-size: 1.2rem;
-}
-
-#app-geoconnex .v-list-item__title {
-  font-size: 1.5rem;
-}
-
-#app-geoconnex .glyphicon-remove-circle {
-  color: rgb(217, 83, 79);
+  line-height: 1;
+  padding: 0;
+  background: transparent;
+  border: 0;
   cursor: pointer;
 }
 
-#app-geoconnex .glyphicon-remove-circle.text-muted {
-  color: #999;
+#app-geoconnex .alert .close:hover {
+  opacity: 1;
 }
 
 #geoconnex-controls {
+  display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
   flex-direction: row;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 #app-geoconnex .opaque #geoconnex-leaflet {
@@ -1785,20 +1855,11 @@ export default toNative(GeoConnex);
   pointer-events: none;
 }
 
-#app-geoconnex .v-chip__content .glyphicon {
-  padding: 1rem;
-}
-
-#app-geoconnex .tooltip-inner {
-  padding: 3px 8px;
-  font-weight: normal;
-}
-
 #geoconnex-map-wrapper {
   flex: 2 1 500px;
 }
 
-#geoconnex-leaflet{
+#geoconnex-leaflet {
   z-index: 2;
 }
 
@@ -1809,97 +1870,202 @@ export default toNative(GeoConnex);
 
 #geoconnex-leaflet {
   height: 400px;
-  border: 1px solid #ddd;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
   margin-bottom: 1rem;
 }
 
 .leaflet-control-container,
 .leaflet-popup {
-  font-size: 1.2rem !important;
+  font-size: 14px !important;
 }
 
 #app-geoconnex .dataset-details {
   display: flex;
   gap: 1rem;
   align-items: center;
+  padding: 8px 0;
 }
 
-#app-geoconnex .v-application .error--text {
-  color: #c09853 !important;
-}
-
-/* ******************* BUTTON OVERRIDES ******************* */
-#app-geoconnex .v-btn {
-  font-size: 1.2rem;
-}
-
+/* Button overrides to match Vuetify */
 .v-application .btn {
-  padding: 6px 12px;
-  border-style: solid;
-  -webkit-box-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) inset;
-  -moz-box-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) inset;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) inset;
+  padding: 6px 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.0892857143em;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.v-application .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .v-application .btn i.fa {
-  margin-right: 1rem;
+  margin-right: 0.5rem;
 }
 
-.v-application .btn-info,
-.btn-primary,
-.btn-success,
-.btn-danger,
-.btn-warning {
-  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
-  color: #fff !important;
+/* Map popup buttons */
+.map-add-geoconnex,
+.map-remove-geoconnex,
+.leaflet-point-search {
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+  margin-top: 8px;
+}
+
+/* Table styling to match Vuetify */
+#app-geoconnex .info-table-wrapper {
+  margin-top: 1rem;
+}
+
+#app-geoconnex .hs-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#app-geoconnex .hs-table tr {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+#app-geoconnex .hs-table tr:last-child {
+  border-bottom: none;
+}
+
+#app-geoconnex .hs-table td {
+  padding: 12px 0;
+}
+
+#app-geoconnex .hs-table .dataset-details a {
+  color: #1976d2;
+  text-decoration: none;
+}
+
+#app-geoconnex .hs-table .dataset-details a:hover {
+  text-decoration: underline;
+}
+
+/* Tooltip styling */
+[data-toggle="tooltip"] {
+  cursor: help;
+}
+
+/* Remove old Bootstrap-specific styles */
+#app-geoconnex .glyphicon-remove-circle,
+#app-geoconnex .glyphicon-info-sign {
+  /* These are Bootstrap icons - consider replacing with Material Icons */
+  font-family: 'Material Icons', sans-serif;
+}
+
+/* Use Material Icons instead of Glyphicons if possible */
+.glyphicon-info-sign:before {
+  content: "info";
+  font-family: 'Material Icons';
+}
+
+.glyphicon-remove-circle:before {
+  content: "cancel";
+  font-family: 'Material Icons';
+}
+
+/* Responsive adjustments */
+@media (max-width: 1264px) {
+  #geoconnex-map-wrapper,
+  #geoconnex-controls-wrapper {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+  
+  #geoconnex-leaflet {
+    height: 300px;
+  }
+}
+
+/* Vuetify component spacing */
+#app-geoconnex .v-autocomplete,
+#app-geoconnex .v-combobox {
+  margin-bottom: 16px;
+}
+
+#app-geoconnex .text-muted {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Chip styling for selected features */
+#app-geoconnex .v-chip {
+  margin: 2px;
+}
+
+/* Progress bar styling */
+#app-geoconnex .v-progress-linear {
+  margin-bottom: 8px;
+}
+
+/* Map info text */
+#geoconnex-leaflet-info {
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 12px;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+/* Remove old button gradient styles and replace with Vuetify-like colors */
+.v-application .btn-info {
+  background-color: #2196f3 !important;
+  border-color: #2196f3 !important;
+  color: white !important;
 }
 
 .v-application .btn-success {
-  background-color: #eee;
-  background-image: -webkit-linear-gradient(#74e274, #5cb85c);
-  background-image: linear-gradient(#74e274, #5cb85c);
-  border-color: #20833f;
+  background-color: #4caf50 !important;
+  border-color: #4caf50 !important;
+  color: white !important;
 }
 
 .v-application .btn-danger {
-  background-color: #d9534f !important;
-  /* border-color: #d43f3a  !important; */
-  border-color: #8c3c3a !important;
+  background-color: #f44336 !important;
+  border-color: #f44336 !important;
+  color: white !important;
 }
 
 .v-application .btn-warning {
-  background-color: #f0ad4e;
-  border-color: #eea236;
-}
-
-.v-application .btn-info {
-  background-color: #5bc0de;
-  border-color: #46b8da;
+  background-color: #ff9800 !important;
+  border-color: #ff9800 !important;
+  color: white !important;
 }
 
 .v-application .btn-default {
-  background-color: #eee;
-  background-image: -webkit-linear-gradient(#fcfcfc, #eee);
-  background-image: linear-gradient(#fcfcfc, #eee);
+  background-color: #f5f5f5 !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+/* Remove text shadows for cleaner look */
+.v-application .btn-info,
+.v-application .btn-primary,
+.v-application .btn-success,
+.v-application .btn-danger,
+.v-application .btn-warning {
+  text-shadow: none;
 }
 
 .v-application .btn-default:not(.active) {
-  text-shadow: 1px 1px #fff;
+  text-shadow: none;
 }
 
-#app-geoconnex .btn-primary {
-  background-image: linear-gradient(#7ab2e2, #428bca);
-  background-color: #eee;
-  background-image: -webkit-linear-gradient(#7ab2e2, #428bca);
-  background-image: linear-gradient(#7ab2e2, #428bca);
-  border-color: #428bca;
+/* Add hover effects */
+.v-application .btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.v-application .btn-success {
-  background-color: #eee;
-  background-image: -webkit-linear-gradient(#74e274, #5cb85c);
-  background-image: linear-gradient(#74e274, #5cb85c);
-  border-color: #20833f;
+.v-application .btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
-
 </style>
