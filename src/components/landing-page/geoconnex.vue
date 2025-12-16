@@ -1320,24 +1320,66 @@ class GeoConnex extends Vue {
     try {
       const leafletLayer = L.geoJSON(geojson, {
         onEachFeature: function (feature, layer) {
-          let popupText = `<h4>${feature.text}</h4>`;
+          let popupText = `<h4 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 500;">${feature.text}</h4>`;
           if (feature.uri) {
-            popupText += `<a href=${feature["uri"]} target="_blank">${feature["uri"]}</a></br></br>`;
+            popupText += `<a href="${feature.uri}" target="_blank" style="color: #1976d2; text-decoration: none; display: block; margin-bottom: 12px; font-size: 14px;">
+              ${feature.uri}
+            </a>`;
           }
+          
+          // Use Material Design styled buttons instead of Bootstrap
           if (
             geoconnexApp.resMode == "Edit" &&
             style.color == geoconnexApp.collectionSearchColor
           ) {
-            popupText += `<button type="button" class="white--text text-none v-btn v-btn--has-bg theme--light v-size--small btn btn-success map-add-geoconnex" data='${JSON.stringify(
-              feature
-            )}'><i class="fa fa-plus"></i> Add Feature</button>`;
+            popupText += `
+              <button type="button" class="map-add-geoconnex" 
+                data='${JSON.stringify(feature)}'
+                style="
+                  background-color: #4caf50;
+                  color: white;
+                  border: none;
+                  border-radius: 4px;
+                  padding: 8px 16px;
+                  font-size: 14px;
+                  font-weight: 500;
+                  cursor: pointer;
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 8px;
+                  transition: background-color 0.2s;
+                "
+                onmouseover="this.style.backgroundColor='#43a047'"
+                onmouseout="this.style.backgroundColor='#4caf50'"
+              >
+                Add Feature
+              </button>`;
           } else if (
             geoconnexApp.resMode == "Edit" &&
             style.color == geoconnexApp.featureSelectColor
           ) {
-            popupText += `<button type="button" class="white--text text-none v-btn v-btn--has-bg theme--light v-size--small btn btn-danger map-remove-geoconnex" data='${JSON.stringify(
-              feature
-            )}'>Remove Feature</button>`;
+            popupText += `
+              <button type="button" class="map-remove-geoconnex" 
+                data='${JSON.stringify(feature)}'
+                style="
+                  background-color: #f44336;
+                  color: white;
+                  border: none;
+                  border-radius: 4px;
+                  padding: 8px 16px;
+                  font-size: 14px;
+                  font-weight: 500;
+                  cursor: pointer;
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 8px;
+                  transition: background-color 0.2s;
+                "
+                onmouseover="this.style.backgroundColor='#e53935'"
+                onmouseout="this.style.backgroundColor='#f44336'"
+              >
+                Remove Feature
+              </button>`;
           }
           layer.bindPopup(popupText, { maxWidth: 400 });
         },
@@ -1606,9 +1648,31 @@ class GeoConnex extends Vue {
     function onMapClick(e) {
       if (!geoconnexApp.hasSearches) return;
       const loc = { lat: e.latlng.lat, long: e.latlng.lng };
-      const content = `<button class="btn btn-info leaflet-point-search" data='${JSON.stringify(
-        loc
-      )}'><i class="fa fa-map-marker"></i>Find features containing this point</button>`;
+      const content = `
+        <button class="leaflet-point-search" 
+          data='${JSON.stringify(loc)}'
+          style="
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.2s;
+            width: 100%;
+            justify-content: center;
+          "
+          onmouseover="this.style.backgroundColor='#1976d3'"
+          onmouseout="this.style.backgroundColor='#2196f3'"
+        >
+          <span class="mdi mdi-map-marker" style="font-size: 18px;"></span>
+          Find features containing this point
+        </button>`;
       popup.setLatLng(e.latlng).setContent(content).openOn(geoconnexApp.map);
     }
 
@@ -2164,5 +2228,91 @@ export default toNative(GeoConnex);
 .v-application .btn:active {
   transform: translateY(0);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Style for Leaflet popup buttons */
+.leaflet-popup-content button {
+  font-family: 'Roboto', sans-serif !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+.leaflet-popup-content .map-add-geoconnex,
+.leaflet-popup-content .map-remove-geoconnex,
+.leaflet-popup-content .leaflet-point-search {
+  font-family: 'Roboto', sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  border-radius: 4px !important;
+  padding: 8px 16px !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s, box-shadow 0.2s !important;
+  border: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.leaflet-popup-content .map-add-geoconnex {
+  background-color: #4caf50 !important;
+  color: white !important;
+}
+
+.leaflet-popup-content .map-add-geoconnex:hover {
+  background-color: #43a047 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+.leaflet-popup-content .map-remove-geoconnex {
+  background-color: #f44336 !important;
+  color: white !important;
+}
+
+.leaflet-popup-content .map-remove-geoconnex:hover {
+  background-color: #e53935 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+.leaflet-popup-content .leaflet-point-search {
+  background-color: #2196f3 !important;
+  color: white !important;
+  width: 100% !important;
+  justify-content: center !important;
+}
+
+.leaflet-popup-content .leaflet-point-search:hover {
+  background-color: #1976d3 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Material icons in popups */
+.leaflet-popup-content .material-icons,
+.leaflet-popup-content .mdi {
+  font-size: 18px !important;
+  line-height: 1 !important;
+}
+
+/* Popup header styling */
+.leaflet-popup-content h4 {
+  margin: 0 0 12px 0 !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  color: rgba(0, 0, 0, 0.87) !important;
+  font-family: 'Roboto', sans-serif !important;
+}
+
+/* Popup link styling */
+.leaflet-popup-content a {
+  color: #1976d2 !important;
+  text-decoration: none !important;
+  display: block !important;
+  margin-bottom: 12px !important;
+  font-size: 14px !important;
+  font-family: 'Roboto', sans-serif !important;
+  word-break: break-all !important;
+}
+
+.leaflet-popup-content a:hover {
+  text-decoration: underline !important;
 }
 </style>
