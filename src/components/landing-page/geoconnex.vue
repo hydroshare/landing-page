@@ -569,9 +569,7 @@ class GeoConnex extends Vue {
       geoconnexApp.resMode == "Edit" && geoconnexApp.fetchCollections(false);
       await geoconnexApp.loadResourceMetadataRelations();
 
-      if (geoconnexApp.resMode == "Edit") {
-        geoconnexApp.updateAppWithResSpatialExtent();
-      }
+      geoconnexApp.updateAppWithResSpatialExtent();
       geoconnexApp.fitMapToFeatures({ group: null, overrideShouldFit: true });
     }
     geoconnexApp.isLoading = false;
