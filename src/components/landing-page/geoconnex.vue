@@ -212,7 +212,7 @@
                       <span class="text-truncate" :title="item.raw.text.length > stringLengthLimit ? item.raw.text : ''">
                         {{ item.raw.text }}
                       </span>
-                      <!-- TODO handle chip removal? -->
+                      <!-- TODO handle chip removal?! -->
                       <!-- <span @click.stop="parent.selectItem(item)" class="glyphicon glyphicon-remove-circle"></span> -->
                   </v-chip>
                   </template>
@@ -578,7 +578,7 @@ class GeoConnex extends Vue {
       await geoconnexApp.loadResourceMetadataRelations();
 
       if (geoconnexApp.resMode == "Edit") {
-        // TODO: make sure we get the spatial coverage correctly
+        // TODO: make sure we get the spatial coverage correctly!
         // wait for spatial coverage map to load before getting extent
         // await geoconnexApp
         //  .until((_) => coverageMap)
@@ -1212,7 +1212,7 @@ class GeoConnex extends Vue {
     // geoconnexApp.map.setView([41.850033, -87.6500523], 3);
     geoconnexApp.map.setView([30, 0], 1);
 
-    // TODO: implement non jquery map events
+    // TODO: implement non jquery map events!
     // geoconnexApp.setMapEvents();
   }
   async addSearchFeaturesToMap(features, collectionOverride = null) {
@@ -1519,7 +1519,7 @@ class GeoConnex extends Vue {
 
     if (geoconnexApp.resMode === "Edit") {
       geoconnexApp.map.on("click", onMapClick);
-      // TODO: remove jquery
+      // TODO: remove jquery!
 
       $("#geoconnex-map-wrapper").on(
         "click",
