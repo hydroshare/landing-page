@@ -10,7 +10,6 @@ declare module 'vue' {
   export interface GlobalComponents {
     AuthRedirect: typeof import('./components/account/auth-redirect.vue')['default']
     'Cd.footer': typeof import('./components/base/cd.footer.vue')['default']
-    'Cd.landingPage': typeof import('./components/landing-page/cd.landing-page.vue')['default']
     'Cd.spatialCoverageMap': typeof import('./components/search-results/cd.spatial-coverage-map.vue')['default']
     copy: typeof import('./components/landing-page/hs-uppy copy.vue')['default']
     'Cz.login': typeof import('./components/account/cz.login.vue')['default']

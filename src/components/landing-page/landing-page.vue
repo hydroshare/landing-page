@@ -1,18 +1,17 @@
 <template>
   <v-container>
-    <v-skeleton-loader
-      v-if="isFetchingMetadata"
-      type="card"
-    ></v-skeleton-loader>
+    <h4
+      v-if="!isFetchingMetadata && wasLoaded"
+      id="overview"
+      class="text-h6 font-weight-medium mb-2"
+    >
+      {{ data.name }}
+    </h4>
 
-    <template v-if="!isFetchingMetadata && wasLoaded">
-      <h4 id="overview" class="text-h6 font-weight-medium mb-2">
-        {{ data.name }}
-      </h4>
-
-      <div
-        class="d-flex justify-space-between mb-2 flex-column flex-sm-row align-normal align-sm-end"
-      >
+    <div
+      class="d-flex justify-space-between mb-2 flex-column flex-sm-row align-normal align-sm-end"
+    >
+      <template v-if="!isLoadingFiles && !isFetchingMetadata && wasLoaded">
         <div v-if="data.creativeWorkStatus || data.dateModified">
           <v-chip
             v-if="data.creativeWorkStatus"
@@ -36,54 +35,62 @@
             </span>
           </template>
         </div>
+      </template>
 
+      <v-spacer></v-spacer>
+      <div class="d-flex gap-1">
         <v-spacer></v-spacer>
-        <div class="d-flex gap-1">
-          <v-spacer></v-spacer>
-          <template v-if="!isLoadingFiles && !isFetchingMetadata">
-            <v-menu width="500" :close-on-content-click="false">
-              <template v-slot:activator="{ props }">
-                <v-btn
-                  size="small"
-                  v-bind="props"
-                  color="primary"
-                  prepend-icon="mdi-cog"
-                  variant="plain"
-                  >Settings</v-btn
-                >
-              </template>
-              <v-card>
-                <v-card-title
-                  class="bg-grey-lighten-3 text-body-1 text-medium-emphasis"
-                  >Settings</v-card-title
-                >
-                <v-divider></v-divider>
-                <v-card-text flat>
-                  <s3-form
-                    :prefix="s3Info.prefix"
-                    :bucket="s3Info.bucket"
-                    :s3-host="s3Host"
-                    :hydroshare-host="hydroshareHost"
-                    :accessKey="accessKey"
-                    :secret-key="secretKey"
-                    @apply-changes="onS3FormUpdate"
-                    @restore-defaults="onRestoreDefaults"
-                  ></s3-form>
-                </v-card-text>
-              </v-card>
-            </v-menu>
 
+        <v-menu width="500" :close-on-content-click="false">
+          <template v-slot:activator="{ props }">
             <v-btn
               size="small"
+              v-bind="props"
               color="primary"
-              prepend-icon="mdi-pen"
-              variant="outlined"
-              @click="$router.push({ name: 'edit-dataset' })"
-              >Edit</v-btn
+              prepend-icon="mdi-cog"
+              variant="plain"
+              >Settings</v-btn
             >
           </template>
-        </div>
+          <v-card>
+            <v-card-title
+              class="bg-grey-lighten-3 text-body-1 text-medium-emphasis"
+              >Settings</v-card-title
+            >
+            <v-divider></v-divider>
+            <v-card-text flat>
+              <s3-form
+                :prefix="s3Info.prefix"
+                :bucket="s3Info.bucket"
+                :s3-host="s3Host"
+                :hydroshare-host="hydroshareHost"
+                :accessKey="credentials.accessKey"
+                :secret-key="credentials.secretKey"
+                @apply-changes="onS3FormUpdate"
+                @restore-defaults="onRestoreDefaults"
+              ></s3-form>
+            </v-card-text>
+          </v-card>
+        </v-menu>
+
+        <v-btn
+          v-if="!isFetchingMetadata && wasLoaded"
+          size="small"
+          color="primary"
+          prepend-icon="mdi-pen"
+          variant="outlined"
+          @click="$router.push({ name: 'edit-dataset' })"
+          >Edit</v-btn
+        >
       </div>
+    </div>
+
+    <v-skeleton-loader
+      v-if="isFetchingMetadata"
+      type="card"
+    ></v-skeleton-loader>
+
+    <template v-if="!isFetchingMetadata && wasLoaded">
       <v-divider class="my-4"></v-divider>
 
       <div class="d-flex gap-2">
@@ -117,10 +124,16 @@
                       </div>
                     </span>
                   </template>
-                  <v-card v-if="creator['type'] == 'Person'" width="auto">
-                    <v-card-title class="text-body-1">
-                      <v-icon class="mr-2">mdi-account-outline</v-icon>
-                      {{ creator.name }}
+                  <v-card
+                    v-if="creator['type'] == 'Person'"
+                    width="auto"
+                    min-width="300"
+                  >
+                    <v-card-title
+                      class="text-body-1 d-flex align-center bg-grey-lighten-5"
+                    >
+                      <v-icon class="mr-1">mdi-account-outline</v-icon>
+                      <span>{{ creator.name }}</span>
                     </v-card-title>
                     <v-divider></v-divider>
 
@@ -137,11 +150,9 @@
                             title="Email address"
                             icon="mdi-email-outline"
                           />
-                          <div class="d-flex align-center gap-1">
-                            <span class="text-medium-emphasis">Email:</span>
-                            {{ creator.email }}
-                          </div>
+                          <div class="text-medium-emphasis">Email</div>
                         </div>
+                        <div>{{ creator.email }}</div>
                       </div>
                       <div
                         v-if="creator.identifier"
@@ -166,21 +177,20 @@
                             mdi-domain
                           </v-icon>
                           <div class="d-flex align-center gap-1">
-                            <span class="text-medium-emphasis"
-                              >Affiliation:</span
-                            >
-                            <div v-if="creator.affiliation.name">
-                              <span
-                                v-if="creator.affiliation.url"
-                                class="d-inline-flex align-baseline"
-                              >
-                                <a :href="creator.affiliation.url">{{
-                                  creator.affiliation.name
-                                }}</a>
-                              </span>
-                              <span v-else>{{ creator.affiliation.name }}</span>
-                            </div>
+                            <div class="text-medium-emphasis">Affiliation</div>
                           </div>
+                        </div>
+
+                        <div v-if="creator.affiliation.name">
+                          <span
+                            v-if="creator.affiliation.url"
+                            class="d-inline-flex align-baseline"
+                          >
+                            <a :href="creator.affiliation.url">{{
+                              creator.affiliation.name
+                            }}</a>
+                          </span>
+                          <span v-else>{{ creator.affiliation.name }}</span>
                         </div>
 
                         <div v-if="creator.affiliation.address">
@@ -215,7 +225,11 @@
               </template>
 
               <div v-bind="infoLabelAttr">Resource Type:</div>
-              <div v-bind="infoValueAttr">{{ data["@type"] }}</div>
+              <div v-bind="infoValueAttr">
+                {{
+                  resourceTypeLabels[data.additionalType] || data.additionalType
+                }}
+              </div>
 
               <template v-if="contentSize">
                 <div v-bind="infoLabelAttr">Resource Size:</div>
@@ -267,10 +281,9 @@
             </v-col>
           </v-row>
 
-          <div class="mb-8 field" id="description">
+          <div class="mb-8 field" id="abstract">
             <div v-bind="headingAttr">Abstract</div>
             <v-divider class="mb-2"></v-divider>
-            <!-- <p class="text-body-1 text-medium-emphasis">{{ data.description }}</p> -->
             <v-banner
               :text="data.description"
               :lines="showDescription ? undefined : 'three'"
@@ -310,10 +323,7 @@
           </div>
 
           <div
-            v-if="
-              data.document[0].associatedMedia &&
-              data.document[0].associatedMedia.length
-            "
+            v-if="data.associatedMedia && data.associatedMedia.length"
             class="mb-8 field"
             id="content"
           >
@@ -378,6 +388,32 @@
                 }}</pre>
               </v-card-text>
             </v-card>
+          </div>
+
+          <div
+            v-if="data.additional_metadata"
+            class="mb-8 field"
+            id="additionalMetadata"
+          >
+            <div v-bind="headingAttr">Additional Metadata</div>
+            <v-divider class="mb-2"></v-divider>
+            <v-table density="compact">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="key in Object.keys(data.additional_metadata)"
+                  :key="key"
+                >
+                  <td>{{ key }}</td>
+                  <td>{{ data.additional_metadata[key] }}</td>
+                </tr>
+              </tbody>
+            </v-table>
           </div>
 
           <div
@@ -763,16 +799,14 @@
             </v-card>
 
             <v-card
-              v-if="
-                data.document[0].citation && data.document[0].citation.length
-              "
+              v-if="data.citation && data.citation.length"
               class="mt-8"
               variant="flat"
               id="citation"
             >
               <v-card-title class="pa-0 pb-2">How to cite</v-card-title>
               <v-card-text
-                v-for="(citation, index) of data.document[0].citation"
+                v-for="(citation, index) of data.citation"
                 :key="index"
                 class="pa-0 text-body-2 text-medium-emphasis"
               >
@@ -825,6 +859,12 @@ import { useGoTo } from "vuetify";
 import { EnumCreativeWorkStatus } from "@/types";
 import markdownit from "markdown-it";
 
+import {
+  DEFAULT_S3_HOST,
+  DEFAULT_HYDROSHARE_HOST,
+  DEFAULT_S3_REGION,
+} from "@/constants";
+
 import CdSpatialCoverageMap from "@/components/search-results/cd.spatial-coverage-map.vue";
 import Geoconnex from "@/components/geoconnex.vue";
 
@@ -862,17 +902,14 @@ class LandingPage extends Vue {
   data: Record<string, any> = {};
   stringify = stringify;
 
-  accessKey = localStorage.getItem("s3AccessKey") || "cuahsi";
-  secretKey = localStorage.getItem("s3SecretKey") || "devpassword";
-
   isLoadingFiles: boolean = true;
   currentPath: string = "";
   isFetchingMetadata = true;
   wasLoaded = true;
 
   s3Client!: S3Client;
-  s3Host: string = "http://localhost:9000";
-  hydroshareHost: string = "http://localhost";
+  s3Host: string = DEFAULT_S3_HOST;
+  hydroshareHost: string = DEFAULT_HYDROSHARE_HOST;
 
   s3Info = {
     bucket: "",
@@ -910,15 +947,18 @@ class LandingPage extends Vue {
     isReadOnly: true, // Unused for now
     hasFolders: true,
   };
+  resourceTypeLabels = {
+    CompositeResource: "Composite Resource",
+  };
 
   startS3Client() {
     this.s3Client = new S3Client({
-      region: "us-central-2",
+      region: DEFAULT_S3_REGION,
       endpoint: this.s3Host,
       forcePathStyle: true,
       credentials: {
-        accessKeyId: this.accessKey,
-        secretAccessKey: this.secretKey,
+        accessKeyId: this.credentials.accessKey,
+        secretAccessKey: this.credentials.secretKey,
       },
     });
   }
@@ -950,9 +990,19 @@ class LandingPage extends Vue {
     Notifications.toast({ message: "Copied to clipboard", type: "info" });
   }
 
+  get credentials() {
+    return User.$state.s3Credentials;
+  }
+
+  set credentials(cred) {
+    User.commit((state) => {
+      state.s3Credentials = cred;
+    });
+  }
+
   async loadReadmeFile() {
     // TODO: get from files loaded
-    const readmeFile = this.data.document[0].associatedMedia?.find(
+    const readmeFile = this.data.associatedMedia?.find(
       (f: any) =>
         f.name.toLowerCase() === "readme.md" ||
         f.name.toLowerCase() === "readme.txt",
@@ -990,8 +1040,8 @@ class LandingPage extends Vue {
   get contentSize() {
     let total = 0;
 
-    if (this.data.document[0].associatedMedia?.length) {
-      total = this.data.document[0].associatedMedia.reduce(
+    if (this.data.associatedMedia?.length) {
+      total = this.data.associatedMedia.reduce(
         (acc: number, m: any, _index: number) => {
           let size = 0;
 
@@ -1024,56 +1074,40 @@ class LandingPage extends Vue {
   }
 
   async created() {
+    // https://cuahsi.atlassian.net/browse/CAM-769
+    // TODO: for now we store access and secret keys in User model
+    // Replace when we update to Pinia
+
+    if (this.isLoggedIn) {
+      console.log("user is already logged in, fetching S3 credentials");
+      await User.getOrCreateS3Credentials();
+    } else {
+      console.log(
+        "checking if we just returned from HydroShare login redirect",
+      );
+      User.checkLoginStatus().then(async (loggedIn) => {
+        if (loggedIn) {
+          await User.getOrCreateS3Credentials();
+        }
+      });
+    }
+
     if (!this.resourceId && this.$route?.params?.resourceId) {
       this.resourceId = this.$route.params.resourceId as string;
     }
 
     // notify if the resourceId is not set
     if (!this.resourceId) {
-      alert(
-        "No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.",
-      );
-      this.$router.push({
-        name: "landing",
-        params: { resourceId: "d7b526e24f7e449098b428ae9363f514" },
+      console.error("No resource ID provided in URL.");
+      this.isLoadingFiles = false;
+      this.isFetchingMetadata = false;
+      this.wasLoaded = false;
+      Notifications.toast({
+        title: "Error",
+        message: "No resource ID provided in URL.",
+        type: "error",
       });
-    }
-
-    // https://cuahsi.atlassian.net/browse/CAM-769
-    // TODO: for now we store access and secret keys in localStorage
-    // Replace when we update to Pinia
-
-    const fetchCredentials = async () => {
-      const { access_key, secret_key } = await User.getOrCreateS3Credentials();
-      this.accessKey = access_key;
-      this.secretKey = secret_key;
-    };
-
-    if (this.isLoggedIn) {
-      console.log("user is already logged in, fetching S3 credentials");
-      fetchCredentials();
-    } else {
-      console.log(
-        "checking if we just returned from HydroShare login redirect",
-      );
-      User.checkLoginStatus().then((loggedIn) => {
-        if (loggedIn) {
-          fetchCredentials();
-        }
-      });
-    }
-
-    if (!this.accessKey || !this.secretKey) {
-      this.accessKey = prompt("Enter your S3 Access Key:") || "cuahsi";
-      this.secretKey = prompt("Enter your S3 Secret Key:") || "devpassword";
-
-      if (this.accessKey && this.secretKey) {
-        localStorage.setItem("s3AccessKey", this.accessKey);
-        localStorage.setItem("s3SecretKey", this.secretKey);
-      } else {
-        alert("Access key and secret key are required to proceed.");
-        return;
-      }
+      return;
     }
 
     if (!this.s3Info.bucket || !this.s3Info.prefix) {
@@ -1158,7 +1192,7 @@ class LandingPage extends Vue {
       { text: "Overview", to: "#overview" },
       {
         text: "Abstract",
-        to: "#description",
+        to: "#abstract",
         // isShown: (data: any) => !!data.description || false,
       },
       {
@@ -1182,6 +1216,11 @@ class LandingPage extends Vue {
         to: "#readme",
         level: 4,
         // isShown: (data: any) => data.associatedMedia?.length || false,
+      },
+      {
+        text: "Additional Metadata",
+        to: "#additionalMetadata",
+        // isShown: (data: any) => data.funding?.length || false,
       },
       {
         text: "Funding",
@@ -1226,10 +1265,10 @@ class LandingPage extends Vue {
     this.hydroshareHost = params.hydroshareHost;
     this.s3Host = params.s3Host;
 
-    this.secretKey = params.secretKey;
-    this.accessKey = params.accessKey;
-    localStorage.setItem("s3AccessKey", this.accessKey);
-    localStorage.setItem("s3SecretKey", this.secretKey);
+    this.credentials = {
+      accessKey: params.accessKey,
+      secretKey: params.secretKey,
+    };
 
     this.startS3Client();
     this.loadResource();
@@ -1238,14 +1277,25 @@ class LandingPage extends Vue {
   async onRestoreDefaults() {
     this.isFetchingMetadata = true;
     this.isLoadingFiles = true;
-    this.s3Host = "http://localhost:9000";
-    this.hydroshareHost = "http://localhost";
+    this.s3Host = DEFAULT_S3_HOST;
+    this.hydroshareHost = DEFAULT_HYDROSHARE_HOST;
+
+    // reset S3 info
+    this.s3Info.bucket = "";
+    this.s3Info.prefix = "";
+    this.credentials = {
+      accessKey: "",
+      secretKey: "",
+    };
+
+    // get new credentials
+    await User.getOrCreateS3Credentials();
 
     try {
       User.getResourceS3prefix(this.resourceId).then((s3info) => {
         if (s3info) {
           this.s3Info = s3info;
-          this.s3Info.prefix = `${this.resourceId}/.hsmetadata/`; // TODO: overriding wrong api response value
+          this.s3Info.prefix = `${this.resourceId}/.hsjsonld/`; // TODO: overriding wrong api response value
         }
       });
       this.startS3Client();

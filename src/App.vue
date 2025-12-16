@@ -199,11 +199,6 @@ class App extends Vue {
   router = useRouter();
   public showMobileNavigation = false;
   public paths: any[] = [
-    {
-      attrs: { to: "d7b526e24f7e449098b428ae9363f514" },
-      label: "Example",
-      icon: "mdi-test-tube",
-    },
   ];
 
   protected get isLoggedIn(): boolean {

@@ -27,8 +27,8 @@
                 :bucket="s3Info.bucket"
                 :s3-host="s3Host"
                 :hydroshare-host="hydroshareHost"
-                :accessKey="accessKey"
-                :secret-key="secretKey"
+                :accessKey="credentials.accessKey"
+                :secret-key="credentials.secretKey"
                 @apply-changes="onS3FormUpdate"
                 @restore-defaults="onRestoreDefaults"
               ></s3-form>
@@ -65,8 +65,8 @@
         ref="hsUppyRef"
         :s3Info="s3Info"
         :s3Host="s3Host"
-        :accessKey="accessKey"
-        :secretKey="secretKey"
+        :accessKey="credentials.accessKey"
+        :secretKey="credentials.secretKey"
         :fileExplorer="fileExplorer"
       />
       <v-skeleton-loader class="mb-12" v-else type="card"></v-skeleton-loader>
@@ -175,6 +175,12 @@ import HsUppy from "./hs-uppy.vue";
 import User from "@/models/user.model";
 import Geoconnex from "@/components/geoconnex.vue";
 
+import {
+  DEFAULT_S3_HOST,
+  DEFAULT_HYDROSHARE_HOST,
+  DEFAULT_S3_REGION,
+} from "@/constants";
+
 interface FormError {
   title: string;
   message: string;
@@ -207,9 +213,6 @@ class App extends Vue {
   data: Record<string, any> = {};
   stringify = stringify;
 
-  accessKey = localStorage.getItem("s3AccessKey") || "cuahsi";
-  secretKey = localStorage.getItem("s3SecretKey") || "devpassword";
-
   isLoadingFiles: boolean = true;
   isSubmitting: boolean = false;
   currentPath: string = "";
@@ -218,8 +221,8 @@ class App extends Vue {
   wasLoaded = false;
 
   s3Client!: S3Client;
-  s3Host: string = "http://localhost:9000";
-  hydroshareHost: string = "http://localhost";
+  s3Host: string = DEFAULT_S3_HOST;
+  hydroshareHost: string = DEFAULT_HYDROSHARE_HOST;
   s3Info = {
     bucket: "",
     prefix: "",
@@ -258,62 +261,59 @@ class App extends Vue {
     hasFolders: true,
   };
 
+  get credentials() {
+    return User.$state.s3Credentials;
+  }
+
+  set credentials(cred) {
+    User.commit((state) => {
+      state.s3Credentials = cred;
+    });
+  }
+
   startS3Client() {
     this.s3Client = new S3Client({
-      region: "us-central-2",
-      endpoint: `${this.s3Host}`,
+      region: DEFAULT_S3_REGION,
+      endpoint: this.s3Host,
       forcePathStyle: true,
       credentials: {
-        accessKeyId: this.accessKey,
-        secretAccessKey: this.secretKey,
+        accessKeyId: this.credentials.accessKey,
+        secretAccessKey: this.credentials.secretKey,
       },
     });
   }
 
   async created() {
-    if (!this.resourceId && this.$route?.params?.resourceId) {
-      this.resourceId = this.$route.params.resourceId as string;
-    }
-
-    if (!this.resourceId) {
-      alert(
-        "No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.",
-      );
-      this.resourceId = "d7b526e24f7e449098b428ae9363f514";
-    }
-
-    const fetchCredentials = async () => {
-      const { access_key, secret_key } = await User.getOrCreateS3Credentials();
-      this.accessKey = access_key;
-      this.secretKey = secret_key;
-    };
-
     if (this.isLoggedIn) {
       console.log("user is already logged in, fetching S3 credentials");
-      fetchCredentials();
+      await User.getOrCreateS3Credentials();
     } else {
       console.log(
         "checking if we just returned from HydroShare login redirect",
       );
-      User.checkLoginStatus().then((loggedIn) => {
+      User.checkLoginStatus().then(async (loggedIn) => {
         if (loggedIn) {
-          fetchCredentials();
+          await User.getOrCreateS3Credentials();
         }
       });
     }
 
-    // temporary local storage for S3 keys (will move to Pinia later)
-    if (!this.accessKey || !this.secretKey) {
-      this.accessKey = prompt("Enter your S3 Access Key:") || "cuahsi";
-      this.secretKey = prompt("Enter your S3 Secret Key:") || "devpassword";
+    if (!this.resourceId && this.$route?.params?.resourceId) {
+      this.resourceId = this.$route.params.resourceId as string;
+    }
 
-      if (this.accessKey && this.secretKey) {
-        localStorage.setItem("s3AccessKey", this.accessKey);
-        localStorage.setItem("s3SecretKey", this.secretKey);
-      } else {
-        alert("Access key and secret key are required to proceed.");
-        return;
-      }
+    // notify if the resourceId is not set
+    if (!this.resourceId) {
+      console.error("No resource ID provided in URL.");
+      this.isLoadingFiles = false;
+      this.isFetchingMetadata = false;
+      this.wasLoaded = false;
+      Notifications.toast({
+        title: "Error",
+        message: "No resource ID provided in URL.",
+        type: "error",
+      });
+      return;
     }
 
     if (!this.s3Info.bucket || !this.s3Info.prefix) {
@@ -382,10 +382,10 @@ class App extends Vue {
     this.hydroshareHost = params.hydroshareHost;
     this.s3Host = params.s3Host;
 
-    this.secretKey = params.secretKey;
-    this.accessKey = params.accessKey;
-    localStorage.setItem("s3AccessKey", this.accessKey);
-    localStorage.setItem("s3SecretKey", this.secretKey);
+    this.credentials = {
+      accessKey: params.accessKey,
+      secretKey: params.secretKey,
+    };
 
     this.startS3Client();
     this.loadResource();
@@ -394,8 +394,20 @@ class App extends Vue {
   async onRestoreDefaults() {
     this.isFetchingMetadata = true;
     this.isLoadingFiles = true;
-    this.s3Host = "http://localhost:9000";
-    this.hydroshareHost = "http://localhost";
+    this.s3Host = DEFAULT_S3_HOST;
+    this.hydroshareHost = DEFAULT_HYDROSHARE_HOST;
+
+    // reset S3 info
+    this.s3Info.bucket = "";
+    this.s3Info.prefix = "";
+    this.credentials = {
+      accessKey: "",
+      secretKey: "",
+    };
+
+    // get new credentials
+    await User.getOrCreateS3Credentials();
+
     const s3Info = await User.getResourceS3prefix(this.resourceId);
     if (s3Info) {
       this.s3Info = s3Info;
