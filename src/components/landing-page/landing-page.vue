@@ -309,14 +309,7 @@
             >
           </div>
 
-          <div
-            v-if="
-              data.document[0].associatedMedia &&
-              data.document[0].associatedMedia.length
-            "
-            class="mb-8 field"
-            id="content"
-          >
+          <div class="mb-8 field" id="content">
             <div v-bind="headingAttr">Content</div>
             <v-divider class="mb-2"></v-divider>
 
@@ -752,7 +745,8 @@
 
             <v-card
               v-if="
-                data.document[0].citation && data.document[0].citation.length
+                data.document?.[0]?.citation &&
+                data.document?.[0]?.citation.length
               "
               class="mt-8"
               variant="flat"
@@ -814,7 +808,6 @@ import { EnumCreativeWorkStatus } from "@/types";
 import markdownit from "markdown-it";
 
 import CdSpatialCoverageMap from "@/components/search-results/cd.spatial-coverage-map.vue";
-import mockResource from "@/../example_metadata/dataset_metadata.json";
 
 const md = markdownit({
   linkify: true,
@@ -859,8 +852,8 @@ class LandingPage extends Vue {
   wasLoaded = true;
 
   s3Client!: S3Client;
-  s3Host: string = "https://s3.beta.hydroshare.org";
-  hydroshareHost: string = "https://beta.hydroshare.org";
+  s3Host: string = "http://localhost:9000";
+  hydroshareHost: string = "http://localhost:8000";
 
   s3Info = {
     bucket: "",
@@ -899,8 +892,8 @@ class LandingPage extends Vue {
     hasFolders: true,
   };
 
-  startS3Client() {
-    this.s3Client = new S3Client({
+  async startS3Client() {
+    this.s3Client = await new S3Client({
       region: "us-central-2",
       endpoint: this.s3Host,
       forcePathStyle: true,
@@ -940,7 +933,7 @@ class LandingPage extends Vue {
 
   async loadReadmeFile() {
     // TODO: get from files loaded
-    const readmeFile = this.data.document[0].associatedMedia?.find(
+    const readmeFile = this.data.document?.[0]?.associatedMedia?.find(
       (f: any) =>
         f.name.toLowerCase() === "readme.md" ||
         f.name.toLowerCase() === "readme.txt",
@@ -978,7 +971,7 @@ class LandingPage extends Vue {
   get contentSize() {
     let total = 0;
 
-    if (this.data.document[0].associatedMedia?.length) {
+    if (this.data.document?.[0].associatedMedia?.length) {
       total = this.data.document[0].associatedMedia.reduce(
         (acc: number, m: any, _index: number) => {
           let size = 0;
@@ -1014,17 +1007,6 @@ class LandingPage extends Vue {
   async created() {
     if (!this.resourceId && this.$route?.params?.resourceId) {
       this.resourceId = this.$route.params.resourceId as string;
-    }
-
-    // notify if the resourceId is not set
-    if (!this.resourceId) {
-      alert(
-        "No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.",
-      );
-      this.$router.push({
-        name: "landing",
-        params: { resourceId: "d7b526e24f7e449098b428ae9363f514" },
-      });
     }
 
     // https://cuahsi.atlassian.net/browse/CAM-769
@@ -1069,7 +1051,7 @@ class LandingPage extends Vue {
         const s3info = await User.getResourceS3prefix(this.resourceId);
         if (s3info) {
           this.s3Info = s3info;
-          this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
+          this.s3Info.prefix = `${this.resourceId}/.hsjsonld/`; // TODO: overriding wrong api response value
         }
       } catch (e) {
         this.isLoadingFiles = false;
@@ -1077,7 +1059,7 @@ class LandingPage extends Vue {
       }
     }
 
-    this.startS3Client();
+    await this.startS3Client();
 
     /* @ts-ignore */
     this.schema = await import(
@@ -1131,13 +1113,8 @@ class LandingPage extends Vue {
       `${this.s3Info.prefix}dataset_metadata.json`,
     );
 
-    // TODO: bypassing to use mock resource
-    if (resource || true) {
-      // this.data = resource.data;
-      this.data = {
-        ...this.data,
-        ...mockResource,
-      };
+    if (resource) {
+      this.data = resource.data;
       // @ts-expect-error The key property is generated when the component is initialized
       this.rootDirectory.children = resource.initialStructure || [];
       this.loadReadmeFile();
@@ -1225,14 +1202,14 @@ class LandingPage extends Vue {
   async onRestoreDefaults() {
     this.isFetchingMetadata = true;
     this.isLoadingFiles = true;
-    this.s3Host = "https://s3.beta.hydroshare.org";
-    this.hydroshareHost = "https://beta.hydroshare.org";
+    this.s3Host = "http://localhost:9000";
+    this.hydroshareHost = "http://localhost:8000";
 
     try {
       User.getResourceS3prefix(this.resourceId).then((s3info) => {
         if (s3info) {
           this.s3Info = s3info;
-          this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
+          this.s3Info.prefix = `${this.resourceId}/.hsjsonld/`; // TODO: overriding wrong api response value
         }
       });
       this.startS3Client();

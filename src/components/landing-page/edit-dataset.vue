@@ -215,8 +215,8 @@ class App extends Vue {
   wasLoaded = true;
 
   s3Client!: S3Client;
-  s3Host: string = "https://s3.beta.hydroshare.org";
-  hydroshareHost: string = "https://beta.hydroshare.org";
+  s3Host: string = "http://localhost:9000";
+  hydroshareHost: string = "http://localhost:8000";
   s3Info = {
     bucket: "",
     prefix: "",
@@ -270,13 +270,6 @@ class App extends Vue {
   async created() {
     if (!this.resourceId && this.$route?.params?.resourceId) {
       this.resourceId = this.$route.params.resourceId as string;
-    }
-
-    if (!this.resourceId) {
-      alert(
-        "No resourceId provided. Using example resourceId: d7b526e24f7e449098b428ae9363f514.",
-      );
-      this.resourceId = "d7b526e24f7e449098b428ae9363f514";
     }
 
     const fetchCredentials = async () => {
@@ -399,12 +392,12 @@ class App extends Vue {
   async onRestoreDefaults() {
     this.isFetchingMetadata = true;
     this.isLoadingFiles = true;
-    this.s3Host = "https://s3.beta.hydroshare.org";
-    this.hydroshareHost = "https://beta.hydroshare.org";
+    this.s3Host = "http://localhost:9000";
+    this.hydroshareHost = "http://localhost:8000";
     const s3Info = await User.getResourceS3prefix(this.resourceId);
     if (s3Info) {
       this.s3Info = s3Info;
-      this.s3Info.prefix = `md/${this.resourceId}/`; // TODO: overriding wrong api response value
+      this.s3Info.prefix = `${this.resourceId}/.hsjsonld/`; // TODO: overriding wrong api response value
       this.startS3Client();
       this.loadResource();
     }

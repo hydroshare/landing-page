@@ -33,17 +33,17 @@ let uppyInstance = {} as Uppy | null;
 class HsUppy extends Vue {
   @Prop({
     required: false,
-    default: () => ({
-      prefix: "d7b526e24f7e449098b428ae9363f514/data/contents/",
-      bucket: "asdf",
-    }),
+    // default: () => ({
+    //   prefix: "1dbbbacc036044c5970440b135f185c2/data/contents/",
+    //   bucket: "asdf",
+    // }),
   })
   s3Info!: { prefix: string; bucket: string };
 
   @Prop({
     type: String,
     required: false,
-    default: "https://s3.beta.hydroshare.org",
+    default: "http://localhost:9000",
   })
   s3Host!: string;
 

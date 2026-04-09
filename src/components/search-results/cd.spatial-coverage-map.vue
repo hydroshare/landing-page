@@ -137,13 +137,14 @@ class CdSpatialCoverageMap extends Vue {
   drawInitialShape() {
     // Center the map
     this.leafletMarkers.clearLayers();
-    if (this.feature["type"] === "GeoCoordinates") {
+    const featureType = this.feature.geo.type;
+    if (featureType === "GeoCoordinates") {
       const point = new L.LatLng(
         this.feature.geo.latitude,
         this.feature.geo.longitude,
       );
       this.drawMarker(L.latLng(point));
-    } else if (this.feature["type"] === "Place") {
+    } else if (featureType === "Place") {
       const extents = this.feature.geo.box
         .trim()
         .split(" ")

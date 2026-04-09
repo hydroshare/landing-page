@@ -20,7 +20,7 @@ Assuming that you have HS running locally, with a user `asdf2` and a resource `6
 "move" the resource to the expected default:
 ```
 export STARTING_RESOURCE_ID=691cd6fc77e6403299bf5ea51ef4698f
-export DEFAULT_RESOURCE_ID=d7b526e24f7e449098b428ae9363f514
+export DEFAULT_RESOURCE_ID=1dbbbacc036044c5970440b135f185c2
 docker exec -it hydroshare python manage.py modify_resource_id $STARTING_RESOURCE_ID $DEFAULT_RESOURCE_ID
 ```
 

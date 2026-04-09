@@ -137,12 +137,10 @@ export const fetchResource = async (resourceId: string, s3Client: S3Client, buck
 
     try {
       data = JSON.parse(bodyContents || "");
-      // this.data = parsed;
       console.log(`Form data loaded from ${bucket}/${key}`);
     } catch (error) {
       console.warn("JSON parse failed, loading defaults:", error);
       return false
-      // data = { ...this.defaults };
     }
 
     try {
