@@ -843,9 +843,6 @@ class LandingPage extends Vue {
   data: Record<string, any> = {};
   stringify = stringify;
 
-  accessKey = localStorage.getItem("s3AccessKey") || "minioadmin";
-  secretKey = localStorage.getItem("s3SecretKey") || "minioadmin";
-
   isLoadingFiles: boolean = true;
   currentPath: string = "";
   isFetchingMetadata = true;
@@ -898,8 +895,8 @@ class LandingPage extends Vue {
       endpoint: this.s3Host,
       forcePathStyle: true,
       credentials: {
-        accessKeyId: this.accessKey,
-        secretAccessKey: this.secretKey,
+        accessKeyId: User.$state.credentials.accessKey,
+        secretAccessKey: User.$state.credentials.secretKey,
       },
     });
   }
@@ -1009,41 +1006,18 @@ class LandingPage extends Vue {
       this.resourceId = this.$route.params.resourceId as string;
     }
 
-    // https://cuahsi.atlassian.net/browse/CAM-769
-    // TODO: for now we store access and secret keys in localStorage
-    // Replace when we update to Pinia
-
-    const fetchCredentials = async () => {
-      const { access_key, secret_key } = await User.getOrCreateS3Credentials();
-      this.accessKey = access_key;
-      this.secretKey = secret_key;
-    };
-
     if (this.isLoggedIn) {
       console.log("user is already logged in, fetching S3 credentials");
-      fetchCredentials();
+      await User.getOrCreateS3Credentials();
     } else {
       console.log(
         "checking if we just returned from HydroShare login redirect",
       );
       User.checkLoginStatus().then((loggedIn) => {
         if (loggedIn) {
-          fetchCredentials();
+          User.getOrCreateS3Credentials();
         }
       });
-    }
-
-    if (!this.accessKey || !this.secretKey) {
-      this.accessKey = prompt("Enter your S3 Access Key:") || "minioadmin";
-      this.secretKey = prompt("Enter your S3 Secret Key:") || "minioadmin";
-
-      if (this.accessKey && this.secretKey) {
-        localStorage.setItem("s3AccessKey", this.accessKey);
-        localStorage.setItem("s3SecretKey", this.secretKey);
-      } else {
-        alert("Access key and secret key are required to proceed.");
-        return;
-      }
     }
 
     if (!this.s3Info.bucket || !this.s3Info.prefix) {
@@ -1069,7 +1043,7 @@ class LandingPage extends Vue {
     /* @ts-ignore */
     this.uischema = await import(`@/schemas/hydroshare/view-uischema.json`);
 
-    this.loadResource();
+    await this.loadResource();
   }
 
   parseDate(date: string): string {
@@ -1190,13 +1164,8 @@ class LandingPage extends Vue {
     this.hydroshareHost = params.hydroshareHost;
     this.s3Host = params.s3Host;
 
-    this.secretKey = params.secretKey;
-    this.accessKey = params.accessKey;
-    localStorage.setItem("s3AccessKey", this.accessKey);
-    localStorage.setItem("s3SecretKey", this.secretKey);
-
-    this.startS3Client();
-    this.loadResource();
+    await this.startS3Client();
+    await this.loadResource();
   }
 
   async onRestoreDefaults() {
@@ -1212,8 +1181,8 @@ class LandingPage extends Vue {
           this.s3Info.prefix = `${this.resourceId}/.hsjsonld/`; // TODO: overriding wrong api response value
         }
       });
-      this.startS3Client();
-      this.loadResource();
+      await this.startS3Client();
+      await this.loadResource();
     } catch (e) {
       this.isLoadingFiles = false;
       this.isFetchingMetadata = false;

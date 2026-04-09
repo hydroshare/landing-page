@@ -200,7 +200,7 @@ class App extends Vue {
   public showMobileNavigation = false;
   public paths: any[] = [
     {
-      attrs: { to: "67edbc13eaea477fad7634b370bd7e5b" },
+      attrs: { to: "bf5b4f5f183742ce9cb9bca1c285c09b" },
       label: "Example",
       icon: "mdi-test-tube",
     },

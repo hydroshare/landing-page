@@ -1,15 +1,11 @@
 import { ViteSSG } from "vite-ssg";
 import App from "./App.vue";
 import type { UserModule } from "./types";
-import axios from "axios";
 import User, { PrivilegeCodes } from "./models/user.model";
 
 import "./assets/css/global.scss";
 import { routes } from "./routes";
 // import { createWebHistory } from "vue-router";
-
-// Configure axios to send cookies with all requests for Django cookie authentication
-axios.defaults.withCredentials = true;
 
 // Temporarily expose User and PrivilegeCodes to global scope for debugging
 if (typeof window !== 'undefined') {

@@ -144,7 +144,7 @@ class CdSpatialCoverageMap extends Vue {
         this.feature.geo.longitude,
       );
       this.drawMarker(L.latLng(point));
-    } else if (featureType === "Place") {
+    } else if (featureType === "GeoShape") {
       const extents = this.feature.geo.box
         .trim()
         .split(" ")

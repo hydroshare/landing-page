@@ -1,7 +1,6 @@
 import type { RouteLocationRaw } from "vue-router";
 import { Notifications } from "@cznethub/cznet-vue-core";
 import { Model } from "@vuex-orm/core";
-import axios from "axios";
 
 export interface ICzCurrentUserState {
   orcid: string;
@@ -10,12 +9,11 @@ export interface ICzCurrentUserState {
 
 export interface IUserState {
   isLoggedIn: boolean;
-  orcid: string;
-  orcidAccessToken: string;
   next: string;
   hasUnsavedChanges: boolean;
-  showZenodoWarning: boolean;
   toc: { to: string, text: string, level?: number }[];
+  credentials: { accessKey: string, secretKey: string },
+  CSRFToken: string
 }
 
 /**
@@ -38,12 +36,6 @@ export enum PrivilegeCodes {
 export default class User extends Model {
   static entity = "users";
 
-  // Cache CSRF token to avoid repeated requests
-  private static _cachedCSRFToken: string | null = null;
-
-  // Cache S3 credentials to avoid repeated requests
-  private static _cachedS3Credentials: { access_key: string; secret_key: string } | null = null;
-
   // Base URL for HydroShare API - can be configured for different environments
   private static readonly hydroshareHost = "http://localhost:8000";
 
@@ -55,19 +47,14 @@ export default class User extends Model {
     return this.store().state.entities[this.entity];
   }
 
-  static get accessToken() {
-    return this.$state?.orcidAccessToken;
-  }
-
   static state(): IUserState {
     return {
       isLoggedIn: false,
-      orcid: "",
-      orcidAccessToken: "",
       next: "",
       hasUnsavedChanges: false,
-      showZenodoWarning: true,
-      toc: []
+      toc: [],
+      credentials: { accessKey: "", secretKey: "" },
+      CSRFToken: ""
     };
   }
 
@@ -88,41 +75,40 @@ export default class User extends Model {
   static async checkLoginStatus() {
     try {
       // Check if user is already authenticated via Django cookies
-      const response = await axios.get(`${this.hydroshareHost}/hsapi/userInfo/`, {
-        withCredentials: true,
+      const response = await fetch(`${this.hydroshareHost}/hsapi/userInfo/`, {
+        credentials: "include",
       });
 
-      if (response.status === 200 && response.data) {
+      if (response.ok) {
+        const data = await response.json();
         await User.commit((state) => {
           state.isLoggedIn = true;
-          // Use username if orcid is not available, or map to appropriate field
-          state.orcid = response.data.orcid || response.data.username || "";
-          // Note: we're not storing orcidAccessToken anymore with cookie auth
+          state.orcid = data.orcid || data.username || "";
           state.orcidAccessToken = "";
         });
         return true;
       }
     } catch (e) {
-      await User.commit((state) => {
-        state.isLoggedIn = false;
-        state.orcid = "";
-        state.orcidAccessToken = "";
-      });
+      // network error
     }
+
+    User.commit((state) => {
+      state.isLoggedIn = false;
+      state.orcid = "";
+      state.orcidAccessToken = "";
+    });
     return false;
   }
 
   static async checkAuthorization() {
     try {
-      // With Django cookie authentication, cookies are automatically sent
-      const response = await axios.get(`${this.hydroshareHost}/hsapi/userInfo/`, {
-        withCredentials: true, // Ensure cookies are sent
+      const response = await fetch(`${this.hydroshareHost}/hsapi/userInfo/`, {
+        credentials: "include",
       });
 
-      console.log("checkAuthorization response:", response.status, response.data);
+      console.log("checkAuthorization response:", response.status);
 
-      if (response.status !== 200) {
-        // Something went wrong, authorization may be invalid
+      if (!response.ok) {
         console.log("Authorization failed - setting logged out");
         User.commit((state) => {
           state.isLoggedIn = false;
@@ -140,24 +126,19 @@ export default class User extends Model {
 
   static async getResourceS3prefix(res_id: string): Promise<{ bucket: string; prefix: string } | null> {
     try {
-      const response = await axios.get(`${this.hydroshareHost}/hsapi/resource/s3/${res_id}/`, {
-        withCredentials: true, // Ensure cookies are sent for authentication
+      const response = await fetch(`${this.hydroshareHost}/hsapi/resource/s3/${res_id}/`, {
+        credentials: "include",
       });
 
-      if (response.status === 200 && response.data) {
-        console.log("getResourceS3prefix response:", response.data);
-        return {
-          bucket: response.data.bucket,
-          prefix: response.data.prefix,
-        };
+      if (response.ok) {
+        const data = await response.json();
+        console.log("getResourceS3prefix response:", data);
+        return { bucket: data.bucket, prefix: data.prefix };
       }
     } catch (e: any) {
       console.log("getResourceS3prefix error:", e);
-      const message = `Failed to get S3 prefix for resource ${res_id}: ${e.message}`
-      Notifications.toast({
-        message: message,
-        type: "error",
-      });
+      const message = `Failed to get S3 prefix for resource ${res_id}: ${e.message}`;
+      Notifications.toast({ message, type: "error" });
       throw new Error(message);
     }
     return null;
@@ -165,111 +146,95 @@ export default class User extends Model {
 
   static async getCSRFToken(forceRefresh: boolean = false): Promise<string | null> {
     // Return cached token if available and not forcing refresh
-    if (!forceRefresh && this._cachedCSRFToken) {
-      return this._cachedCSRFToken;
+    if (!forceRefresh && this.$state.CSRFToken) {
+      return this.$state.CSRFToken;
     }
 
     try {
       // Use Django's @ensure_csrf_cookie endpoint to get/set the CSRF cookie
-      await axios.get(`${this.hydroshareHost}/csrf-cookie/`, {
-        withCredentials: true,
+      await fetch(`${this.hydroshareHost}/csrf-cookie/`, {
+        credentials: "include",
       });
 
       // After calling the endpoint, the CSRF cookie should be set
       // Now read it from the cookies
-      const cookies = document.cookie.split(';');
-      for (let cookie of cookies) {
-        const [name, value] = cookie.trim().split('=');
-        if (name === 'csrftoken') {
-          this._cachedCSRFToken = decodeURIComponent(value);
-          return this._cachedCSRFToken;
-        }
+      const token = this._readCSRFCookie();
+      if (token) {
+        await User.commit((state) => {
+          state.CSRFToken = token
+        })
+        return token;
       }
     } catch (e) {
       console.log("CSRF endpoint error:", e);
     }
 
     // Fallback: try to get CSRF token from cookie (in case it was already set)
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-      const [name, value] = cookie.trim().split('=');
-      if (name === 'csrftoken') {
-        this._cachedCSRFToken = decodeURIComponent(value);
-        return this._cachedCSRFToken;
-      }
+    const token = this._readCSRFCookie();
+    if (token) {
+      await User.commit((state) => {
+        state.CSRFToken = token
+      })
+      return token;
     }
 
     console.warn("No CSRF token found");
-    this._cachedCSRFToken = null;
+    await User.commit((state) => {
+      state.CSRFToken = ""
+    })
+    return User.$state.CSRFToken;
+  }
+
+  private static _readCSRFCookie(): string | null {
+    for (const cookie of document.cookie.split(';')) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'csrftoken') return decodeURIComponent(value);
+    }
     return null;
+  }
+
+  private static _buildHeaders(csrfToken: string | null): HeadersInit {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+    return headers;
   }
 
   static async getOrCreateS3Credentials() {
     // Return cached credentials if available
-    if (this._cachedS3Credentials) {
-      return this._cachedS3Credentials;
+    if (this.$state.credentials.accessKey && this.$state.credentials.secretKey) {
+      return this.$state.credentials;
     }
-    try {
-      // Get CSRF token (cached if available)
-      let csrfToken = await this.getCSRFToken();
 
-      const headers: any = {
-        'Content-Type': 'application/json',
-      };
-
-      if (csrfToken) {
-        headers['X-CSRFToken'] = csrfToken;
-      }
-
-      const response = await axios.post(`${this.hydroshareHost}/hsapi/user/service/accounts/s3/`, {}, {
-        withCredentials: true, // Ensure cookies are sent for authentication
-        headers: headers,
+    const doRequest = async (csrfToken: string | null) =>
+      fetch(`${this.hydroshareHost}/hsapi/user/service/accounts/s3/`, {
+        method: "POST",
+        credentials: "include",
+        headers: this._buildHeaders(csrfToken),
+        body: JSON.stringify({}),
       });
 
-      if (response.status >= 200 && response.status < 300 && response.data) {
-        // cache the keys in the User model
-        this._cachedS3Credentials = {
-          access_key: response.data.access_key,
-          secret_key: response.data.secret_key,
-        };
-        return this._cachedS3Credentials
-      }
-    } catch (e: any) {
-      // If we get a 403 CSRF error, try refreshing the token once
-      if (e.response?.status === 403 && e.response?.data?.detail?.includes('CSRF')) {
-        console.log("CSRF token invalid, refreshing and retrying...");
-        try {
-          const csrfToken = await this.getCSRFToken(true); // Force refresh
-          const headers: any = {
-            'Content-Type': 'application/json',
-          };
+    try {
+      let response = await doRequest(await this.getCSRFToken());
 
-          if (csrfToken) {
-            headers['X-CSRFToken'] = csrfToken;
-          }
-
-          const retryResponse = await axios.post(`${this.hydroshareHost}/hsapi/user/service/accounts/s3/`, {}, {
-            withCredentials: true,
-            headers: headers,
-          });
-
-          if (retryResponse.status === 200 && retryResponse.data) {
-            console.log("getOrCreateS3Credentials retry response:", retryResponse.data);
-            return {
-              access_key: retryResponse.data.access_key,
-              secret_key: retryResponse.data.secret_key,
-            };
-          }
-        } catch (retryError: any) {
-          console.log("getOrCreateS3Credentials retry error:", retryError);
-          throw new Error(`Failed to create S3 credentials after retry: ${retryError.message}`);
+      if (response.status === 403) {
+        const body = await response.json().catch(() => ({}));
+        if (body?.detail?.includes('CSRF')) {
+          console.log("CSRF token invalid, refreshing and retrying...");
+          response = await doRequest(await this.getCSRFToken(true));
         }
       }
 
+      if (response.ok) {
+        const data = await response.json();
+        await User.commit((state) => {
+          state.credentials = { accessKey: data.access_key, secretKey: data.secret_key };
+        });
+      }
+    } catch (e: any) {
       console.log("getOrCreateS3Credentials error:", e);
       throw new Error(`Failed to create S3 credentials: ${e.message}`);
     }
-    return null;
+    return this.$state.credentials;;
   }
 
   static async manageResourceAccess(resource_id: string, user_id: number, privilege: number | PrivilegeCodes) {
@@ -283,135 +248,70 @@ export default class User extends Model {
       );
     }
 
-    try {
-      // Get CSRF token (cached if available)
-      let csrfToken = await this.getCSRFToken();
+    const endpoint = `${this.hydroshareHost}/hsapi/resource/${resource_id}/access/`;
 
-      const headers: any = {
-        'Content-Type': 'application/json',
-      };
-
-      if (csrfToken) {
-        headers['X-CSRFToken'] = csrfToken;
-      }
-
-      const endpoint = `${this.hydroshareHost}/hsapi/resource/${resource_id}/access/`;
-
-      let response;
-
+    const doRequest = async (csrfToken: string | null) => {
+      const headers = this._buildHeaders(csrfToken);
       if (privilege === PrivilegeCodes.NONE) {
-        // DELETE request with user_id as query parameter
-        response = await axios.delete(`${endpoint}?user_id=${user_id}`, {
-          withCredentials: true,
-          headers: headers,
-        });
-        console.log("manageResourceAccess DELETE response:", response.status, response.data);
+        return fetch(`${endpoint}?user_id=${user_id}`, { method: "DELETE", credentials: "include", headers });
       } else {
-        // PUT request with JSON body
-        const requestBody = {
-          privilege: privilege,
-          user_id: user_id,
-        };
-
-        response = await axios.put(endpoint, requestBody, {
-          withCredentials: true,
-          headers: headers,
+        return fetch(endpoint, {
+          method: "PUT",
+          credentials: "include",
+          headers,
+          body: JSON.stringify({ privilege, user_id }),
         });
-        console.log("manageResourceAccess PUT response:", response.status, response.data);
       }
+    };
 
-      if (response.status >= 200 && response.status < 300) {
-        return {
-          success: true,
-          action: privilege === PrivilegeCodes.NONE ? 'removed' : 'updated',
-          resource_id: resource_id,
-          user_id: user_id,
-          privilege: privilege === PrivilegeCodes.NONE ? null : privilege,
-          data: response.data,
-        };
-      }
-    } catch (e: any) {
-      // If we get a 403 CSRF error, try refreshing the token once
-      if (e.response?.status === 403 && e.response?.data?.detail?.includes('CSRF')) {
-        console.log("CSRF token invalid, refreshing and retrying...");
-        try {
-          const csrfToken = await this.getCSRFToken(true); // Force refresh
-          const headers: any = {
-            'Content-Type': 'application/json',
-          };
+    try {
+      let csrfToken = await this.getCSRFToken();
+      let response = await doRequest(csrfToken);
 
-          if (csrfToken) {
-            headers['X-CSRFToken'] = csrfToken;
-          }
-
-          const endpoint = `${this.hydroshareHost}/hsapi/resource/${resource_id}/access/`;
-          let retryResponse;
-
-          if (privilege === PrivilegeCodes.NONE) {
-            // Retry DELETE request
-            retryResponse = await axios.delete(`${endpoint}?user_id=${user_id}`, {
-              withCredentials: true,
-              headers: headers,
-            });
-          } else {
-            // Retry PUT request
-            const requestBody = {
-              privilege: privilege,
-              user_id: user_id,
-            };
-
-            retryResponse = await axios.put(endpoint, requestBody, {
-              withCredentials: true,
-              headers: headers,
-            });
-          }
-
-          if (retryResponse.status >= 200 && retryResponse.status < 300) {
-            console.log("manageResourceAccess retry response:", retryResponse.status, retryResponse.data);
-            return {
-              success: true,
-              action: privilege === PrivilegeCodes.NONE ? 'removed' : 'updated',
-              resource_id: resource_id,
-              user_id: user_id,
-              privilege: privilege === PrivilegeCodes.NONE ? null : privilege,
-              data: retryResponse.data,
-            };
-          }
-        } catch (retryError: any) {
-          console.log("manageResourceAccess retry error:", retryError);
-          throw new Error(`Failed to manage resource access after retry: ${retryError.message}`);
+      if (response.status === 403) {
+        const body = await response.json().catch(() => ({}));
+        if (body?.detail?.includes('CSRF')) {
+          console.log("CSRF token invalid, refreshing and retrying...");
+          response = await doRequest(await this.getCSRFToken(true));
         }
       }
 
+      if (response.ok) {
+        const data = await response.json().catch(() => ({}));
+        console.log("manageResourceAccess response:", response.status, data);
+        return {
+          success: true,
+          action: privilege === PrivilegeCodes.NONE ? 'removed' : 'updated',
+          resource_id,
+          user_id,
+          privilege: privilege === PrivilegeCodes.NONE ? null : privilege,
+          data,
+        };
+      }
+    } catch (e: any) {
       console.log("manageResourceAccess error:", e);
       throw new Error(`Failed to manage resource access: ${e.message}`);
     }
 
-    return {
-      success: false,
-      message: 'Unexpected response from server'
-    };
+    return { success: false, message: 'Unexpected response from server' };
   }
 
   static async logOut() {
     try {
-      await axios.get(`${this.hydroshareHost}/accounts/logout/`, {
-        withCredentials: true, // Ensure cookies are sent for logout
+      await fetch(`${this.hydroshareHost}/accounts/logout/`, {
+        credentials: "include",
       });
-      this._logOut();
     } catch (e) {
       // We don't care about the response status. We at least log the user out in the frontend.
-      this._logOut();
     }
+    this._logOut();
   }
 
   private static async _logOut() {
-    // Clear cached CSRF token on logout
-    this._cachedCSRFToken = null;
-
     await User.commit((state) => {
       state.isLoggedIn = false;
       state.orcidAccessToken = "";
+      state.CSRFToken = ""
     });
 
     Notifications.toast({
