@@ -789,6 +789,7 @@
 </template>
 
 <script lang="ts">
+import "github-markdown-css/github-markdown-light.css";
 import { Component, Vue, toNative, Ref } from "vue-facing-decorator";
 import {
   CzForm,
@@ -796,7 +797,7 @@ import {
   Notifications,
 } from "@cznethub/cznet-vue-core";
 import type { IFolder } from "@cznethub/cznet-vue-core/dist/types";
-import { S3Client, _Object } from "@aws-sdk/client-s3";
+import { GetObjectCommand, S3Client, _Object } from "@aws-sdk/client-s3";
 import { stringify } from "@/utils";
 import { fetchResource, onFileDownload } from "./shared";
 import S3Form from "./s3-form.vue";
@@ -806,6 +807,7 @@ import prettyBytes from "pretty-bytes";
 import { useGoTo } from "vuetify";
 import { EnumCreativeWorkStatus } from "@/types";
 import markdownit from "markdown-it";
+import hljs from "highlight.js"; // https://highlightjs.org
 
 import CdSpatialCoverageMap from "@/components/search-results/cd.spatial-coverage-map.vue";
 
@@ -814,6 +816,15 @@ const md = markdownit({
   typographer: true,
   breaks: true,
   html: true,
+  highlight: function (str, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return hljs.highlight(str, { language: lang }).value;
+      } catch (__) {}
+    }
+
+    return ""; // use external default escaping
+  },
 });
 
 @Component({
@@ -929,34 +940,34 @@ class LandingPage extends Vue {
   }
 
   async loadReadmeFile() {
-    // TODO: get from files loaded
-    const readmeFile = this.data.document?.[0]?.associatedMedia?.find(
-      (f: any) =>
-        f.name.toLowerCase() === "readme.md" ||
-        f.name.toLowerCase() === "readme.txt",
-    );
+    const basePrefix = `${this.resourceId}/data/contents/`;
+    const mdKey = `${basePrefix}${"readme.md"}`;
+    const txtKey = `${basePrefix}${"readme.txt"}`;
+    let result;
 
-    if (readmeFile?.contentUrl) {
-      this.readMeFileName = readmeFile.name;
-      if (readmeFile.name.toLowerCase() === "readme.txt") {
-        this.hasTxtReadme = true;
-      }
-      const url = readmeFile.contentUrl.replace("http:", "https:");
+    try {
+      result = await this.s3Client.send(
+        new GetObjectCommand({ Bucket: this.s3Info.bucket, Key: mdKey }),
+      );
+    } catch (e) {
       try {
-        this.isLoadingMD = true;
-        const response = await fetch(url);
-        const rawMd = await response.text();
-        if (!this.hasTxtReadme) {
-          this.readmeMd = md.render(rawMd);
-        } else {
-          // simple text viewer
-          this.readmeMd = rawMd;
-        }
+        result = await this.s3Client.send(
+          new GetObjectCommand({ Bucket: this.s3Info.bucket, Key: txtKey }),
+        );
+        this.hasTxtReadme = true;
       } catch (e) {
-        console.log(e);
-      } finally {
-        this.isLoadingMD = false;
+        return;
       }
+    }
+
+    try {
+      this.isLoadingMD = true;
+      const rawMd = await result.Body?.transformToString();
+      this.readmeMd = this.hasTxtReadme ? rawMd : md.render(rawMd);
+    } catch (e) {
+      console.log(e);
+    } finally {
+      this.isLoadingMD = false;
     }
   }
 

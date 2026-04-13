@@ -66,6 +66,7 @@ export const _readFolderRecursive = async (
             isUploaded: true,
             file: null,
             uploadedSize: f.Size,
+            contentKey: f.Key
           };
         });
     }
