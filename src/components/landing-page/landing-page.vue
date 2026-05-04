@@ -64,8 +64,8 @@
                     :bucket="s3Info.bucket"
                     :s3-host="s3Host"
                     :hydroshare-host="hydroshareHost"
-                    :accessKey="accessKey"
-                    :secret-key="secretKey"
+                    :accessKey="credentials.accessKey"
+                    :secret-key="credentials.secretKey"
                     @apply-changes="onS3FormUpdate"
                     @restore-defaults="onRestoreDefaults"
                   ></s3-form>
@@ -779,12 +779,41 @@
       </div>
     </template>
 
-    <v-empty-state
-      v-if="!wasLoaded"
-      icon="mdi-cloud-cancel"
-      text="Try adjusting your settings."
-      title="We couldn't load this resource."
-    ></v-empty-state>
+    <div v-if="!wasLoaded && !isFetchingMetadata" class="d-flex flex-column align-center">
+      <v-empty-state
+        icon="mdi-cloud-cancel"
+        text="Try adjusting your settings."
+        title="We couldn't load this resource."
+      ></v-empty-state>
+      <v-menu width="500" :close-on-content-click="false">
+        <template v-slot:activator="{ props }">
+          <v-btn
+            size="small"
+            v-bind="props"
+            color="primary"
+            prepend-icon="mdi-cog"
+            variant="outlined"
+            >Settings</v-btn
+          >
+        </template>
+        <v-card>
+          <v-card-title class="bg-grey-lighten-3 text-body-1 text-medium-emphasis">Settings</v-card-title>
+          <v-divider></v-divider>
+          <v-card-text flat>
+            <s3-form
+              :prefix="s3Info.prefix"
+              :bucket="s3Info.bucket"
+              :s3-host="s3Host"
+              :hydroshare-host="hydroshareHost"
+              :accessKey="credentials.accessKey"
+              :secret-key="credentials.secretKey"
+              @apply-changes="onS3FormUpdate"
+              @restore-defaults="onRestoreDefaults"
+            ></s3-form>
+          </v-card-text>
+        </v-card>
+      </v-menu>
+    </div>
   </v-container>
 </template>
 
@@ -839,6 +868,10 @@ class LandingPage extends Vue {
 
   protected get isLoggedIn(): boolean {
     return User.$state.isLoggedIn;
+  }
+
+  protected get credentials() {
+    return User.$state.credentials;
   }
 
   showDescription = false;
@@ -901,14 +934,13 @@ class LandingPage extends Vue {
   };
 
   async startS3Client() {
-    this.s3Client = await new S3Client({
+    const accessKeyId = User.$state.credentials.accessKey || import.meta.env.VITE_MINIO_ACCESS_KEY || "";
+    const secretAccessKey = User.$state.credentials.secretKey || import.meta.env.VITE_MINIO_SECRET_KEY || "";
+    this.s3Client = new S3Client({
       region: "us-central-2",
       endpoint: this.s3Host,
       forcePathStyle: true,
-      credentials: {
-        accessKeyId: User.$state.credentials.accessKey,
-        secretAccessKey: User.$state.credentials.secretKey,
-      },
+      credentials: { accessKeyId, secretAccessKey },
     });
   }
   infoLabelAttr = {
@@ -1017,6 +1049,12 @@ class LandingPage extends Vue {
       this.resourceId = this.$route.params.resourceId as string;
     }
 
+    if (!this.resourceId) {
+      this.isFetchingMetadata = false;
+      this.wasLoaded = false;
+      return;
+    }
+
     if (this.isLoggedIn) {
       console.log("user is already logged in, fetching S3 credentials");
       await User.getOrCreateS3Credentials();
@@ -1024,11 +1062,10 @@ class LandingPage extends Vue {
       console.log(
         "checking if we just returned from HydroShare login redirect",
       );
-      User.checkLoginStatus().then((loggedIn) => {
-        if (loggedIn) {
-          User.getOrCreateS3Credentials();
-        }
-      });
+      const loggedIn = await User.checkLoginStatus();
+      if (loggedIn) {
+        await User.getOrCreateS3Credentials();
+      }
     }
 
     if (!this.s3Info.bucket || !this.s3Info.prefix) {
@@ -1153,6 +1190,14 @@ class LandingPage extends Vue {
     this.s3Info.prefix = params.prefix;
     this.hydroshareHost = params.hydroshareHost;
     this.s3Host = params.s3Host;
+    if (params.accessKey || params.secretKey) {
+      User.commit((state) => {
+        state.credentials = {
+          accessKey: params.accessKey || state.credentials.accessKey,
+          secretKey: params.secretKey || state.credentials.secretKey,
+        };
+      });
+    }
 
     await this.startS3Client();
     await this.loadResource();
