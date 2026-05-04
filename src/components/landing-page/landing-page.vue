@@ -1083,6 +1083,7 @@ class LandingPage extends Vue {
 
   beforeUnmount() {
     User.$state.toc = [];
+    User.$state.isTocReady = false;
   }
 
   async loadResource() {
@@ -1090,6 +1091,7 @@ class LandingPage extends Vue {
     this.isLoadingFiles = true;
     this.wasLoaded = true;
     User.$state.toc = [];
+    User.$state.isTocReady = false;
 
     const resource = await fetchResource(
       this.resourceId,
@@ -1103,68 +1105,45 @@ class LandingPage extends Vue {
       // @ts-expect-error The key property is generated when the component is initialized
       this.rootDirectory.children = resource.initialStructure || [];
       this.loadReadmeFile();
+      User.$state.toc = [
+        { text: "Overview", to: "#overview" },
+        {
+          text: "Abstract",
+          to: "#description",
+        },
+        {
+          text: "Subject Keywords",
+          to: "#subject",
+        },
+        {
+          text: "Content",
+          to: "#content",
+        },
+        {
+          text: "Files",
+          to: "#fileExplorer",
+          level: 4,
+        },
+        {
+          text: "README",
+          to: "#readme",
+          level: 4,
+        },
+        {
+          text: "Funding",
+          to: "#funding",
+        },
+        {
+          text: "Related Resources",
+          to: "#related",
+        },
+      ];
+      User.$state.isTocReady = true;
     } else {
       this.wasLoaded = false;
     }
     this.isFetchingMetadata = false;
     this.isLoadingFiles = false;
-    User.$state.toc = [
-      { text: "Overview", to: "#overview" },
-      {
-        text: "Abstract",
-        to: "#description",
-        // isShown: (data: any) => !!data.description || false,
-      },
-      {
-        text: "Subject Keywords",
-        to: "#subject",
-        // isShown: (data: any) => data.keywords?.length || false,
-      },
-      {
-        text: "Content",
-        to: "#content",
-        // isShown: (data: any) => data.associatedMedia?.length || false,
-      },
-      {
-        text: "Files",
-        to: "#fileExplorer",
-        level: 4,
-        // isShown: (data: any) => data.associatedMedia?.length || false,
-      },
-      {
-        text: "README",
-        to: "#readme",
-        level: 4,
-        // isShown: (data: any) => data.associatedMedia?.length || false,
-      },
-      {
-        text: "Funding",
-        to: "#funding",
-        // isShown: (data: any) => data.funding?.length || false,
-      },
-      {
-        text: "Related Resources",
-        to: "#related",
-        // isShown: (data: any) => data.hasPart?.length || false,
-      },
-      // {
-      //   text: "Spatial Coverage",
-      //   to: "#spatial-coverage",
-      //   // isShown: (data: any) => {
-      //   //   const feat = data.spatialCoverage?.["type"];
-      //   //   const hasSpatialFeatures =
-      //   //     feat === "GeoShape" ||
-      //   //     feat === "GeoCoordinates" ||
-      //   //     feat === "Place";
-      //   //   return !!hasSpatialFeatures || false;
-      //   // },
-      // },
-      // {
-      //   text: "Temporal Coverage",
-      //   to: "#temporal-coverage",
-      //   // isShown: (data: any) => data.temporalCoverage || false,
-      // },
-    ];
   }
 
   async onS3FormUpdate(params: any) {

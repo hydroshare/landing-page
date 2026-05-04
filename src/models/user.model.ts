@@ -12,6 +12,7 @@ export interface IUserState {
   next: string;
   hasUnsavedChanges: boolean;
   toc: { to: string, text: string, level?: number }[];
+  isTocReady: boolean;
   credentials: { accessKey: string, secretKey: string },
   CSRFToken: string
 }
@@ -36,8 +37,8 @@ export enum PrivilegeCodes {
 export default class User extends Model {
   static entity = "users";
 
-  // Base URL for HydroShare API - can be configured for different environments
   private static readonly hydroshareHost = "http://localhost:8000";
+  private static readonly apiBase = "";
 
   static fields() {
     return {};
@@ -53,6 +54,7 @@ export default class User extends Model {
       next: "",
       hasUnsavedChanges: false,
       toc: [],
+      isTocReady: false,
       credentials: { accessKey: "", secretKey: "" },
       CSRFToken: ""
     };
@@ -75,7 +77,7 @@ export default class User extends Model {
   static async checkLoginStatus() {
     try {
       // Check if user is already authenticated via Django cookies
-      const response = await fetch(`${this.hydroshareHost}/hsapi/userInfo/`, {
+      const response = await fetch(`${this.apiBase}/hsapi/userInfo/`, {
         credentials: "include",
       });
 
@@ -102,7 +104,7 @@ export default class User extends Model {
 
   static async checkAuthorization() {
     try {
-      const response = await fetch(`${this.hydroshareHost}/hsapi/userInfo/`, {
+      const response = await fetch(`${this.apiBase}/hsapi/userInfo/`, {
         credentials: "include",
       });
 
@@ -126,7 +128,7 @@ export default class User extends Model {
 
   static async getResourceS3prefix(res_id: string): Promise<{ bucket: string; prefix: string } | null> {
     try {
-      const response = await fetch(`${this.hydroshareHost}/hsapi/resource/s3/${res_id}/`, {
+      const response = await fetch(`${this.apiBase}/hsapi/resource/s3/${res_id}/`, {
         credentials: "include",
       });
 
@@ -152,7 +154,7 @@ export default class User extends Model {
 
     try {
       // Use Django's @ensure_csrf_cookie endpoint to get/set the CSRF cookie
-      await fetch(`${this.hydroshareHost}/csrf-cookie/`, {
+      await fetch(`${this.apiBase}/csrf-cookie/`, {
         credentials: "include",
       });
 
@@ -206,7 +208,7 @@ export default class User extends Model {
     }
 
     const doRequest = async (csrfToken: string | null) =>
-      fetch(`${this.hydroshareHost}/hsapi/user/service/accounts/s3/`, {
+      fetch(`${this.apiBase}/hsapi/user/service/accounts/s3/`, {
         method: "POST",
         credentials: "include",
         headers: this._buildHeaders(csrfToken),
@@ -248,7 +250,7 @@ export default class User extends Model {
       );
     }
 
-    const endpoint = `${this.hydroshareHost}/hsapi/resource/${resource_id}/access/`;
+    const endpoint = `${this.apiBase}/hsapi/resource/${resource_id}/access/`;
 
     const doRequest = async (csrfToken: string | null) => {
       const headers = this._buildHeaders(csrfToken);
@@ -298,7 +300,7 @@ export default class User extends Model {
 
   static async logOut() {
     try {
-      await fetch(`${this.hydroshareHost}/accounts/logout/`, {
+      await fetch(`${this.apiBase}/accounts/logout/`, {
         credentials: "include",
       });
     } catch (e) {

@@ -1,5 +1,6 @@
 <template>
   <v-navigation-drawer
+    v-if="isTocReady"
     id="app-toc"
     location="left"
     width="256"
@@ -14,48 +15,32 @@
     </template>
 
     <ul class="ms-5">
-      <template v-if="toc?.length">
-        <li
-          v-for="item of toc"
-          :key="item.to"
-          :class="[
-            'ps-3 text-medium-emphasis text-body-2 py-1 font-weight-regular',
-            {
-              'text-primary active': activeItem === item.to,
-              'ps-6': item.level === 3,
-              'ps-9': item.level === 4,
-              'ps-12': item.level === 5,
-            },
-          ]"
-        >
-          <a
-            href="#"
-            class="v-toc-link d-block text-decoration-none"
-            @click.prevent="onClick(item.to)"
-            v-text="item.text"
-          />
-        </li>
-      </template>
-      <template v-else>
-        <li
-          v-for="item of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]"
-          :key="item"
-          class="ps-3 py-1"
-        >
-          <v-skeleton-loader
-            :loading="true"
-            type="text"
-            class="pa-0 ma-0"
-          ></v-skeleton-loader>
-        </li>
-      </template>
+      <li
+        v-for="item of toc"
+        :key="item.to"
+        :class="[
+          'ps-3 text-medium-emphasis text-body-2 py-1 font-weight-regular',
+          {
+            'text-primary active': activeItem === item.to,
+            'ps-6': item.level === 3,
+            'ps-9': item.level === 4,
+            'ps-12': item.level === 5,
+          },
+        ]"
+      >
+        <a
+          href="#"
+          class="v-toc-link d-block text-decoration-none"
+          @click.prevent="onClick(item.to)"
+          v-text="item.text"
+        />
+      </li>
     </ul>
   </v-navigation-drawer>
 </template>
 
 <script lang="ts">
-import { nextTick } from "vue";
-import { Component, Vue, Watch, toNative } from "vue-facing-decorator";
+import { Component, Vue, toNative } from "vue-facing-decorator";
 import User from "@/models/user.model";
 
 @Component({
@@ -89,6 +74,10 @@ class Toc extends Vue {
 
   get toc() {
     return User.$state.toc;
+  }
+
+  get isTocReady() {
+    return User.$state.isTocReady;
   }
 
   onClick(hash: string): void {
