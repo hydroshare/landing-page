@@ -1,36 +1,34 @@
 <template>
   <v-navigation-drawer
-    v-if="isTocReady"
+    v-if="isTocReady && visibleToc.length"
     id="app-toc"
     location="left"
-    width="256"
+    width="220"
     floating
     sticky
-    class="mt-4 ml-4"
+    class="mt-2"
   >
     <template #prepend>
-      <div class="mt-4 mb-2 ms-4 text-body-2 text-medium-emphasis">
-        Table of contents
+      <div class="toc-title text-caption font-weight-bold text-uppercase text-medium-emphasis ms-4 mt-4 mb-2">
+        On this page
       </div>
     </template>
 
-    <ul class="ms-5">
+    <ul class="ms-4 me-2">
       <li
-        v-for="item of toc"
+        v-for="item of visibleToc"
         :key="item.to"
         :class="[
-          'ps-3 text-medium-emphasis text-body-2 py-1 font-weight-regular',
+          'toc-item text-body-2 py-1',
           {
-            'text-primary active': activeItem === item.to,
-            'ps-6': item.level === 3,
-            'ps-9': item.level === 4,
-            'ps-12': item.level === 5,
+            'active': activeItem === item.to,
+            'toc-nested': item.level && item.level >= 4,
           },
         ]"
       >
         <a
           href="#"
-          class="v-toc-link d-block text-decoration-none"
+          class="toc-link d-block text-decoration-none"
           @click.prevent="onClick(item.to)"
           v-text="item.text"
         />
@@ -76,6 +74,13 @@ class Toc extends Vue {
     return User.$state.toc;
   }
 
+  get visibleToc() {
+    return this.toc.filter((item) => {
+      const el = document.querySelector(item.to);
+      return el && el.offsetParent !== null;
+    });
+  }
+
   get isTocReady() {
     return User.$state.isTocReady;
   }
@@ -84,8 +89,7 @@ class Toc extends Vue {
     const el = document.querySelector(hash);
     if (!el) return;
     this.activeItem = hash;
-    const navbarHeight = document.getElementById("app-bar")?.offsetHeight ?? 0;
-    const top = el.getBoundingClientRect().top + window.scrollY - navbarHeight;
+    const top = el.getBoundingClientRect().top + window.scrollY - 16;
     window.scrollTo({ top, behavior: "smooth" });
   }
 }
@@ -96,25 +100,37 @@ export default toNative(Toc);
 <style lang="scss" scoped>
 #app-toc ul {
   list-style-type: none;
+  padding-left: 0;
 }
 
-li {
-  border-left: 2px solid rgb(var(--v-theme-on-surface-variant));
+.toc-item {
+  padding-left: 12px;
+  border-left: 2px solid transparent;
+  transition: border-color 0.15s, color 0.15s;
+  color: rgba(0, 0, 0, 0.54);
+
+  &:hover {
+    color: rgba(0, 0, 0, 0.87);
+  }
+
   &.active {
-    border-left-color: currentColor;
+    border-left-color: rgb(var(--v-theme-primary));
+    color: rgb(var(--v-theme-primary));
+    font-weight: 500;
+  }
+
+  &.toc-nested {
+    padding-left: 24px;
+    font-size: 0.8125rem;
   }
 }
 
-.v-toc-link {
+.toc-link {
   color: inherit;
 }
 
 :deep(.v-navigation-drawer__content) {
   height: auto;
   margin-right: 12px;
-}
-
-:deep(.v-skeleton-loader__text) {
-  margin: 0;
 }
 </style>

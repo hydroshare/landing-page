@@ -130,18 +130,11 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       port: 5004,
-      // strictPort: true,
-      // proxy: {
-      //   "/sockjs-node": {
-      //     target: "ws://127.0.0.1:8081",
-      //     ws: true,
-      //   },
-      // },
-      // hmr: {
-      //   path: "/sockjs-node",
-      //   port: 8081,
-      //   clientPort: 443,
-      // },
+      proxy: {
+        "/hsapi": { target: "http://localhost:8000", changeOrigin: true },
+        "/accounts": { target: "http://localhost:8000", changeOrigin: true },
+        "/csrf-cookie": { target: "http://localhost:8000", changeOrigin: true },
+      },
       allowedHosts: ["host.docker.internal"],
       // origin: `${base}`,
     },

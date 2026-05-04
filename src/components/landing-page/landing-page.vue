@@ -6,49 +6,55 @@
     ></v-skeleton-loader>
 
     <template v-if="!isFetchingMetadata && wasLoaded">
-      <h4 id="overview" class="text-h6 font-weight-medium mb-2">
-        {{ data.name }}
-      </h4>
+      <div id="overview" class="resource-header mb-6">
+        <h1 class="text-h5 font-weight-bold mb-3">
+          {{ data.name }}
+        </h1>
 
-      <div
-        class="d-flex justify-space-between mb-2 flex-column flex-sm-row align-normal align-sm-end"
-      >
-        <div v-if="data.creativeWorkStatus || data.dateModified">
+        <div class="d-flex align-center gap-3 mb-1">
           <v-chip
             v-if="data.creativeWorkStatus"
             size="small"
-            class="mr-2 bg-primary"
             :color="getStatusColor(data.creativeWorkStatus.name)"
             :title="data.creativeWorkStatus.description"
+            variant="flat"
+            label
           >
             {{ data.creativeWorkStatus.name }}
           </v-chip>
 
-          <template v-if="data.dateModified">
-            <span class="d-block d-sm-inline" v-bind="infoLabelAttr"
-              >Last Updated:
-            </span>
-            <span v-bind="infoValueAttr">
-              {{ parseDate(data.dateModified) }}
-              <span class="font-weight-light">
-                (<timeago :datetime="data.dateModified" />)
-              </span>
-            </span>
-          </template>
-        </div>
+          <span
+            v-if="data.dateModified"
+            class="text-body-2 text-medium-emphasis"
+          >
+            Updated {{ parseDate(data.dateModified) }}
+            <span class="font-weight-light"
+              >(<timeago :datetime="data.dateModified" />)</span
+            >
+          </span>
 
-        <v-spacer></v-spacer>
-        <div class="d-flex gap-1">
+          <span
+            v-if="data.viewCount != null"
+            class="text-body-2 text-medium-emphasis"
+          >
+            <v-icon size="14" class="mr-1">mdi-eye-outline</v-icon
+            >{{ data.viewCount.toLocaleString() }}
+            {{ data.viewCount === 1 ? "view" : "views" }}
+          </span>
+
           <v-spacer></v-spacer>
-          <template v-if="!isLoadingFiles && !isFetchingMetadata">
+
+          <div
+            v-if="!isLoadingFiles && !isFetchingMetadata"
+            class="d-flex align-center gap-1 flex-shrink-0"
+          >
             <v-menu width="500" :close-on-content-click="false">
               <template v-slot:activator="{ props }">
                 <v-btn
                   size="small"
                   v-bind="props"
-                  color="primary"
                   prepend-icon="mdi-cog"
-                  variant="plain"
+                  variant="text"
                   >Settings</v-btn
                 >
               </template>
@@ -81,195 +87,196 @@
               @click="$router.push({ name: 'edit-dataset' })"
               >Edit</v-btn
             >
-          </template>
+          </div>
         </div>
       </div>
-      <v-divider class="my-4"></v-divider>
 
-      <div class="d-flex gap-2">
+      <v-divider></v-divider>
+
+      <div class="d-flex gap-4 mt-6">
         <v-container
-          class="page-content"
+          class="page-content pa-0"
           :class="{ 'is-sm': $vuetify.display.mdAndDown }"
           fluid
         >
-          <v-row
-            class="mb-4 align-start"
-            :no-gutters="$vuetify.display.smAndDown"
-          >
-            <v-col cols="12" sm="6" class="dataset-info">
-              <div v-bind="infoLabelAttr">Created By:</div>
+          <v-card id="details" variant="outlined" class="mb-6">
+            <v-card-text class="pa-5">
+              <v-row :no-gutters="$vuetify.display.smAndDown">
+                <v-col cols="12" sm="6" class="dataset-info">
+                  <div v-bind="infoLabelAttr">Created By:</div>
 
-              <div class="infoValueAttr">
-                <v-menu
-                  v-for="(creator, index) of data.creator"
-                  offset-y
-                  :close-on-content-click="false"
-                  class="d-inline"
-                  :key="index"
-                >
-                  <template v-slot:activator="{ props }">
-                    <span
-                      class="mr-2 cursor-pointer"
-                      v-bind="{ ...props, ...infoValueAttr }"
+                  <div class="infoValueAttr">
+                    <v-menu
+                      v-for="(creator, index) of data.creator"
+                      offset-y
+                      :close-on-content-click="false"
+                      class="d-inline"
+                      :key="index"
                     >
-                      <div class="d-inline-block">
-                        {{ creator.name }} <v-icon small>mdi-menu-down</v-icon>
-                      </div>
-                    </span>
-                  </template>
-                  <v-card v-if="creator['type'] == 'Person'" width="auto">
-                    <v-card-title class="text-body-1">
-                      <v-icon class="mr-2">mdi-account-outline</v-icon>
-                      {{ creator.name }}
-                    </v-card-title>
-                    <v-divider></v-divider>
-
-                    <v-card-text
-                      v-if="creator.email || creator.identifier"
-                      class="d-flex flex-column gap-1"
-                    >
-                      <div v-if="creator.email">
-                        <div class="d-flex align-center mb-1">
-                          <v-icon
-                            class="mr-1"
-                            small
-                            color="secondary"
-                            title="Email address"
-                            icon="mdi-email-outline"
-                          />
-                          <div class="d-flex align-center gap-1">
-                            <span class="text-medium-emphasis">Email:</span>
-                            {{ creator.email }}
+                      <template v-slot:activator="{ props }">
+                        <span
+                          class="mr-2 cursor-pointer"
+                          v-bind="{ ...props, ...infoValueAttr }"
+                        >
+                          <div class="d-inline-block">
+                            {{ creator.name }}
+                            <v-icon small>mdi-menu-down</v-icon>
                           </div>
-                        </div>
-                      </div>
-                      <div
-                        v-if="creator.identifier"
-                        class="d-flex align-center"
-                      >
-                        <i
-                          class="fab fa-orcid mr-2 text-secondary text-h6"
-                          aria-hidden="true"
-                          title="ORCID"
-                        ></i>
-                        {{ creator.identifier }}
-                      </div>
+                        </span>
+                      </template>
+                      <v-card v-if="creator['type'] == 'Person'" width="auto">
+                        <v-card-title class="text-body-1">
+                          <v-icon class="mr-2">mdi-account-outline</v-icon>
+                          {{ creator.name }}
+                        </v-card-title>
+                        <v-divider></v-divider>
 
-                      <div v-if="creator.affiliation">
-                        <div class="d-flex align-center mb-1">
-                          <v-icon
-                            small
-                            color="secondary"
-                            class="mr-1"
-                            title="Affiliation"
-                          >
-                            mdi-domain
-                          </v-icon>
-                          <div class="d-flex align-center gap-1">
-                            <span class="text-medium-emphasis"
-                              >Affiliation:</span
-                            >
-                            <div v-if="creator.affiliation.name">
-                              <span
-                                v-if="creator.affiliation.url"
-                                class="d-inline-flex align-baseline"
-                              >
-                                <a :href="creator.affiliation.url">{{
-                                  creator.affiliation.name
-                                }}</a>
-                              </span>
-                              <span v-else>{{ creator.affiliation.name }}</span>
+                        <v-card-text
+                          v-if="creator.email || creator.identifier"
+                          class="d-flex flex-column gap-1"
+                        >
+                          <div v-if="creator.email">
+                            <div class="d-flex align-center mb-1">
+                              <v-icon
+                                class="mr-1"
+                                small
+                                color="secondary"
+                                title="Email address"
+                                icon="mdi-email-outline"
+                              />
+                              <div class="d-flex align-center gap-1">
+                                <span class="text-medium-emphasis">Email:</span>
+                                {{ creator.email }}
+                              </div>
                             </div>
                           </div>
-                        </div>
+                          <div
+                            v-if="creator.identifier"
+                            class="d-flex align-center"
+                          >
+                            <i
+                              class="fab fa-orcid mr-2 text-secondary text-h6"
+                              aria-hidden="true"
+                              title="ORCID"
+                            ></i>
+                            {{ creator.identifier }}
+                          </div>
 
-                        <div v-if="creator.affiliation.address">
-                          {{ creator.affiliation.address }}
-                        </div>
-                      </div>
-                    </v-card-text>
-                  </v-card>
-                </v-menu>
-              </div>
+                          <div v-if="creator.affiliation">
+                            <div class="d-flex align-center mb-1">
+                              <v-icon
+                                small
+                                color="secondary"
+                                class="mr-1"
+                                title="Affiliation"
+                              >
+                                mdi-domain
+                              </v-icon>
+                              <div class="d-flex align-center gap-1">
+                                <span class="text-medium-emphasis"
+                                  >Affiliation:</span
+                                >
+                                <div v-if="creator.affiliation.name">
+                                  <span
+                                    v-if="creator.affiliation.url"
+                                    class="d-inline-flex align-baseline"
+                                  >
+                                    <a :href="creator.affiliation.url">{{
+                                      creator.affiliation.name
+                                    }}</a>
+                                  </span>
+                                  <span v-else>{{
+                                    creator.affiliation.name
+                                  }}</span>
+                                </div>
+                              </div>
+                            </div>
 
-              <template v-if="data.provider">
-                <div v-bind="infoLabelAttr">Provider:</div>
-                <div v-bind="infoValueAttr">
-                  <span v-if="data.provider.url" class="d-flex align-baseline">
-                    <a :href="data.provider.url">{{ data.provider.name }}</a>
-                  </span>
+                            <div v-if="creator.affiliation.address">
+                              {{ creator.affiliation.address }}
+                            </div>
+                          </div>
+                        </v-card-text>
+                      </v-card>
+                    </v-menu>
+                  </div>
 
-                  <template v-else>{{ data.provider.name }}</template>
-                </div>
-              </template>
+                  <template v-if="data.provider">
+                    <div v-bind="infoLabelAttr">Provider:</div>
+                    <div v-bind="infoValueAttr">
+                      <span
+                        v-if="data.provider.url"
+                        class="d-flex align-baseline"
+                      >
+                        <a :href="data.provider.url">{{
+                          data.provider.name
+                        }}</a>
+                      </span>
+                      <template v-else>{{ data.provider.name }}</template>
+                    </div>
+                  </template>
 
-              <template v-if="data.publisher">
-                <div v-bind="infoLabelAttr">Publisher:</div>
-                <div v-bind="infoValueAttr">
-                  <span v-if="data.publisher.url" class="d-flex align-baseline">
-                    <a :href="data.publisher.url">{{ data.publisher.name }}</a>
-                  </span>
+                  <template v-if="data.publisher">
+                    <div v-bind="infoLabelAttr">Publisher:</div>
+                    <div v-bind="infoValueAttr">
+                      <span
+                        v-if="data.publisher.url"
+                        class="d-flex align-baseline"
+                      >
+                        <a :href="data.publisher.url">{{
+                          data.publisher.name
+                        }}</a>
+                      </span>
+                      <template v-else>{{ data.publisher.name }}</template>
+                    </div>
+                  </template>
 
-                  <template v-else>{{ data.publisher.name }}</template>
-                </div>
-              </template>
+                  <div v-bind="infoLabelAttr">Resource Type:</div>
+                  <div v-bind="infoValueAttr">{{ data["@type"] }}</div>
 
-              <div v-bind="infoLabelAttr">Resource Type:</div>
-              <div v-bind="infoValueAttr">{{ data["@type"] }}</div>
+                  <template v-if="contentSize">
+                    <div v-bind="infoLabelAttr">Resource Size:</div>
+                    <div v-bind="infoValueAttr">~{{ contentSize }}</div>
+                  </template>
 
-              <template v-if="contentSize">
-                <div v-bind="infoLabelAttr">Resource Size:</div>
-                <div v-bind="infoValueAttr">~{{ contentSize }}</div>
-              </template>
+                  <template v-if="data.inLanguage">
+                    <div v-bind="infoLabelAttr">Language:</div>
+                    <div v-bind="infoValueAttr">{{ data.inLanguage }}</div>
+                  </template>
 
-              <div v-bind="infoLabelAttr">License:</div>
-              <div v-bind="infoValueAttr">
-                <div v-if="data.license?.url" class="d-flex align-baseline">
-                  <a :href="data.license?.url">{{ data.license?.name }}</a>
-                </div>
+                  <template v-if="data.version">
+                    <div v-bind="infoLabelAttr">Version:</div>
+                    <div v-bind="infoValueAttr">{{ data.version }}</div>
+                  </template>
+                </v-col>
 
-                <template v-else>{{ data.license?.name }}</template>
+                <v-col cols="12" sm="6" class="dataset-info">
+                  <div v-bind="infoLabelAttr">Created:</div>
+                  <div v-bind="infoValueAttr">
+                    {{ parseDate(data.dateCreated) }}
+                  </div>
 
-                <div class="font-weight-light text-subtitle-2">
-                  {{ data.license?.description }}
-                </div>
-              </div>
+                  <template v-if="data.datePublished">
+                    <div v-bind="infoLabelAttr">Published:</div>
+                    <div v-bind="infoValueAttr">
+                      {{ parseDate(data.datePublished) }}
+                    </div>
+                  </template>
 
-              <template v-if="data.inLanguage">
-                <div v-bind="infoLabelAttr">Language:</div>
-                <div v-bind="infoValueAttr">{{ data.inLanguage }}</div>
-              </template>
+                  <div v-bind="infoLabelAttr">Views:</div>
+                  <div v-bind="infoValueAttr">
+                    {{ data.viewCount?.toLocaleString() }}
+                  </div>
 
-              <template v-if="data.version">
-                <div v-bind="infoLabelAttr">Version:</div>
-                <div v-bind="infoValueAttr">{{ data.version }}</div>
-              </template>
-            </v-col>
+                  <div v-bind="infoLabelAttr">Downloads:</div>
+                  <div v-bind="infoValueAttr">46</div>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
 
-            <v-col cols="12" sm="6" class="dataset-info">
-              <div v-bind="infoLabelAttr">Created:</div>
-              <div v-bind="infoValueAttr">
-                {{ parseDate(data.dateCreated) }}
-              </div>
-
-              <template v-if="data.datePublished">
-                <div v-bind="infoLabelAttr">Published:</div>
-                <div v-bind="infoValueAttr">
-                  {{ parseDate(data.datePublished) }}
-                </div>
-              </template>
-
-              <div v-bind="infoLabelAttr">Views:</div>
-              <div v-bind="infoValueAttr">3784</div>
-
-              <div v-bind="infoLabelAttr">Downloads:</div>
-              <div v-bind="infoValueAttr">46</div>
-            </v-col>
-          </v-row>
-
-          <div class="mb-8 field" id="description">
+          <div v-if="data.description" class="mb-6 field" id="description">
             <div v-bind="headingAttr">Abstract</div>
-            <v-divider class="mb-2"></v-divider>
             <!-- <p class="text-body-1 text-medium-emphasis">{{ data.description }}</p> -->
             <v-banner
               :text="data.description"
@@ -294,24 +301,8 @@
             </v-banner>
           </div>
 
-          <div class="my-4 field" id="subject">
-            <div v-bind="headingAttr">Subject Keywords</div>
-            <v-divider class="mb-2"></v-divider>
-            <v-chip
-              v-for="keyword of data.keywords"
-              :key="keyword"
-              size="small"
-              style="margin: 0.25rem"
-              variant="outlined"
-              class="bg-grey-lighten-5"
-              border="thin"
-              >{{ keyword }}</v-chip
-            >
-          </div>
-
-          <div class="mb-8 field" id="content">
+          <div class="mb-6 field" id="content">
             <div v-bind="headingAttr">Content</div>
-            <v-divider class="mb-2"></v-divider>
 
             <cz-file-explorer
               @showMetadata="onShowMetadata($event)"
@@ -375,11 +366,10 @@
 
           <div
             v-if="data.funding && data.funding.length"
-            class="mb-8 field"
+            class="mb-6 field"
             id="funding"
           >
             <div v-bind="headingAttr">Funding</div>
-            <v-divider class="mb-2"></v-divider>
             <p class="text-body-2 text-medium-emphasis mb-4">
               This resource was created using funding from the following
               sources:
@@ -447,11 +437,10 @@
               data.isPartOf?.length ||
               data.subjectOf?.length
             "
-            class="mb-8 field"
+            class="mb-6 field"
             id="related"
           >
             <div v-bind="headingAttr">Related Resources</div>
-            <v-divider class="mb-2"></v-divider>
             <v-card variant="outlined" border="grey thin">
               <v-table>
                 <template v-slot:default>
@@ -462,7 +451,7 @@
                     >
                       <td class="">Has part</td>
                       <td>
-                        <a :href="part.url">{{ part.name }}</a>
+                        <a :href="part.url">{{ part.url }}</a>
                       </td>
                     </tr>
 
@@ -472,7 +461,7 @@
                     >
                       <td class="">Is part of</td>
                       <td>
-                        <a :href="part.url">{{ part.name }}</a>
+                        <a :href="part.url">{{ part.url }}</a>
                       </td>
                     </tr>
 
@@ -482,7 +471,7 @@
                     >
                       <td class="">Subject of</td>
                       <td>
-                        <a :href="part.url">{{ part.name }}</a>
+                        <a :href="part.url">{{ part.url }}</a>
                       </td>
                     </tr>
                   </tbody>
@@ -493,14 +482,10 @@
 
           <div
             v-if="hasSpatialFeatures && $vuetify.display.mdAndDown"
-            class="my-4 field text-body-1"
+            class="mb-6 field text-body-1"
             id="coverage"
           >
-            <div class="text-overline primary--text darken-4">
-              Spatial Coverage
-            </div>
-
-            <v-divider class="primary mb-2"></v-divider>
+            <div v-bind="headingAttr">Spatial Coverage</div>
             <v-row>
               <v-col cols="12" sm="8">
                 <v-card variant="outlined" border="grey thin">
@@ -575,12 +560,9 @@
 
           <div
             v-if="data.temporalCoverage && $vuetify.display.mdAndDown"
-            class="mb-8 field text-body-1"
+            class="mb-6 field text-body-1"
           >
-            <div class="text-overline primary--text darken-4">
-              Temporal Coverage
-            </div>
-            <v-divider class="primary mb-2"></v-divider>
+            <div v-bind="headingAttr">Temporal Coverage</div>
 
             <v-timeline align-top density="compact" line-color="info">
               <v-timeline-item dot-color="primary">
@@ -606,149 +588,125 @@
 
         <div v-if="!$vuetify.display.mdAndDown" class="sidebar break-word">
           <div>
-            <v-card
-              v-if="hasSpatialFeatures"
-              variant="outlined"
-              border="grey thin"
-            >
-              <v-card-title class="text-overline">
+            <v-card v-if="data.keywords?.length" id="subject" variant="flat" class="mb-6">
+              <v-card-title class="pa-0 pb-2 text-subtitle-2 font-weight-bold text-uppercase" style="letter-spacing: 0.05em; color: #546e7a;">
+                Subject Keywords
+              </v-card-title>
+              <div>
+                <v-chip
+                  v-for="keyword of data.keywords"
+                  :key="keyword"
+                  size="small"
+                  style="margin: 0.15rem"
+                  variant="outlined"
+                  class="bg-grey-lighten-5"
+                  border="thin"
+                >{{ keyword }}</v-chip>
+              </div>
+            </v-card>
+
+            <v-card v-if="data.license" variant="flat" class="mb-6">
+              <v-card-title class="pa-0 pb-2 text-subtitle-2 font-weight-bold text-uppercase" style="letter-spacing: 0.05em; color: #546e7a;">
+                License
+              </v-card-title>
+              <div class="text-body-2 text-medium-emphasis">
+                <a v-if="data.license.url" :href="data.license.url">{{ data.license.name }}</a>
+                <template v-else>{{ data.license.name }}</template>
+              </div>
+            </v-card>
+
+            <div v-if="hasSpatialFeatures" class="mb-6">
+              <div class="text-subtitle-2 font-weight-bold text-uppercase mb-2" style="letter-spacing: 0.05em; color: #546e7a;">
                 Spatial Coverage
-              </v-card-title>
-              <v-divider></v-divider>
-              <v-card-text flat class="pa-0">
-                <cd-spatial-coverage-map :feature="data.spatialCoverage" />
-              </v-card-text>
-              <v-divider></v-divider>
-              <v-expansion-panels accordion flat>
-                <v-expansion-panel>
-                  <v-expansion-panel-title color="text-overline">
-                    Extent
-                  </v-expansion-panel-title>
+              </div>
+              <v-card variant="outlined" border="grey thin">
+                <v-card-text flat class="pa-0">
+                  <cd-spatial-coverage-map :feature="data.spatialCoverage" />
+                </v-card-text>
+                <v-divider></v-divider>
+                <v-expansion-panels accordion flat>
+                  <v-expansion-panel>
+                    <v-expansion-panel-title color="text-overline">
+                      Extent
+                    </v-expansion-panel-title>
+                    <v-expansion-panel-text>
+                      <v-card-text v-if="data.spatialCoverage.geo['type'] == 'GeoShape'">
+                        <v-row class="align-start">
+                          <v-col cols="12" class="dataset-info pa-0">
+                            <div v-bind="infoLabelAttr">North Latitude:</div>
+                            <div v-bind="infoValueAttr" class="text-right">{{ boxCoordinates.north }}°</div>
+                            <div v-bind="infoLabelAttr">East Longitude:</div>
+                            <div v-bind="infoValueAttr" class="text-right">{{ boxCoordinates.east }}°</div>
+                            <div v-bind="infoLabelAttr">South Latitude:</div>
+                            <div v-bind="infoValueAttr" class="text-right">{{ boxCoordinates.south }}°</div>
+                            <div v-bind="infoLabelAttr">West Longitude:</div>
+                            <div v-bind="infoValueAttr" class="text-right">{{ boxCoordinates.west }}°</div>
+                          </v-col>
+                        </v-row>
+                      </v-card-text>
+                      <v-card-text v-if="data.spatialCoverage.geo['type'] == 'GeoCoordinates'">
+                        <v-row class="align-start">
+                          <v-col cols="12" class="dataset-info">
+                            <div v-bind="infoLabelAttr">Latitude:</div>
+                            <div v-bind="infoValueAttr">{{ data.spatialCoverage.geo.latitude }}°</div>
+                          </v-col>
+                          <v-col cols="12" class="dataset-info">
+                            <div v-bind="infoLabelAttr">Longitude:</div>
+                            <div v-bind="infoValueAttr">{{ data.spatialCoverage.geo.longitude }}°</div>
+                          </v-col>
+                        </v-row>
+                      </v-card-text>
+                    </v-expansion-panel-text>
+                  </v-expansion-panel>
+                  <v-expansion-panel>
+                    <v-expansion-panel-title color="text-overline">
+                      Coordinate System
+                    </v-expansion-panel-title>
+                    <v-expansion-panel-text>
+                      <v-card-text class="dataset-info one-col pa-0">
+                        <div v-bind="infoLabelAttr">Coordinate System/Geographic Projection:</div>
+                        <div v-bind="infoValueAttr">WGS 84 EPSG:4326</div>
+                        <div v-bind="infoLabelAttr">Coordinate Units:</div>
+                        <div v-bind="infoValueAttr">Decimal degrees</div>
+                        <div v-bind="infoLabelAttr">Place/Area Name:</div>
+                        <div v-bind="infoValueAttr">{{ data.spatialCoverage.name }}</div>
+                      </v-card-text>
+                    </v-expansion-panel-text>
+                  </v-expansion-panel>
+                </v-expansion-panels>
+              </v-card>
+            </div>
 
-                  <v-expansion-panel-text>
-                    <v-card-text
-                      v-if="data.spatialCoverage.geo['type'] == 'GeoShape'"
-                    >
-                      <v-row class="align-start">
-                        <v-col cols="12" class="dataset-info pa-0">
-                          <div v-bind="infoLabelAttr">North Latitude:</div>
-                          <div v-bind="infoValueAttr" class="text-right">
-                            {{ boxCoordinates.north }}°
-                          </div>
-
-                          <div v-bind="infoLabelAttr">East Longitude:</div>
-                          <div v-bind="infoValueAttr" class="text-right">
-                            {{ boxCoordinates.east }}°
-                          </div>
-
-                          <div v-bind="infoLabelAttr">South Latitude:</div>
-                          <div v-bind="infoValueAttr" class="text-right">
-                            {{ boxCoordinates.south }}°
-                          </div>
-
-                          <div v-bind="infoLabelAttr">West Longitude:</div>
-                          <div v-bind="infoValueAttr" class="text-right">
-                            {{ boxCoordinates.west }}°
-                          </div>
-                        </v-col>
-                      </v-row>
-                    </v-card-text>
-
-                    <v-card-text
-                      v-if="
-                        data.spatialCoverage.geo['type'] == 'GeoCoordinates'
-                      "
-                    >
-                      <v-row class="align-start">
-                        <v-col cols="12" class="dataset-info">
-                          <div v-bind="infoLabelAttr">Latitude:</div>
-                          <div v-bind="infoValueAttr">
-                            {{ data.spatialCoverage.geo.latitude }}°
-                          </div>
-                        </v-col>
-
-                        <v-col cols="12" class="dataset-info">
-                          <div v-bind="infoLabelAttr">Longitude:</div>
-                          <div v-bind="infoValueAttr">
-                            {{ data.spatialCoverage.geo.longitude }}°
-                          </div>
-                        </v-col>
-                      </v-row>
-                    </v-card-text>
-                  </v-expansion-panel-text>
-                </v-expansion-panel>
-
-                <v-expansion-panel>
-                  <v-expansion-panel-title color="text-overline">
-                    Coordinate System
-                  </v-expansion-panel-title>
-
-                  <v-expansion-panel-text>
-                    <v-card-text class="dataset-info one-col pa-0">
-                      <div v-bind="infoLabelAttr">
-                        Coordinate System/Geographic Projection:
-                      </div>
-                      <div v-bind="infoValueAttr">WGS 84 EPSG:4326</div>
-
-                      <div v-bind="infoLabelAttr">Coordinate Units:</div>
-                      <div v-bind="infoValueAttr">Decimal degrees</div>
-
-                      <div v-bind="infoLabelAttr">Place/Area Name:</div>
-                      <div v-bind="infoValueAttr">
-                        {{ data.spatialCoverage.name }}
-                      </div>
-                    </v-card-text>
-                  </v-expansion-panel-text>
-                </v-expansion-panel>
-              </v-expansion-panels>
-            </v-card>
-
-            <v-card
-              v-if="data.temporalCoverage"
-              class="mt-8"
-              variant="outlined"
-              border="grey thin"
-            >
-              <v-card-title class="text-overline primary--text darken-4">
+            <div v-if="data.temporalCoverage" class="mb-6">
+              <div class="text-subtitle-2 font-weight-bold text-uppercase mb-2" style="letter-spacing: 0.05em; color: #546e7a;">
                 Temporal Coverage
-              </v-card-title>
-              <v-divider></v-divider>
-
-              <v-card-text>
-                <v-timeline align-top density="compact" line-color="info">
-                  <v-timeline-item
-                    dot-color="primary"
-                    icon="mdi-calendar"
-                    fill-dot
-                  >
-                    <div>
-                      <strong>Start Date</strong>
+              </div>
+              <v-card variant="outlined" border="grey thin">
+                <v-card-text>
+                  <v-timeline align-top density="compact" line-color="info">
+                    <v-timeline-item dot-color="primary" icon="mdi-calendar" fill-dot>
                       <div>
-                        {{ parseDate(data.temporalCoverage.startDate) }}
+                        <strong>Start Date</strong>
+                        <div>{{ parseDate(data.temporalCoverage.startDate) }}</div>
                       </div>
-                    </div>
-                  </v-timeline-item>
-
-                  <v-timeline-item
-                    dot-color="orange-darken-2"
-                    icon="mdi-calendar"
-                    fill-dot
-                  >
-                    <div>
-                      <strong>End Date</strong>
-                      <div>{{ parseDate(data.temporalCoverage.endDate) }}</div>
-                    </div>
-                  </v-timeline-item>
-                </v-timeline>
-              </v-card-text>
-            </v-card>
+                    </v-timeline-item>
+                    <v-timeline-item dot-color="orange-darken-2" icon="mdi-calendar" fill-dot>
+                      <div>
+                        <strong>End Date</strong>
+                        <div>{{ parseDate(data.temporalCoverage.endDate) }}</div>
+                      </div>
+                    </v-timeline-item>
+                  </v-timeline>
+                </v-card-text>
+              </v-card>
+            </div>
 
             <v-card
               v-if="
                 data.document?.[0]?.citation &&
                 data.document?.[0]?.citation.length
               "
-              class="mt-8"
+              class="mb-6"
               variant="flat"
               id="citation"
             >
@@ -779,7 +737,10 @@
       </div>
     </template>
 
-    <div v-if="!wasLoaded && !isFetchingMetadata" class="d-flex flex-column align-center">
+    <div
+      v-if="!wasLoaded && !isFetchingMetadata"
+      class="d-flex flex-column align-center"
+    >
       <v-empty-state
         icon="mdi-cloud-cancel"
         text="Try adjusting your settings."
@@ -797,7 +758,10 @@
           >
         </template>
         <v-card>
-          <v-card-title class="bg-grey-lighten-3 text-body-1 text-medium-emphasis">Settings</v-card-title>
+          <v-card-title
+            class="bg-grey-lighten-3 text-body-1 text-medium-emphasis"
+            >Settings</v-card-title
+          >
           <v-divider></v-divider>
           <v-card-text flat>
             <s3-form
@@ -934,8 +898,14 @@ class LandingPage extends Vue {
   };
 
   async startS3Client() {
-    const accessKeyId = User.$state.credentials.accessKey || import.meta.env.VITE_MINIO_ACCESS_KEY || "";
-    const secretAccessKey = User.$state.credentials.secretKey || import.meta.env.VITE_MINIO_SECRET_KEY || "";
+    const accessKeyId =
+      User.$state.credentials.accessKey ||
+      import.meta.env.VITE_MINIO_ACCESS_KEY ||
+      "";
+    const secretAccessKey =
+      User.$state.credentials.secretKey ||
+      import.meta.env.VITE_MINIO_SECRET_KEY ||
+      "";
     this.s3Client = new S3Client({
       region: "us-central-2",
       endpoint: this.s3Host,
@@ -953,7 +923,8 @@ class LandingPage extends Vue {
     class: "text-body-2 mb-2 text-medium-emphasis",
   };
   headingAttr = {
-    class: "text-teal-lighten-2 font-weight-medium text-h6 mb-2",
+    class:
+      "section-heading text-subtitle-1 font-weight-bold text-uppercase mb-3",
   };
   scrollOptions = {
     offset: -80,
@@ -1118,6 +1089,34 @@ class LandingPage extends Vue {
     }
   }
 
+  buildToc() {
+    const d = this.data;
+    const toc: { text: string; to: string; level?: number }[] = [
+      { text: "Overview", to: "#overview" },
+      { text: "Details", to: "#details" },
+    ];
+
+    if (d.description) {
+      toc.push({ text: "Abstract", to: "#description" });
+    }
+
+    toc.push({ text: "Content", to: "#content" });
+    toc.push({ text: "Files", to: "#fileExplorer", level: 4 });
+
+    if (d.funding?.length) {
+      toc.push({ text: "Funding", to: "#funding" });
+    }
+
+    const hasRelated =
+      d.hasPart?.length || d.isPartOf?.length || d.subjectOf?.length;
+    if (hasRelated) {
+      toc.push({ text: "Related Resources", to: "#related" });
+    }
+
+    User.$state.toc = toc;
+    User.$state.isTocReady = true;
+  }
+
   beforeUnmount() {
     User.$state.toc = [];
     User.$state.isTocReady = false;
@@ -1142,40 +1141,7 @@ class LandingPage extends Vue {
       // @ts-expect-error The key property is generated when the component is initialized
       this.rootDirectory.children = resource.initialStructure || [];
       this.loadReadmeFile();
-      User.$state.toc = [
-        { text: "Overview", to: "#overview" },
-        {
-          text: "Abstract",
-          to: "#description",
-        },
-        {
-          text: "Subject Keywords",
-          to: "#subject",
-        },
-        {
-          text: "Content",
-          to: "#content",
-        },
-        {
-          text: "Files",
-          to: "#fileExplorer",
-          level: 4,
-        },
-        {
-          text: "README",
-          to: "#readme",
-          level: 4,
-        },
-        {
-          text: "Funding",
-          to: "#funding",
-        },
-        {
-          text: "Related Resources",
-          to: "#related",
-        },
-      ];
-      User.$state.isTocReady = true;
+      this.buildToc();
     } else {
       this.wasLoaded = false;
     }
@@ -1228,8 +1194,16 @@ export default toNative(LandingPage);
 </script>
 
 <style lang="scss" scoped>
+.section-heading {
+  color: #546e7a;
+  letter-spacing: 0.05em;
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 2px solid #e0e0e0;
+}
+
 .sidebar {
-  flex-basis: 25rem;
+  flex-basis: 22rem;
   flex-shrink: 0;
   min-width: 0;
 }
@@ -1256,16 +1230,10 @@ export default toNative(LandingPage);
   word-break: break-word;
 }
 
-#graph-container {
-  width: 600px;
-  height: 400px;
-  border: 1px solid #ddd;
-}
-
 .dataset-info {
   display: grid;
   grid-template-columns: auto auto;
-  gap: 0rem 1rem;
+  gap: 0.1rem 1rem;
   justify-content: start;
   align-items: baseline;
   align-content: baseline;
